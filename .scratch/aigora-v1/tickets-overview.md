@@ -77,7 +77,7 @@ graph LR
 | 前端路由（`frontend/src/router.ts`；討論頁、歷史頁、唯讀紀錄頁） | 01 | 不得修改 |
 | 前端主版面（`frontend/src/layouts/AppLayout.vue`） | 01 | 不得修改（17 換正式素材時例外） |
 | 前端全域 store（`frontend/src/stores/discussion.ts`，匯出 `useDiscussionStore`） | 01 建立空殼、02 填入事件處理後凍結 | 不得修改 |
-| WebSocket 訊息型別（Python / TypeScript） | 02，完成後凍結 | 不得修改 |
+| WebSocket 訊息型別（`backend/aigora/api/messages.py`、`frontend/src/contracts/messages.ts`） | 02，完成後凍結 | 不得修改 |
 | 測試設定（`backend/pyproject.toml` 的 pytest 段、`frontend/playwright.config.ts`、`frontend/vite.config.ts`） | 01 | 不得修改；E2E 參與者可加到 `frontend/e2e/participants.e2e.toml` |
 | 討論引擎 | 03 建立，之後 04 → 06 → 07 → 08 依序擁有 | 其他 ticket 不得修改；需要時停下回報 |
 
