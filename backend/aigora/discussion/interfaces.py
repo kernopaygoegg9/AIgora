@@ -65,6 +65,8 @@ class RoundView:
     turns: Sequence[TurnView]
     draft: str | None = None  # moderator's consensus draft written after this round
     interjections: Sequence[str] = ()  # user interjections that apply from this round
+    judge_detail: JudgeDetail | None = None  # the latest judge verdict's detail for this round
+    confirmations: Sequence[ConfirmationAnswer] | None = None  # judge B confirmation answers
 
 
 @dataclass(frozen=True)
@@ -75,8 +77,9 @@ class DiscussionView:
     active_participant_ids: Sequence[str]  # still in the discussion, in settings order
     moderator_id: str | None
     rounds: Sequence[RoundView]  # completed rounds plus the current one (last)
-    # Reasons from participants who disagreed in the last confirmation (judge B),
-    # carried into the next round's instructions.
+    # Reasons from participants who disagreed in the latest confirmation (judge B) of the
+    # current or the previous round (participant id -> reason), carried into the next
+    # round's instructions and the moderator's draft.
     pending_disagreements: Mapping[str, str] = field(default_factory=dict)
 
     @property

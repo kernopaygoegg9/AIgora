@@ -154,7 +154,12 @@ def test_the_consensus_record_keeps_each_rounds_draft_and_judge_result(client, w
     assert record["result"] == {"kind": "consensus", "text": "Draft one", "answers": None}
 
 
-def test_a_judge_that_is_not_available_yet_is_rejected(client, write_participants):
+def test_a_judge_that_is_not_available_is_rejected(client, write_participants, tmp_path, monkeypatch):
+    # Judge B without a TypeSafe key (see test_consensus_jev.py for judge B itself).
+    env_file = tmp_path / ".env"
+    env_file.write_text("", encoding="utf-8")
+    monkeypatch.setenv("AIGORA_ENV_FILE", str(env_file))
+    monkeypatch.delenv("TYPESAFE_API_KEY", raising=False)
     write_participants(fake_participant("fake-a", "Fake A") + fake_participant("fake-b", "Fake B"))
 
     messages = run_discussion(client, "Q?", {"mode": "consensus", "participant_ids": ["fake-a", "fake-b"],

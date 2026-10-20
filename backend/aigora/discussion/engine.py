@@ -9,7 +9,10 @@ interjections and stop are ticket 06; failure handling is ticket 07: a
 participant whose turns fail in 2 rounds in a row is removed, fewer than 2
 active participants ends the discussion as `insufficient_participants`, and a
 moderator who is removed or fails a moderator call hands over to the next
-active participant in the list. Ticket 08 adds judge B confirmations.
+active participant in the list. Judge B's confirmations (ticket 08) are extra
+calls like any other; their answers are reported by the mode
+(`confirmation_result`) and the disagreeing reasons reach the next round
+through `DiscussionView.pending_disagreements`.
 
 The discussion record (`aigora.record.DiscussionRecord`) is the engine's
 single source of state; the read-only `DiscussionView` handed to modes and
@@ -326,16 +329,20 @@ class DiscussionEngine:
         return results
 
     async def _apply_reports(self, number: int, decision: ContinueRound | ExtraCalls | Finish) -> None:
-        """Store and emit the judge / confirmation reports a decision carries."""
+        """Store and emit the confirmation / judge reports a decision carries.
+
+        Confirmation answers come first: judge B's verdict after a confirmation is based
+        on them. A later judge report of the same round replaces the earlier one in the
+        record (judge B: `confirm`, then `reached` / `not_reached`)."""
         round_ = self.record.rounds[-1]
-        if decision.judge_report is not None:
-            r = decision.judge_report
-            round_.judge = RecordJudge(judge=r.judge, outcome=r.outcome, detail=r.detail)
-            await self._emit(m.JudgeResult, round=number, judge=r.judge, outcome=r.outcome, detail=r.detail)
         if decision.confirmation_report is not None:
             answers = list(decision.confirmation_report.answers)
             round_.confirmations = answers
             await self._emit(m.ConfirmationResult, round=number, answers=answers)
+        if decision.judge_report is not None:
+            r = decision.judge_report
+            round_.judge = RecordJudge(judge=r.judge, outcome=r.outcome, detail=r.detail)
+            await self._emit(m.JudgeResult, round=number, judge=r.judge, outcome=r.outcome, detail=r.detail)
 
     async def _complete_round(self, number: int) -> None:
         self.store.save(self.record)
@@ -466,10 +473,20 @@ class DiscussionEngine:
                     ],
                     draft=r.draft,
                     interjections=interjections.get(r.number, ()),
+                    judge_detail=r.judge.detail if r.judge else None,
+                    confirmations=list(r.confirmations) if r.confirmations is not None else None,
                 )
                 for r in self.record.rounds
             ],
+            pending_disagreements=self._pending_disagreements(),
         )
+
+    def _pending_disagreements(self) -> dict[str, str]:
+        """Disagreeing confirmation answers of the current round, else of the previous one."""
+        for round_ in self.record.rounds[::-1][:2]:
+            if round_.confirmations is not None:
+                return {a.participant_id: a.reason for a in round_.confirmations if not a.agree}
+        return {}
 
     # --- events --------------------------------------------------------------
 

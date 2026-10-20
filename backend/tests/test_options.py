@@ -66,15 +66,14 @@ def _jev_reason(client) -> str | None:
     return _judges(client)["jev"]["unavailable_reason"]
 
 
-def test_with_a_key_in_the_env_file_judge_b_is_no_longer_blocked_by_the_key_and_the_key_is_never_sent(
+def test_with_a_key_in_the_env_file_judge_b_is_available_and_the_key_is_never_sent(
     client, write_participants, no_key_env
 ):
     write_participants(PARTICIPANTS)
     no_key_env.write_text("TYPESAFE_API_KEY=sk-test-secret-123\n", encoding="utf-8")
     response = client.get("/api/options")
     jev = {j["id"]: j for j in response.json()["judges"]}["jev"]
-    # Available once ticket 08 registers judge B; until then only "not built yet".
-    assert jev["available"] or "TYPESAFE_API_KEY" not in jev["unavailable_reason"]
+    assert jev["available"] is True and jev["unavailable_reason"] is None
     assert "sk-test-secret-123" not in response.text
 
 
@@ -87,8 +86,7 @@ def test_an_empty_key_counts_as_missing(client, write_participants, no_key_env):
 def test_a_key_in_the_process_environment_also_counts(client, write_participants, no_key_env, monkeypatch):
     write_participants(PARTICIPANTS)
     monkeypatch.setenv("TYPESAFE_API_KEY", "sk-from-environment")
-    reason = _jev_reason(client)
-    assert reason is None or "TYPESAFE_API_KEY" not in reason
+    assert _jev_reason(client) is None
 
 
 def test_each_mode_lists_the_settings_it_uses(client, write_participants, no_key_env):

@@ -10,7 +10,7 @@
 
 **Blocked by:** 07
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 - [ ] 無金鑰時，選項端點標示方式 B 不可用並附原因
 - [ ] 假 Jev client（固定機率）下：低於門檻 → 繼續下一輪；達門檻 → 收到 `confirmation_result`

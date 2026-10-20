@@ -12,11 +12,10 @@ from aigora.discussion.judges import JUDGES
 from aigora.discussion.modes import MODES
 from aigora.discussion.orders import SPEAKING_ORDERS
 from aigora.domain import JUDGE_IDS, MODE_IDS, SPEAKING_ORDER_IDS
-from aigora.env import TYPESAFE_API_KEY, backend_env, has_typesafe_key
+from aigora.env import backend_env
 
 # Shown for identifiers whose class is not registered yet.
 _PENDING_ORDER_NAMES = {"sequential": "依序"}  # interface only in v1
-_PENDING_JUDGE_NAMES = {"jev": "Jev 判斷 + 反問確認"}  # ticket 08 registers JevJudge in JUDGES
 
 
 def _mode_options() -> list[ModeOption]:
@@ -32,11 +31,6 @@ def _judge_option(judge_id: str, env: Mapping[str, str]) -> JudgeOption:
     if judge is not None:
         availability = judge().availability(env)
         available, reason, name = availability.available, availability.reason, judge.name
-    elif judge_id == "jev":
-        # Until ticket 08 registers judge B: unavailable without a key, and (not built) even with one.
-        name = _PENDING_JUDGE_NAMES[judge_id]
-        available = False
-        reason = f".env 沒有設定 {TYPESAFE_API_KEY}" if not has_typesafe_key(env) else "方式 B 尚未提供"
     else:
         name, available, reason = judge_id, False, "尚未提供"
     return JudgeOption(
