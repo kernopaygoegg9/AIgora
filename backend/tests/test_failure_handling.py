@@ -128,7 +128,32 @@ def draft_calls(messages: list[dict]) -> list[tuple[int, str]]:
     return [(m["round"], m["participant_id"]) for m in of_type(messages, "turn_started") if m["purpose"] == "draft"]
 
 
-def test_a_removed_moderator_is_replaced_by_the_next_active_participant(client, write_participants, data_dir):
+def test_a_moderator_whose_turn_fails_hands_over_to_the_next_active_participant(
+    client, write_participants, data_dir
+):
+    write_participants(
+        fake_participant("fake-a", "Fake A", stream=False, drafts=["A's draft"])
+        + fake_participant("fake-b", "Fake B", stream=False, drafts=["B's draft"], fail_rounds=[1])
+        + fake_participant("fake-c", "Fake C", stream=False, drafts=["C's draft"])
+    )
+
+    messages = run_discussion(client, "Q?", consensus("fake-a", "fake-b", "fake-c", moderator_id="fake-b"))
+
+    types = [m["type"] for m in messages]
+    changes = of_type(messages, "moderator_changed")
+    # One failed turn is enough to hand over (no removal yet); it happens before the draft.
+    assert [(c["participant_id"], c["round"]) for c in changes] == [("fake-c", 1)]
+    assert of_type(messages, "participant_removed") == []
+    assert types.index("turn_failed") < types.index("moderator_changed") < types.index("draft_created")
+    assert draft_calls(messages) == [(1, "fake-c")]
+    assert messages[-1]["outcome"] == "consensus"
+    assert messages[-1]["result"]["text"] == "C's draft"
+
+    record = saved_record(data_dir, messages)
+    assert record["moderator_changes"] == [{"round": 1, "participant_id": "fake-c"}]
+
+
+def test_a_failing_moderator_hands_over_once_and_is_later_removed(client, write_participants, data_dir):
     write_participants(
         fake_participant("fake-a", "Fake A", stream=False, fail_rounds=[1, 2], fail_purposes=["turn"])
         + fake_participant(
@@ -140,18 +165,18 @@ def test_a_removed_moderator_is_replaced_by_the_next_active_participant(client, 
 
     messages = run_discussion(client, "Q?", consensus("fake-a", "fake-b", "fake-c"))
 
-    types = [m["type"] for m in messages]
+    # fake-a's round-1 turn failed: fake-b takes over at once and writes every draft;
+    # removing fake-a after round 2 changes nothing more.
     changes = of_type(messages, "moderator_changed")
-    assert [(c["participant_id"], c["round"]) for c in changes] == [("fake-b", 2)]
-    assert types.index("participant_removed") < types.index("moderator_changed") < types.index("judge_result")
-    # fake-a (still moderator) wrote round 1's draft; fake-b took over from round 2.
-    assert draft_calls(messages) == [(1, "fake-a"), (2, "fake-b")]
+    assert [(c["participant_id"], c["round"]) for c in changes] == [("fake-b", 1)]
+    assert [(r["participant_id"], r["round"]) for r in of_type(messages, "participant_removed")] == [("fake-a", 2)]
+    assert draft_calls(messages) == [(1, "fake-b"), (2, "fake-b")]
     finished = messages[-1]
     assert finished["outcome"] == "consensus"
     assert finished["result"]["text"] == "B's draft"
 
     record = saved_record(data_dir, messages)
-    assert record["moderator_changes"] == [{"round": 2, "participant_id": "fake-b"}]
+    assert record["moderator_changes"] == [{"round": 1, "participant_id": "fake-b"}]
 
 
 def test_a_failed_moderator_call_hands_over_to_the_next_participant_who_retries_it(

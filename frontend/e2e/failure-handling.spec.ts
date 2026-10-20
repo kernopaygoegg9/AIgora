@@ -24,12 +24,14 @@ test('a failing participant is marked failed, then removed, and the moderator ha
   const a1 = round(page, 1).locator('[data-testid="turn-card"][data-participant-id="fake-a"]')
   await expect(a1.getByTestId('turn-status')).toHaveText('完成')
   await expect(round(page, 1).getByTestId('participant-removed')).toHaveCount(0)
+  // The moderator's turn failed, so the moderator role moves on at once (wrapping to Fake A).
+  await expect(round(page, 1).getByTestId('moderator-changed')).toContainText('改由 Fake A 擔任主持人')
 
-  // Round 2: second failure in a row -> removed; the moderator role moves on (wrapping to Fake A).
+  // Round 2: second failure in a row -> removed; the moderator does not change again.
   const removed = round(page, 2).getByTestId('participant-removed')
   await expect(removed).toContainText('Fake Flaky')
   await expect(removed).toContainText('連續 2 輪')
-  await expect(round(page, 2).getByTestId('moderator-changed')).toContainText('改由 Fake A 擔任主持人')
+  await expect(round(page, 2).getByTestId('moderator-changed')).toHaveCount(0)
 
   // The remaining two still reach consensus.
   await expect(page.getByTestId('discussion-result')).toContainText('共識結果')

@@ -8,8 +8,8 @@ draft / summary) and judge reports are run and emitted here (ticket 04);
 interjections and stop are ticket 06; failure handling is ticket 07: a
 participant whose turns fail in 2 rounds in a row is removed, fewer than 2
 active participants ends the discussion as `insufficient_participants`, and a
-moderator who is removed or fails a moderator call hands over to the next
-active participant in the list. Judge B's confirmations (ticket 08) are extra
+moderator whose turn or moderator call fails, or who is removed, hands over to
+the next active participant in the list. Judge B's confirmations (ticket 08) are extra
 calls like any other; their answers are reported by the mode
 (`confirmation_result`) and the disagreeing reasons reach the next round
 through `DiscussionView.pending_disagreements`.
@@ -230,6 +230,7 @@ class DiscussionEngine:
         while True:
             round_number += 1
             await self._run_round(round_number)
+            await self._hand_over_if_moderator_failed(round_number)
             await self._remove_failing(round_number)
             active = len(self.active_participant_ids())
             if active < MIN_PARTICIPANTS:
@@ -288,6 +289,13 @@ class DiscussionEngine:
             await self._emit(m.ParticipantRemoved, participant_id=pid, reason=reason, round=number)
             if pid == self.moderator_id():
                 await self._hand_over_moderator(number)
+
+    async def _hand_over_if_moderator_failed(self, number: int) -> None:
+        """The moderator's own turn in this round failed: the next active participant takes over."""
+        moderator = self.moderator_id()
+        turn = _turn_of(self.record.rounds[-1], moderator) if moderator is not None else None
+        if turn is not None and turn.status != "ok":
+            await self._hand_over_moderator(number)
 
     async def _hand_over_moderator(self, number: int) -> None:
         """The moderator failed or was removed: the next active participant in the list takes over."""
