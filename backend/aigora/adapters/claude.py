@@ -46,6 +46,7 @@ from aigora.adapters.base import (
     FailureKind,
     TurnRequest,
 )
+from aigora.adapters.subprocesses import kill_tree, process_group_options
 from aigora.config import ParticipantConfig
 
 WEB_TOOLS = "WebSearch,WebFetch"
@@ -102,19 +103,6 @@ def _child_env() -> dict[str, str]:
     return env
 
 
-async def _kill(proc: asyncio.subprocess.Process) -> None:
-    if proc.returncode is not None:
-        return
-    try:
-        proc.kill()
-    except ProcessLookupError:
-        return
-    try:
-        await asyncio.wait_for(proc.wait(), timeout=10)
-    except asyncio.TimeoutError:  # pragma: no cover - the OS did not reap it in time
-        pass
-
-
 class ClaudeAdapter(Adapter):
     id = "claude"
 
@@ -146,13 +134,14 @@ class ClaudeAdapter(Adapter):
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 env=_child_env(),
+                **process_group_options(),
             )
         except OSError as exc:
             return Availability(False, f"cannot start Claude Code CLI: {exc}")
         try:
             out, err = await asyncio.wait_for(proc.communicate(), timeout=AUTH_CHECK_TIMEOUT_SECONDS)
         except asyncio.TimeoutError:
-            await _kill(proc)
+            await kill_tree(proc)
             return Availability(False, "`claude auth status` did not answer in time")
         stdout = out.decode("utf-8", "replace")
         stderr = err.decode("utf-8", "replace").strip()
@@ -187,6 +176,7 @@ class ClaudeAdapter(Adapter):
                 stderr=asyncio.subprocess.PIPE,
                 env=_child_env(),
                 limit=16 * 1024 * 1024,  # one stream-json line can be a whole long message
+                **process_group_options(),  # so cancelling kills the CLI's children too
             )
         except OSError as exc:
             yield Failed("not_available", f"cannot start Claude Code CLI: {exc}")
@@ -198,8 +188,8 @@ class ClaudeAdapter(Adapter):
                 yield event
         finally:
             # Normal end, cancellation (stop / timeout) or generator close: never
-            # leave the CLI running.
-            await _kill(proc)
+            # leave the CLI (or anything it started) running.
+            await kill_tree(proc)
             if not stderr_task.done():
                 stderr_task.cancel()
 
