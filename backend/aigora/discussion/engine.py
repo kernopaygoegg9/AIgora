@@ -205,6 +205,9 @@ class DiscussionEngine:
         if not text:
             await self.report_error("插話內容不能是空白")
             return
+        if self._stop_requested:
+            await self.report_error("討論已停止，無法插話")
+            return
         if self.record.outcome is not None or self._finishing:
             await self.report_error("討論已結束，無法插話")
             return
