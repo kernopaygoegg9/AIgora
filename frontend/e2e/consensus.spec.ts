@@ -26,6 +26,8 @@ test('a consensus discussion shows the draft, everyone\'s stance and the consens
   await expect(judge).toContainText('取得共識')
   await expect(judge.getByTestId('stance').filter({ hasText: 'Fake A' })).toContainText('同意')
   await expect(judge.getByTestId('stance').filter({ hasText: 'Fake B' })).toContainText('同意')
+  // The inspector's stance tracker (ui-redesign 05) has a row for round 2.
+  await expect(page.getByTestId('stance-tracker')).toContainText('第 2 輪')
 
   // The consensus result is shown on its own.
   const result = page.getByTestId('discussion-result')

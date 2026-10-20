@@ -1,12 +1,16 @@
-<!-- The inspector beside a live / finished discussion (ui-redesign 04): queued interjections
-     and the locked settings snapshot. Participants and the stance tracker come in ticket 05. -->
+<!-- The inspector beside a live / finished discussion (ui-redesign 04, 05): participants,
+     the stance tracker (consensus), queued interjections and the locked settings snapshot.
+     Participants and stances are derived from the store here and passed to props-only
+     components, which the read-only record (07) feeds from a saved record instead. -->
 <script setup lang="ts">
 import { computed } from 'vue'
 
 import type { OptionsResponse } from '../../contracts/http'
 import type { DiscussionSettings, ParticipantSnapshot } from '../../contracts/messages'
-import type { Interjection } from '../../stores/discussion'
+import { useDiscussionStore, type Interjection, type TurnStateStatus } from '../../stores/discussion'
 import { JUDGE_LABELS, MODE_LABELS } from '../labels'
+import InspectorParticipants from './InspectorParticipants.vue'
+import StanceTracker, { type StanceCell } from './StanceTracker.vue'
 
 const props = defineProps<{
   settings: DiscussionSettings | null
@@ -15,7 +19,28 @@ const props = defineProps<{
   participantById: (id: string) => ParticipantSnapshot | undefined
 }>()
 
+const store = useDiscussionStore()
 const consensus = computed(() => props.settings?.mode === 'consensus')
+
+const removedIds = computed(() => store.removed.map((r) => r.participantId))
+
+// Each participant's latest turn status, over all rounds.
+const statuses = computed(() => {
+  const out: Record<string, TurnStateStatus | undefined> = {}
+  for (const round of store.rounds) for (const t of round.turns) out[t.participantId] = t.status
+  return out
+})
+
+// Stances are taken on the previous round's draft, so they start in round 2.
+const stanceRounds = computed(() =>
+  store.rounds
+    .filter((r) => r.number >= 2)
+    .map((r) => {
+      const cells: Record<string, StanceCell | undefined> = {}
+      for (const t of r.turns) cells[t.participantId] = { status: t.status, stance: t.stance }
+      return { number: r.number, cells }
+    }),
+)
 
 const rows = computed(() => {
   const s = props.settings
@@ -36,6 +61,21 @@ const rows = computed(() => {
 
 <template>
   <aside class="inspector" aria-label="檢視器" data-testid="discussion-inspector">
+    <section class="section">
+      <h3 class="section-title">參與者</h3>
+      <InspectorParticipants
+        :participants="store.participants"
+        :moderator-id="consensus ? store.moderatorId : null"
+        :removed-ids="removedIds"
+        :statuses="statuses"
+      />
+    </section>
+
+    <section v-if="consensus && stanceRounds.length" class="section">
+      <h3 class="section-title">表態追蹤</h3>
+      <StanceTracker :participants="store.participants" :rounds="stanceRounds" />
+    </section>
+
     <section v-if="consensus" class="section">
       <h3 class="section-title">插話佇列</h3>
       <ul v-if="interjections.length" class="queue">

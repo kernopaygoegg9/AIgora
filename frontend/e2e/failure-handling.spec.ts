@@ -33,6 +33,12 @@ test('a failing participant is marked failed, then removed, and the moderator ha
   await expect(removed).toContainText('連續 2 輪')
   await expect(round(page, 2).getByTestId('moderator-changed')).toHaveCount(0)
 
+  // The inspector (ui-redesign 05): Fake Flaky is marked removed, Fake A is now the moderator.
+  const seat = (id: string) => page.locator(`[data-testid="inspector-participant"][data-participant-id="${id}"]`)
+  await expect(seat('fake-flaky')).toContainText('已移出')
+  await expect(seat('fake-a').getByTestId('inspector-moderator')).toBeVisible()
+  await expect(seat('fake-flaky').getByTestId('inspector-moderator')).toHaveCount(0)
+
   // The remaining two still reach consensus.
   await expect(page.getByTestId('discussion-result')).toContainText('共識結果')
   await expect(page.getByTestId('discussion-status')).toHaveText('已結束')
