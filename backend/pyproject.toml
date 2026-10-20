@@ -1,0 +1,44 @@
+[project]
+name = "aigora"
+version = "0.1.0"
+description = "Let multiple AI CLIs answer and discuss the same question in one window."
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    # HTTP client: Ollama adapter (local HTTP API) and FastAPI's TestClient.
+    "httpx>=0.27",
+    # Reads TYPESAFE_API_KEY and other settings from .env (backend only).
+    "python-dotenv>=1.0",
+    # Official TypeSafe Python SDK, used by the Jev client (consensus judge B).
+    "typesafe-sdk>=0.7",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "pytest-timeout>=2.3",
+]
+
+[project.scripts]
+aigora = "aigora.__main__:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["aigora"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+timeout = 60
+# Tests that call a real AI CLI or the real TypeSafe API are marked `real_ai`
+# and skipped by default. Run them explicitly with: uv run pytest -m real_ai
+addopts = "-m 'not real_ai'"
+markers = [
+    "real_ai: calls a real AI CLI or the real TypeSafe API (slow, spends quota); run manually only",
+]

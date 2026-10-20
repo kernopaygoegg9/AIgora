@@ -70,14 +70,15 @@ graph LR
 
 | 熱點檔案 | 建立 / 擁有者 | 其他 ticket 的規則 |
 |---|---|---|
-| 後端依賴清單（`pyproject.toml`） | 01 | 不得修改；需要新套件時停下回報 |
-| 前端依賴清單（`package.json`） | 01 | 同上 |
-| 後端路由註冊（所有 HTTP / WebSocket 端點先註冊為「未實作」） | 01 | 不得修改；只實作各自端點的處理函式 |
-| Adapter registry（5 個識別碼全部先註冊） | 01 | 不得修改；Adapter ticket 只新增自己的模組 |
-| 前端路由（討論頁、歷史頁） | 01 | 不得修改 |
-| 前端主版面 | 01 | 不得修改（17 換正式素材時例外） |
-| 前端全域 store | 01 建立空殼、02 填入事件處理後凍結 | 不得修改 |
+| 後端依賴清單（`backend/pyproject.toml`、`backend/uv.lock`） | 01 | 不得修改；需要新套件時停下回報 |
+| 前端依賴清單（`frontend/package.json`、`frontend/package-lock.json`） | 01 | 同上 |
+| 後端路由註冊（`backend/aigora/api/routes.py`；所有 HTTP / WebSocket 端點先註冊為「未實作」）與 App 工廠（`backend/aigora/app.py`） | 01 | 不得修改；只實作 `backend/aigora/api/handlers/` 下各自端點的處理函式 |
+| Adapter registry（`backend/aigora/adapters/registry.py`；5 個識別碼全部先註冊） | 01 | 不得修改；Adapter ticket 只填自己的模組 `backend/aigora/adapters/<id>.py` |
+| 前端路由（`frontend/src/router.ts`；討論頁、歷史頁、唯讀紀錄頁） | 01 | 不得修改 |
+| 前端主版面（`frontend/src/layouts/AppLayout.vue`） | 01 | 不得修改（17 換正式素材時例外） |
+| 前端全域 store（`frontend/src/stores/discussion.ts`，匯出 `useDiscussionStore`） | 01 建立空殼、02 填入事件處理後凍結 | 不得修改 |
 | WebSocket 訊息型別（Python / TypeScript） | 02，完成後凍結 | 不得修改 |
+| 測試設定（`backend/pyproject.toml` 的 pytest 段、`frontend/playwright.config.ts`、`frontend/vite.config.ts`） | 01 | 不得修改；E2E 參與者可加到 `frontend/e2e/participants.e2e.toml` |
 | 討論引擎 | 03 建立，之後 04 → 06 → 07 → 08 依序擁有 | 其他 ticket 不得修改；需要時停下回報 |
 
 ## 共通規則（所有 ticket）
