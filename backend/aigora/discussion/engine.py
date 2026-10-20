@@ -344,7 +344,8 @@ class DiscussionEngine:
 
         Confirmation answers come first: judge B's verdict after a confirmation is based
         on them. A later judge report of the same round replaces the earlier one in the
-        record (judge B: `confirm`, then `reached` / `not_reached`)."""
+        record's `judge`; every verdict stays in `judge_history` (judge B: `confirm`, then
+        `reached` / `not_reached`)."""
         round_ = self.record.rounds[-1]
         if decision.confirmation_report is not None:
             answers = list(decision.confirmation_report.answers)
@@ -353,6 +354,7 @@ class DiscussionEngine:
         if decision.judge_report is not None:
             r = decision.judge_report
             round_.judge = RecordJudge(judge=r.judge, outcome=r.outcome, detail=r.detail)
+            round_.judge_history.append(round_.judge)
             await self._emit(m.JudgeResult, round=number, judge=r.judge, outcome=r.outcome, detail=r.detail)
 
     async def _complete_round(self, number: int) -> None:

@@ -42,8 +42,12 @@ function toTurnState(t: RecordTurn): TurnState {
 
 const turns = computed(() => props.round.turns.map((t) => ({ record: t, state: toTurnState(t) })))
 const draftHtml = computed(() => (props.round.draft ? renderMarkdown(props.round.draft) : ''))
-const judge = computed(() => props.round.judge ?? null)
-const stances = computed(() => Object.entries(judge.value?.detail.stances ?? {}))
+// Every verdict of the round (judge B: `confirm`, then the final one); older records only have `judge`.
+const verdicts = computed(() => {
+  const history = props.round.judge_history ?? []
+  if (history.length) return history
+  return props.round.judge ? [props.round.judge] : []
+})
 </script>
 
 <template>
@@ -75,12 +79,12 @@ const stances = computed(() => Object.entries(judge.value?.detail.stances ?? {})
       <div class="block-text" v-html="draftHtml" />
     </div>
 
-    <div v-if="judge" class="block" data-testid="record-judge">
+    <div v-for="(judge, k) in verdicts" :key="`j${k}`" class="block" data-testid="record-judge">
       <h3 class="block-title">
         共識裁定（{{ JUDGE_LABELS[judge.judge] ?? judge.judge }}）：{{ judgeOutcomeLabel(judge.judge, judge.outcome) }}
       </h3>
-      <ul v-if="stances.length" class="plain-list">
-        <li v-for="[pid, stance] in stances" :key="pid">{{ name(pid) }}：{{ stanceLabel(stance) }}</li>
+      <ul v-if="judge.detail.stances" class="plain-list">
+        <li v-for="(stance, pid) in judge.detail.stances" :key="pid">{{ name(String(pid)) }}：{{ stanceLabel(stance) }}</li>
       </ul>
       <p v-if="judge.detail.probability != null" class="block-text">
         Jev 機率 {{ judge.detail.probability }}<template v-if="judge.detail.threshold != null">

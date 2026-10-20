@@ -138,6 +138,11 @@ def test_at_the_threshold_everyone_is_asked_and_unanimous_agreement_ends_with_th
     assert round2["judge"] == {
         "judge": "jev", "outcome": "reached", "detail": {"stances": None, "probability": 0.8, "threshold": 0.8},
     }
+    # The `confirm` verdict (Jev passed the threshold) is kept too, before the final one.
+    assert [(j["judge"], j["outcome"], j["detail"]["probability"]) for j in round2["judge_history"]] == [
+        ("jev", "confirm", 0.8), ("jev", "reached", 0.8),
+    ]
+    assert record["rounds"][0]["judge_history"] == []
     assert [(c["participant_id"], c["agree"]) for c in round2["confirmations"]] == [("fake-a", True), ("fake-b", True)]
     assert record["rounds"][0]["confirmations"] is None
     assert record["outcome"] == "consensus"
