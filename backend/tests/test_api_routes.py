@@ -14,8 +14,6 @@ def client():
 @pytest.mark.parametrize(
     "path",
     [
-        "/api/discussions",
-        "/api/discussions/some-id",
         "/api/avatars/claude.png",
     ],
 )

@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 
 import { openDiscussionSocket, type DiscussionSocket } from '../api/discussionSocket'
 import { fetchOptions } from '../api/options'
 import { fetchParticipants } from '../api/participants'
+import DiscussionOutcome from '../components/discussion/DiscussionOutcome.vue'
+import RecordView from '../components/history/RecordView.vue'
 import RoundSection from '../components/discussion/RoundSection.vue'
 import SettingsPanel from '../components/settings/SettingsPanel.vue'
 import type { OptionsResponse, ParticipantInfo } from '../contracts/http'
@@ -23,14 +25,16 @@ let socket: DiscussionSocket | null = null
 const STATUS_LABELS = { idle: '', running: '討論中', finished: '已結束' } as const
 const statusLabel = computed(() => STATUS_LABELS[store.status])
 
-onMounted(async () => {
-  if (props.id) return
+// The router reuses this instance between `/` and `/discussions/:id`, so load whenever
+// the live view is shown, not only on mount.
+watch(() => props.id, async (id) => {
+  if (id || participants.value.length) return
   try {
     ;[participants.value, options.value] = await Promise.all([fetchParticipants(), fetchOptions()])
   } catch (err) {
     loadError.value = err instanceof Error ? err.message : String(err)
   }
-})
+}, { immediate: true })
 
 onBeforeUnmount(() => socket?.close())
 
@@ -50,7 +54,9 @@ function startDiscussion(question: string, settings: StartSettings) {
 </script>
 
 <template>
-  <section class="discussion-page" data-testid="discussion-page">
+  <!-- Past discussion: read-only record view only (ticket 09). -->
+  <RecordView v-if="id" :id="id" />
+  <section v-else class="discussion-page" data-testid="discussion-page">
     <h1 class="page-title">討論</h1>
 
     <template v-if="!id">
@@ -77,7 +83,9 @@ function startDiscussion(question: string, settings: StartSettings) {
         :round="round"
         :participant-by-id="store.participantById"
         :show-number="store.settings?.mode !== 'ask'"
+        :moderator-id="store.moderatorId"
       />
+      <DiscussionOutcome :outcome="store.outcome" :result="store.result" :reason="store.finishReason" />
     </div>
   </section>
 </template>

@@ -1,15 +1,17 @@
-<!-- Question input + participant picker. Emits `submit` with the question and the chosen ids. -->
+<!-- Question input + mode + participant picker. Emits `submit` with the question, the chosen ids and the mode. -->
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 
 import type { ParticipantInfo } from '../../contracts/http'
+import type { ModeId } from '../../contracts/messages'
 import ParticipantAvatar from './ParticipantAvatar.vue'
 
 const props = defineProps<{ participants: ParticipantInfo[]; disabled?: boolean }>()
-const emit = defineEmits<{ submit: [question: string, participantIds: string[]] }>()
+const emit = defineEmits<{ submit: [question: string, participantIds: string[], mode: ModeId] }>()
 
 const question = ref('')
 const selected = ref<string[]>([])
+const mode = ref<ModeId>('ask')
 
 const canSubmit = computed(() => !props.disabled && question.value.trim() !== '' && selected.value.length > 0)
 
@@ -17,7 +19,7 @@ function submit() {
   if (!canSubmit.value) return
   // Keep the participant file's order, not the click order.
   const ids = props.participants.map((p) => p.id).filter((id) => selected.value.includes(id))
-  emit('submit', question.value.trim(), ids)
+  emit('submit', question.value.trim(), ids, mode.value)
 }
 </script>
 
@@ -33,6 +35,12 @@ function submit() {
       :disabled="disabled"
       @keydown.enter.ctrl.prevent="submit"
     />
+
+    <fieldset class="modes" :disabled="disabled">
+      <legend>討論模式</legend>
+      <label><input v-model="mode" type="radio" value="ask" /> 提問</label>
+      <label><input v-model="mode" type="radio" value="consensus" /> 共識討論</label>
+    </fieldset>
 
     <fieldset class="participants" :disabled="disabled">
       <legend>參與者</legend>
@@ -73,6 +81,13 @@ function submit() {
   border: 1px solid #c4cad1;
   border-radius: 6px;
   resize: vertical;
+}
+.modes {
+  display: flex;
+  gap: 1rem;
+  border: 1px solid #d8dde3;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
 }
 .participants {
   display: flex;

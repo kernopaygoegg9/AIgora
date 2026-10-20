@@ -6,11 +6,11 @@ test('main layout loads and switches between the discussion and history pages', 
   await expect(page.getByRole('banner')).toContainText('AIgora')
   await expect(page.getByTestId('discussion-page')).toBeVisible()
 
-  await page.getByRole('link', { name: '歷史' }).click()
+  await page.getByRole('link', { name: '歷史', exact: true }).click()
   await expect(page).toHaveURL(/\/history$/)
   await expect(page.getByTestId('history-page')).toBeVisible()
 
-  await page.getByRole('link', { name: '討論' }).click()
+  await page.getByRole('link', { name: '討論', exact: true }).click()
   await expect(page.getByTestId('discussion-page')).toBeVisible()
 })
 

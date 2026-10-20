@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from aigora.api.messages import DiscussionSettings, StartSettings
 from aigora.config import ParticipantsConfig
+from aigora.discussion.judges import JUDGES
 from aigora.discussion.modes import MODES
 from aigora.discussion.orders import SPEAKING_ORDERS
 
@@ -31,6 +32,10 @@ def resolve_settings(requested: StartSettings, config: ParticipantsConfig) -> Di
     if speaking_order not in SPEAKING_ORDERS:
         raise SettingsError(f"發言順序 `{speaking_order}` 尚未提供")
 
+    judge = requested.judge or d.judge
+    if "judge" in mode.uses_settings and judge not in JUDGES:
+        raise SettingsError(f"共識裁定方式 `{judge}` 尚未提供")
+
     moderator_id: str | None = None
     if "moderator_id" in mode.uses_settings:
         moderator_id = requested.moderator_id or (d.moderator if d.moderator in ids else ids[0])
@@ -40,7 +45,7 @@ def resolve_settings(requested: StartSettings, config: ParticipantsConfig) -> Di
     return DiscussionSettings(
         mode=requested.mode,
         participant_ids=ids,
-        judge=requested.judge or d.judge,
+        judge=judge,
         moderator_id=moderator_id,
         speaking_order=speaking_order,
         max_rounds=requested.max_rounds or d.max_rounds,

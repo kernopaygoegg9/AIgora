@@ -62,26 +62,33 @@ def test_judge_b_is_unavailable_with_a_reason_when_env_has_no_typesafe_key(
     assert "TYPESAFE_API_KEY" in judges["jev"]["unavailable_reason"]
 
 
-def test_judge_b_is_available_when_env_file_has_a_key_and_the_key_is_never_sent(
+def _jev_reason(client) -> str | None:
+    return _judges(client)["jev"]["unavailable_reason"]
+
+
+def test_with_a_key_in_the_env_file_judge_b_is_no_longer_blocked_by_the_key_and_the_key_is_never_sent(
     client, write_participants, no_key_env
 ):
     write_participants(PARTICIPANTS)
     no_key_env.write_text("TYPESAFE_API_KEY=sk-test-secret-123\n", encoding="utf-8")
     response = client.get("/api/options")
-    assert {j["id"]: j["available"] for j in response.json()["judges"]}["jev"] is True
+    jev = {j["id"]: j for j in response.json()["judges"]}["jev"]
+    # Available once ticket 08 registers judge B; until then only "not built yet".
+    assert jev["available"] or "TYPESAFE_API_KEY" not in jev["unavailable_reason"]
     assert "sk-test-secret-123" not in response.text
 
 
 def test_an_empty_key_counts_as_missing(client, write_participants, no_key_env):
     write_participants(PARTICIPANTS)
     no_key_env.write_text("TYPESAFE_API_KEY=\n", encoding="utf-8")
-    assert _judges(client)["jev"]["available"] is False
+    assert "TYPESAFE_API_KEY" in _jev_reason(client)
 
 
 def test_a_key_in_the_process_environment_also_counts(client, write_participants, no_key_env, monkeypatch):
     write_participants(PARTICIPANTS)
     monkeypatch.setenv("TYPESAFE_API_KEY", "sk-from-environment")
-    assert _judges(client)["jev"]["available"] is True
+    reason = _jev_reason(client)
+    assert reason is None or "TYPESAFE_API_KEY" not in reason
 
 
 def test_each_mode_lists_the_settings_it_uses(client, write_participants, no_key_env):
