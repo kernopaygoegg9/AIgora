@@ -9,7 +9,7 @@
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 - [ ] API 測試（Fake Adapter）：送出 `start`（提問）後依序收到 `discussion_started`、`round_started`、各參與者的 `turn_started` / `turn_delta` / `turn_completed`、`round_completed`、`discussion_finished`（outcome = completed）
 - [ ] 同一批次的參與者平行執行（總耗時接近最慢的一個，而不是加總）
