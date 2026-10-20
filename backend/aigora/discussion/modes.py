@@ -138,7 +138,8 @@ class ConsensusMode(DiscussionMode):
         tried.add(result.call.participant_id)
         # A failed moderator call hands over to the next participant (the engine records
         # it); the new moderator retries the call once, unless it has already tried.
-        if result.status != "ok" and view.moderator_id is not None and view.moderator_id not in tried:
+        moderator_call = result.call.purpose in ("draft", "final_result", "no_consensus_summary")
+        if moderator_call and result.status != "ok" and view.moderator_id is not None and view.moderator_id not in tried:
             return ExtraCalls(calls=[ExtraCall(view.moderator_id, result.call.purpose, result.call.instructions)])
         if result.call.purpose == "no_consensus_summary":
             reason = f"到達輪數上限（{view.settings.max_rounds} 輪）仍未取得共識"
