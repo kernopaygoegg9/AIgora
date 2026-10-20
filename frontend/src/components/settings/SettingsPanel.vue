@@ -154,13 +154,15 @@ function startAdding() {
   adding.value = true
 }
 
-// Extra ids: `<template id>-<n>`, matching ^[a-z0-9][a-z0-9_-]{0,63}$ and unused.
+// Extra ids: `<template id>-x<n>`, matching ^[a-z0-9][a-z0-9_-]{0,63}$ and unused here.
+// The backend also rejects ids of disabled participants, which this page never sees, so the
+// `-x<n>` suffix keeps clear of the usual `<name>-2` style of configured ids.
 function newExtraId(template: ParticipantInfo): string {
-  const base = template.id.toLowerCase().replace(/[^a-z0-9_-]/g, '-').replace(/^[^a-z0-9]+/, '').slice(0, 56) || 'extra'
+  const base = template.id.toLowerCase().replace(/[^a-z0-9_-]/g, '-').replace(/^[^a-z0-9]+/, '').slice(0, 54) || 'extra'
   const used = new Set(rows.value.map((r) => r.id))
   let n = 2
-  while (used.has(`${base}-${n}`)) n++
-  return `${base}-${n}`
+  while (used.has(`${base}-x${n}`)) n++
+  return `${base}-x${n}`
 }
 
 function addExtra() {
