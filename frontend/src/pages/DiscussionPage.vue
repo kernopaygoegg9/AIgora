@@ -4,6 +4,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { openDiscussionSocket, type DiscussionSocket } from '../api/discussionSocket'
 import { fetchOptions } from '../api/options'
 import { fetchParticipants } from '../api/participants'
+import DiscussionControls from '../components/discussion/DiscussionControls.vue'
 import DiscussionOutcome from '../components/discussion/DiscussionOutcome.vue'
 import RecordView from '../components/history/RecordView.vue'
 import RoundSection from '../components/discussion/RoundSection.vue'
@@ -84,6 +85,16 @@ function startDiscussion(question: string, settings: StartSettings) {
         :participant-by-id="store.participantById"
         :show-number="store.settings?.mode !== 'ask'"
         :moderator-id="store.moderatorId"
+      />
+      <DiscussionControls
+        :key="store.discussionId ?? ''"
+        :status="store.status"
+        :mode="store.settings?.mode ?? null"
+        :interjections="store.interjections"
+        :outcome="store.outcome"
+        :read-only="store.readOnly"
+        @interject="(text) => socket?.interject(text)"
+        @stop="() => socket?.stop()"
       />
       <DiscussionOutcome :outcome="store.outcome" :result="store.result" :reason="store.finishReason" />
     </div>

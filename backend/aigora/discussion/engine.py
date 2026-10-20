@@ -5,8 +5,8 @@ It owns no rules: what each round asks for and what happens after it come
 from the `DiscussionMode`; how a round is split into batches comes from the
 `SpeakingOrder` (see `interfaces.py` for the flow). Extra calls (moderator
 draft / summary) and judge reports are run and emitted here (ticket 04);
-tickets 06 -> 07 -> 08 extend it (interjections / stop, failure counting and
-removal, judge B confirmations).
+interjections and stop are ticket 06; tickets 07 -> 08 extend it (failure
+counting and removal, judge B confirmations).
 
 The discussion record (`aigora.record.DiscussionRecord`) is the engine's
 single source of state; the read-only `DiscussionView` handed to modes and
@@ -20,6 +20,7 @@ import logging
 import secrets
 import tempfile
 from collections.abc import Awaitable, Callable, Sequence
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -45,13 +46,25 @@ from aigora.discussion.prompt_builder import build_prompt
 from aigora.discussion.store import DiscussionStore
 from aigora.domain import TurnPurpose
 from aigora.participant_info import snapshot_of
-from aigora.record import DiscussionRecord, RecordJudge, RecordRound, RecordTurn
+from aigora.record import DiscussionRecord, RecordInterjection, RecordJudge, RecordRound, RecordTurn
 from aigora.stance import parse_stance
 
 log = logging.getLogger("aigora.engine")
 
 # Receives each server message as a JSON-ready dict, in `seq` order.
 Send = Callable[[dict[str, Any]], Awaitable[None]]
+
+
+STOPPED_REASON = "使用者停止了討論，這次發言已取消"
+
+
+@dataclass
+class _CancelledCall:
+    """A call that was running when the user stopped the discussion."""
+
+    ids: dict[str, Any]  # round / participant_id / purpose
+    started_at: str
+    streamed: list[str]
 
 
 def now_iso() -> str:
@@ -83,6 +96,11 @@ class DiscussionEngine:
         self._participants = {p.id: p for p in participants}
         self._seq = 0
         self._send_lock = asyncio.Lock()
+        self._finishing = False
+        self._main: asyncio.Task[DiscussionRecord] | None = None
+        self._stop_requested = False
+        self._cancelled_calls: list[_CancelledCall] = []
+        self._schedule_order: dict[int, list[str]] = {}  # round -> participant ids in scheduled order
         self.record = DiscussionRecord(
             id=discussion_id or new_discussion_id(),
             question=question,
@@ -102,13 +120,73 @@ class DiscussionEngine:
     # --- running -------------------------------------------------------------
 
     async def run(self) -> DiscussionRecord:
-        """Run to the end. An unexpected error ends the discussion with outcome `error`."""
+        """Run to the end. An unexpected error ends the discussion with outcome `error`.
+
+        The rounds run in their own task so that `stop()` can cancel everything
+        in flight (turns, extra calls, judges); cancelling `run()` itself (the
+        browser went away) cancels it too, without a `discussion_finished`.
+        """
+        self._main = asyncio.create_task(self._run())
         try:
-            return await self._run()
+            return await self._main
+        except asyncio.CancelledError:
+            task = asyncio.current_task()
+            if not self._stop_requested or (task is not None and task.cancelling()):
+                raise
+            await self._finish_stopped()
+            return self.record
         except Exception as exc:  # noqa: BLE001 - reported to the user, saved in the record
             log.exception("discussion %s crashed", self.discussion_id)
             await self._finish(Finish(outcome="error", result=None, reason=f"討論發生錯誤：{exc!r}"))
             return self.record
+
+    async def stop(self) -> None:
+        """The user's stop (停止): cancel every running call, save, and finish as `stopped`."""
+        if self._stop_requested or self._finishing or self._main is None or self._main.done():
+            return
+        self._stop_requested = True
+        self._main.cancel()
+
+    async def _finish_stopped(self) -> None:
+        """After the stop's cancellation: report the cancelled calls, keep the cancelled turns."""
+        for call in self._cancelled_calls:
+            await self._emit(m.TurnFailed, **call.ids, reason=STOPPED_REASON, kind="unknown")
+            if call.ids["purpose"] != "turn":
+                continue  # an unfinished extra call leaves nothing in the record
+            round_ = next(r for r in self.record.rounds if r.number == call.ids["round"])
+            round_.turns.append(
+                RecordTurn(
+                    participant_id=call.ids["participant_id"],
+                    status="failed",
+                    text="".join(call.streamed) or None,
+                    stance=None,
+                    started_at=call.started_at,
+                    ended_at=now_iso(),
+                    error=STOPPED_REASON,
+                )
+            )
+        if self.record.rounds:
+            self._sort_turns(self.record.rounds[-1])
+        await self._finish(Finish(outcome="stopped", result=None, reason="使用者停止了討論"))
+
+    async def interject(self, text: str) -> None:
+        """Queue the user's interjection (插話) for the next round; the running round is not touched.
+
+        Rounds take their prompts' view when they start, so an interjection made
+        while round N runs (or before round N+1 has started) applies to round N+1.
+        """
+        text = text.strip()
+        if not text:
+            await self.report_error("插話內容不能是空白")
+            return
+        if self.record.outcome is not None or self._finishing:
+            await self.report_error("討論已結束，無法插話")
+            return
+        applies_to_round = len(self.record.rounds) + 1
+        self.record.interjections.append(
+            RecordInterjection(text=text, at=now_iso(), applies_to_round=applies_to_round)
+        )
+        await self._emit(m.InterjectionQueued, text=text, applies_to_round=applies_to_round)
 
     async def report_error(self, message: str) -> None:
         """An `error` message for this discussion (e.g. an invalid client message)."""
@@ -141,15 +219,26 @@ class DiscussionEngine:
     async def _run_round(self, number: int) -> None:
         round_ = RecordRound(number=number, turns=[])
         self.record.rounds.append(round_)
+        order = self._schedule_order.setdefault(number, [])
         await self._emit(m.RoundStarted, round=number)
+
+        async def turn(pid: str, view: DiscussionView) -> None:
+            # Kept as soon as it ends, so a stop mid-round keeps the finished turns.
+            round_.turns.append(
+                await self._run_call(pid, number, "turn", self.mode.round_instructions(view, pid), view)
+            )
+
         for batch in self.order.schedule(self.active_participant_ids(), number):
             # Everyone in a batch sees the same view: earlier batches and rounds only.
             view = self.view()
-            calls = [
-                self._run_call(pid, number, "turn", self.mode.round_instructions(view, pid), view)
-                for pid in batch
-            ]
-            round_.turns.extend(await asyncio.gather(*calls))
+            order.extend(batch)
+            await asyncio.gather(*(turn(pid, view) for pid in batch))
+            self._sort_turns(round_)
+
+    def _sort_turns(self, round_: RecordRound) -> None:
+        """Record a round's turns in speaking order, not in the order they finished."""
+        order = self._schedule_order.get(round_.number, [])
+        round_.turns.sort(key=lambda t: order.index(t.participant_id) if t.participant_id in order else len(order))
 
     async def _run_extra_calls(self, number: int, calls: Sequence[ExtraCall]) -> list[ExtraCallResult]:
         """Run the mode's extra calls in parallel; a finished `draft` call becomes the round's draft."""
@@ -185,6 +274,7 @@ class DiscussionEngine:
         await self._emit(m.RoundCompleted, round=number)
 
     async def _finish(self, decision: Finish) -> None:
+        self._finishing = True
         self.record.outcome = decision.outcome
         self.record.result = decision.result
         self.record.finished_at = now_iso()
@@ -205,10 +295,15 @@ class DiscussionEngine:
         participant = self._participants[participant_id]
         ids = {"round": round_number, "participant_id": participant_id, "purpose": purpose}
         started_at = now_iso()
-        await self._emit(m.TurnStarted, **ids)
-
-        prompt = build_prompt(view, participant_id, instructions)
-        text, failure = await self._call_adapter(participant, prompt, round_number, purpose, ids)
+        streamed: list[str] = []
+        try:
+            await self._emit(m.TurnStarted, **ids)
+            prompt = build_prompt(view, participant_id, instructions)
+            text, failure = await self._call_adapter(participant, prompt, round_number, purpose, ids, streamed)
+        except asyncio.CancelledError:
+            if self._stop_requested:
+                self._cancelled_calls.append(_CancelledCall(ids=ids, started_at=started_at, streamed=streamed))
+            raise
 
         if failure is not None:
             kind, reason = failure
@@ -241,10 +336,10 @@ class DiscussionEngine:
         round_number: int,
         purpose: TurnPurpose,
         ids: dict[str, Any],
+        streamed: list[str],
     ) -> tuple[str, tuple[str, str] | None]:
-        """Stream the adapter's events; returns (text so far, (kind, reason) on failure)."""
+        """Stream the adapter's events (collected in `streamed`); returns (text, (kind, reason) on failure)."""
         timeout = self.settings.turn_timeout_seconds
-        streamed: list[str] = []
         with tempfile.TemporaryDirectory(prefix="aigora-turn-", ignore_cleanup_errors=True) as workspace:
             request = TurnRequest(
                 participant=participant,

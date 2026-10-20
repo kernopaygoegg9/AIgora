@@ -48,8 +48,13 @@ def _system_prompt(view: DiscussionView, participant_id: str) -> str:
 
 
 def _history(view: DiscussionView) -> str:
+    """Earlier rounds; the current round's interjections get their own section instead."""
     parts: list[str] = []
+    current = view.current_round
     for round_ in view.rounds:
+        if round_ is not current and round_.interjections:
+            notes = "\n".join(f"- {text}" for text in round_.interjections)
+            parts.append(f"### Notes from the user (from round {round_.number})\n\n{notes}")
         parts.extend(_round_lines(view, round_))
     return "\n\n".join(parts)
 

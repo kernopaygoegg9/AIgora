@@ -32,6 +32,7 @@ Options (all optional):
 | `available` | true | availability check result; when false every call fails as not_available |
 | `unavailable_reason` | "fake: configured unavailable" | reason shown when unavailable |
 | `web_access` | true | the `web_access` capability |
+| `cancel_log` | none | file path; a cancelled call (stop / timeout) appends the participant id as one line |
 
 Generated texts name the participant; generated normal turns end with
 `STANCE: AGREE` from round 2 on and generated confirmations agree, so a
@@ -76,6 +77,7 @@ _DEFAULTS: dict[str, Any] = {
     "available": True,
     "unavailable_reason": "fake: configured unavailable",
     "web_access": True,
+    "cancel_log": None,
 }
 
 
@@ -102,7 +104,7 @@ class FakeAdapter(Adapter):
         for key in ("replies", "drafts", "confirmations"):
             if key in o:
                 _check(_is_str_list(o[key]) and len(o[key]) > 0, f"`{key}` must be a non-empty list of strings")
-        for key in ("final", "summary", "fail_reason", "unavailable_reason"):
+        for key in ("final", "summary", "fail_reason", "unavailable_reason", "cancel_log"):
             if key in o:
                 _check(isinstance(o[key], str), f"`{key}` must be a string")
         for key in ("echo_prompt", "stream", "available", "web_access"):
@@ -140,6 +142,19 @@ class FakeAdapter(Adapter):
 
     async def run_turn(self, request: TurnRequest) -> AsyncIterator[AdapterEvent]:
         o = self._options(request.participant)
+        ended = False
+        try:
+            async for event in self._run_turn(request, o):
+                ended = isinstance(event, (Completed, Failed))
+                yield event
+        except (asyncio.CancelledError, GeneratorExit):
+            # Cancelled (or closed) before the final event: lets tests observe a stop / timeout.
+            if o["cancel_log"] and not ended:
+                with open(o["cancel_log"], "a", encoding="utf-8") as log:
+                    log.write(f"{request.participant.id}\n")
+            raise
+
+    async def _run_turn(self, request: TurnRequest, o: dict[str, Any]) -> AsyncIterator[AdapterEvent]:
         if not o["available"]:
             yield Failed("not_available", o["unavailable_reason"])
             return
