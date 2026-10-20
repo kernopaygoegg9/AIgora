@@ -7,6 +7,7 @@ from aigora.config import ParticipantsConfig
 from aigora.discussion.judges import JUDGES
 from aigora.discussion.modes import MODES
 from aigora.discussion.orders import SPEAKING_ORDERS
+from aigora.env import backend_env
 
 
 class SettingsError(ValueError):
@@ -35,6 +36,10 @@ def resolve_settings(requested: StartSettings, config: ParticipantsConfig) -> Di
     judge = requested.judge or d.judge
     if "judge" in mode.uses_settings and judge not in JUDGES:
         raise SettingsError(f"共識裁定方式 `{judge}` 尚未提供")
+    if "judge" in mode.uses_settings:
+        availability = JUDGES[judge]().availability(backend_env())
+        if not availability.available:
+            raise SettingsError(f"共識裁定方式 `{judge}` 目前不可用：{availability.reason}")
 
     moderator_id: str | None = None
     if "moderator_id" in mode.uses_settings:

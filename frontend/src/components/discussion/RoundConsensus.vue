@@ -1,6 +1,7 @@
 <!-- What happens after a round's turns in a consensus discussion: the judge result
-     (everyone's stance on the previous draft) and the moderator's extra calls
-     (the new consensus draft, or the final summary while it is being written). -->
+     (judge A: everyone's stance on the previous draft; judge B: Jev's probability),
+     judge B's confirmation answers, and the extra calls (the new consensus draft;
+     confirmations / final result / summary while they run or when they fail). -->
 <script setup lang="ts">
 import { computed } from 'vue'
 
@@ -17,6 +18,18 @@ const props = defineProps<{
 }>()
 
 const OUTCOME_LABELS = { reached: '全員同意，取得共識', not_reached: '尚未取得共識', confirm: '需要反問確認' } as const
+const JEV_OUTCOME_LABELS = {
+  reached: '反問全員同意，取得共識',
+  not_reached: '尚未取得共識',
+  confirm: '達到門檻，反問每個參與者',
+} as const
+
+const isJev = computed(() => props.round.judge?.judge === 'jev')
+const outcomeLabel = computed(() => {
+  const judge = props.round.judge
+  if (!judge) return ''
+  return (isJev.value ? JEV_OUTCOME_LABELS : OUTCOME_LABELS)[judge.outcome]
+})
 const PURPOSE_LABELS: Record<TurnPurpose, string> = {
   turn: '發言',
   draft: '共識草案',
@@ -34,6 +47,8 @@ function stanceLabel(stance: Stance | null): string {
 function nameOf(id: string): string {
   return props.participantById(id)?.display_name ?? id
 }
+
+const allAgree = computed(() => (props.round.confirmations ?? []).every((a) => a.agree))
 
 const stances = computed(() =>
   Object.entries(props.round.judge?.detail.stances ?? {}).map(([id, stance]) => ({ id, stance })),
@@ -62,20 +77,44 @@ function callText(call: TurnState): string {
     data-testid="judge-result"
   >
     <header class="block-header">
-      <span class="block-title">第 {{ round.number }} 輪表態</span>
-      <span class="outcome">{{ OUTCOME_LABELS[round.judge.outcome] }}</span>
+      <span class="block-title">第 {{ round.number }} 輪{{ isJev ? ' Jev 判斷' : '表態' }}</span>
+      <span class="outcome">{{ outcomeLabel }}</span>
     </header>
-    <ul class="stances">
+    <ul v-if="stances.length" class="stances">
       <li v-for="s in stances" :key="s.id" class="stance" :class="`stance-${s.stance ?? 'none'}`" data-testid="stance">
         <ParticipantAvatar :avatar="participantById(s.id)?.avatar ?? 'default.png'" :size="18" />
         <span class="stance-name">{{ nameOf(s.id) }}</span>
         <span class="stance-value">{{ stanceLabel(s.stance) }}</span>
       </li>
     </ul>
-    <p v-if="round.judge.detail.probability != null" class="muted">
-      Jev 機率 {{ round.judge.detail.probability.toFixed(2) }}
+    <p v-if="round.judge.detail.probability != null" class="jev-probability" data-testid="jev-probability">
+      Jev 判斷已取得共識的機率 <strong>{{ round.judge.detail.probability.toFixed(2) }}</strong>
       <template v-if="round.judge.detail.threshold != null">（門檻 {{ round.judge.detail.threshold }}）</template>
     </p>
+    <p v-else-if="isJev" class="failure" data-testid="jev-probability">Jev 這輪無法判斷，視為尚未取得共識</p>
+  </section>
+
+  <section v-if="round.confirmations?.length" class="confirmations" :class="{ 'all-agree': allAgree }" data-testid="confirmation-result">
+    <header class="block-header">
+      <span class="block-title">反問確認（第 {{ round.number }} 輪）</span>
+      <span class="outcome">{{ allAgree ? '全員同意已取得共識' : '有參與者不同意' }}</span>
+    </header>
+    <ul class="answers">
+      <li
+        v-for="a in round.confirmations"
+        :key="a.participant_id"
+        class="answer"
+        :class="a.agree ? 'answer-agree' : 'answer-disagree'"
+        data-testid="confirmation-answer"
+      >
+        <div class="answer-head">
+          <ParticipantAvatar :avatar="participantById(a.participant_id)?.avatar ?? 'default.png'" :size="18" />
+          <span class="stance-name">{{ nameOf(a.participant_id) }}</span>
+          <span class="stance-value">{{ a.agree ? '同意' : '不同意' }}</span>
+        </div>
+        <p v-if="a.reason && !a.agree" class="reason">{{ a.reason }}</p>
+      </li>
+    </ul>
   </section>
 
   <article
@@ -88,7 +127,7 @@ function callText(call: TurnState): string {
     <header class="block-header">
       <span class="block-title">{{ PURPOSE_LABELS[call.purpose] }}（第 {{ round.number }} 輪後）</span>
       <ParticipantAvatar :avatar="participantById(call.participantId)?.avatar ?? 'default.png'" :size="18" />
-      <span class="author">主持人 {{ nameOf(call.participantId) }}</span>
+      <span class="author">{{ call.purpose === 'confirmation' ? '' : '主持人 ' }}{{ nameOf(call.participantId) }}</span>
       <span v-if="call.status === 'running'" class="muted">撰寫中…</span>
     </header>
     <p v-if="call.failure" class="failure">失敗：{{ call.failure.reason }}</p>
@@ -108,6 +147,7 @@ function callText(call: TurnState): string {
 
 <style scoped>
 .judge-result,
+.confirmations,
 .extra-call {
   display: flex;
   flex-direction: column;
@@ -125,7 +165,8 @@ function callText(call: TurnState): string {
 .extra-call.status-timeout {
   border-color: #e5a29a;
 }
-.judge-result.outcome-reached {
+.judge-result.outcome-reached,
+.confirmations.all-agree {
   border-color: #9fd3ae;
   background: #f0faf3;
 }
@@ -173,6 +214,37 @@ function callText(call: TurnState): string {
 .stance-none .stance-value {
   background: #fdecea;
   color: #a1260d;
+}
+.answers {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.answer-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.answer-agree .stance-value {
+  background: #dcf3e3;
+  color: #1b7a3a;
+}
+.answer-disagree .stance-value {
+  background: #fdecea;
+  color: #a1260d;
+}
+.reason {
+  margin: 0.15rem 0 0 1.6rem;
+  font-size: 0.9rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.jev-probability {
+  margin: 0;
+  font-size: 0.9rem;
 }
 .author {
   font-size: 0.85rem;

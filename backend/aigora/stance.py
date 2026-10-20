@@ -22,3 +22,11 @@ def parse_stance(text: str) -> Stance | None:
     if match is None:
         return None
     return "AGREE" if match.group(1).upper() == "AGREE" else "DISAGREE"
+
+
+def strip_stance_line(text: str) -> str:
+    """`text` without a trailing stance line (e.g. the reason in a confirmation answer)."""
+    lines = text.rstrip().splitlines()
+    if lines and _STANCE_LINE.fullmatch(lines[-1].strip()):
+        lines = lines[:-1]
+    return "\n".join(lines).strip()
