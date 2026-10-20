@@ -9,9 +9,12 @@ import '../../styles/discussion.css'
 
 import type { ParticipantSnapshot, TurnPurpose } from '../../contracts/messages'
 import type { RoundState, TurnState } from '../../stores/discussion'
-import { agreeLabel, judgeOutcomeLabel, stanceLabel } from '../labels'
+import { judgeOutcomeLabel } from '../labels'
+import ConfirmationList from './ConfirmationList.vue'
+import JevProbability from './JevProbability.vue'
 import { renderMarkdown } from './markdown'
 import ParticipantLabel from './ParticipantLabel.vue'
+import StanceList from './StanceList.vue'
 
 const props = defineProps<{
   round: RoundState
@@ -51,12 +54,9 @@ const draftFromRecord = computed(() =>
 
 const probability = computed(() => props.round.judge?.detail.probability ?? null)
 const threshold = computed(() => props.round.judge?.detail.threshold ?? null)
-const pct = (v: number) => `${Math.min(Math.max(v, 0), 1) * 100}%`
 
 const hasLeft = computed(() => extraCalls.value.length > 0 || draftFromRecord.value !== null)
 const hasRight = computed(() => props.round.judge !== null || (props.round.confirmations?.length ?? 0) > 0)
-
-const STANCE_PILLS = { AGREE: 'pill-ok', DISAGREE: 'pill-bad', none: 'pill-bad' } as const
 
 function callText(call: TurnState): string {
   return call.purpose === 'draft' && call.status === 'ok' && props.round.draft ? props.round.draft : call.text
@@ -112,22 +112,14 @@ function callText(call: TurnState): string {
           <span class="d-block-title">第 {{ round.number }} 輪{{ isJev ? ' Jev 判斷' : '表態' }}</span>
           <span class="d-push pill" :class="round.judge.outcome === 'reached' ? 'pill-ok' : 'pill-warn'">{{ outcomeLabel }}</span>
         </header>
-        <ul v-if="stances.length" class="d-list">
-          <li v-for="s in stances" :key="s.id" class="stance d-list-row" :class="`stance-${s.stance ?? 'none'}`" data-testid="stance">
-            <ParticipantLabel :participant="participantById(s.id)" :id="s.id" :size="18" hide-web />
-            <span class="pill" :class="STANCE_PILLS[s.stance ?? 'none']">{{ stanceLabel(s.stance) }}</span>
-          </li>
-        </ul>
-        <div v-if="probability != null" class="jev-probability" data-testid="jev-probability">
-          <p class="prob-text">
-            已取得共識的機率 <strong>{{ probability.toFixed(2) }}</strong>
-            <template v-if="threshold != null">（門檻 {{ threshold }}）</template>
-          </p>
-          <div class="d-bar" aria-hidden="true">
-            <i class="d-bar-fill" :class="{ 'is-over': threshold != null && probability >= threshold }" :style="{ width: pct(probability) }" />
-            <i v-if="threshold != null" class="d-bar-tick" :style="{ left: pct(threshold) }" />
-          </div>
-        </div>
+        <StanceList v-if="stances.length" :stances="stances" :participant-by-id="participantById" item-testid="stance" />
+        <JevProbability
+          v-if="probability != null"
+          class="jev-probability"
+          data-testid="jev-probability"
+          :probability="probability"
+          :threshold="threshold"
+        />
         <p v-else-if="isJev" class="d-failure" data-testid="jev-probability">Jev 這輪無法判斷，視為未取得共識</p>
       </section>
 
@@ -141,28 +133,8 @@ function callText(call: TurnState): string {
           <span class="d-block-title">反問確認</span>
           <span class="d-push pill" :class="allAgree ? 'pill-ok' : 'pill-warn'">{{ allAgree ? '全員同意已取得共識' : '有參與者不同意' }}</span>
         </header>
-        <ul class="d-list">
-          <li
-            v-for="a in round.confirmations"
-            :key="a.participant_id"
-            class="answer"
-            :class="a.agree ? 'answer-agree' : 'answer-disagree'"
-            data-testid="confirmation-answer"
-          >
-            <div class="d-list-row">
-              <ParticipantLabel :participant="participantById(a.participant_id)" :id="a.participant_id" :size="18" hide-web />
-              <span class="pill" :class="a.agree ? 'pill-ok' : 'pill-bad'">{{ agreeLabel(a.agree) }}</span>
-            </div>
-            <p v-if="a.reason && !a.agree" class="d-reason">{{ a.reason }}</p>
-          </li>
-        </ul>
+        <ConfirmationList :answers="round.confirmations" :participant-by-id="participantById" item-testid="confirmation-answer" />
       </section>
     </div>
   </div>
 </template>
-
-<style scoped>
-.prob-text {
-  margin: 0;
-}
-</style>
