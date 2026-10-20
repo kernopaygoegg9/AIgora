@@ -1,13 +1,15 @@
-<!-- One round: the participants' turns side by side. -->
+<!-- One round: the participants' turns side by side, then (consensus) the judge result and draft. -->
 <script setup lang="ts">
 import type { ParticipantSnapshot } from '../../contracts/messages'
 import type { RoundState } from '../../stores/discussion'
+import RoundConsensus from './RoundConsensus.vue'
 import TurnCard from './TurnCard.vue'
 
 defineProps<{
   round: RoundState
   participantById: (id: string) => ParticipantSnapshot | undefined
   showNumber?: boolean
+  moderatorId?: string | null
 }>()
 </script>
 
@@ -22,6 +24,7 @@ defineProps<{
         :participant="participantById(turn.participantId)"
       />
     </div>
+    <RoundConsensus :round="round" :participant-by-id="participantById" :moderator-id="moderatorId" />
   </section>
 </template>
 
