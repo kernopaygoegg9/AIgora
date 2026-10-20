@@ -1,7 +1,9 @@
 """WebSocket message types (spec "WebSocket 訊息").
 
 FROZEN after ticket 02. Tickets that need a new message type or field must
-stop and report instead of editing this file. The TypeScript twin is
+stop and report instead of editing this file. (ui-redesign ticket 10 deliberately
+added `models` / `extra_participants` to the start settings and the snapshot:
+spec "參與者與模型選擇".) The TypeScript twin is
 `frontend/src/contracts/messages.ts`; `tests/test_ws_messages.py` checks that
 both define the same types and fields.
 
@@ -50,8 +52,22 @@ class _Model(BaseModel):
 # --- shared shapes -------------------------------------------------------------
 
 
+class ExtraParticipant(_Model):
+    """A participant that exists only in one discussion (臨時參與者), copied from the
+    configured participant `template_id` (adapter, display name, avatar, options).
+    `model` null: the template's model. Its `id` also goes into `participant_ids`."""
+
+    id: str
+    template_id: str
+    model: str | None
+
+
 class StartSettings(_Model):
-    """Settings sent with `start`. Omitted (null) fields are filled from `[defaults]`."""
+    """Settings sent with `start`. Omitted (null) fields are filled from `[defaults]`.
+
+    `models`: participant id -> the model to use in this discussion (configured or extra).
+    `extra_participants`: definitions of the extra ids in `participant_ids`.
+    Omitting both behaves exactly like v1."""
 
     mode: ModeId
     participant_ids: list[str] = Field(min_length=1)
@@ -61,10 +77,15 @@ class StartSettings(_Model):
     max_rounds: int | None = Field(default=None, ge=1)
     turn_timeout_seconds: float | None = Field(default=None, gt=0)
     jev_threshold: float | None = Field(default=None, ge=0, le=1)
+    models: dict[str, str] | None = None
+    extra_participants: list[ExtraParticipant] | None = None
 
 
 class DiscussionSettings(_Model):
-    """The full settings snapshot, locked when the discussion starts."""
+    """The full settings snapshot, locked when the discussion starts.
+
+    `models` / `extra_participants` are the resolved requests (trimmed models; only the
+    extra participants that take part); empty in v1 records."""
 
     mode: ModeId
     participant_ids: list[str]
@@ -74,6 +95,8 @@ class DiscussionSettings(_Model):
     max_rounds: int
     turn_timeout_seconds: float
     jev_threshold: float
+    models: dict[str, str] = {}
+    extra_participants: list[ExtraParticipant] = []
 
 
 class Capabilities(_Model):
@@ -82,6 +105,9 @@ class Capabilities(_Model):
 
 
 class ParticipantSnapshot(_Model):
+    """`model`: the model actually used (after `models` overrides); `display_name`: the
+    name used in this discussion (made unique, see `build_participants`)."""
+
     id: str
     display_name: str
     adapter: str
@@ -125,6 +151,7 @@ class DiscussionResult(_Model):
 SHARED_MODELS: dict[str, type[BaseModel]] = {
     model.__name__: model
     for model in (
+        ExtraParticipant,
         StartSettings,
         DiscussionSettings,
         Capabilities,

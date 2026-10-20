@@ -18,7 +18,10 @@ from aigora.api.messages import (
 )
 from aigora.domain import JudgeId, JudgeOutcome, Outcome, Stance, TurnStatus
 
-SCHEMA_VERSION = 1
+# 2 (ui-redesign ticket 10): `settings.models` / `settings.extra_participants`, and
+# `participants[].model` / `.display_name` are the ones actually used. Schema 1 records
+# lack the new settings fields and still load through their defaults.
+SCHEMA_VERSION = 2
 
 
 class _Model(BaseModel):

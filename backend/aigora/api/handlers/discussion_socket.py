@@ -19,7 +19,7 @@ from aigora.discussion.derived import SourceError, derived_engine, load_source
 from aigora.discussion.engine import DiscussionEngine
 from aigora.discussion.modes import get_mode
 from aigora.discussion.orders import get_speaking_order
-from aigora.discussion.settings import SettingsError, resolve_settings
+from aigora.discussion.settings import SettingsError, build_participants, resolve_settings
 from aigora.discussion.store import DiscussionStore
 
 async def _send_error(websocket: WebSocket, message: str) -> None:
@@ -43,8 +43,9 @@ async def _receive_start(websocket: WebSocket) -> m.StartMessage | None:
 def _build_engine(start: m.StartMessage, websocket: WebSocket) -> DiscussionEngine:
     """Raises SettingsError / SourceError / ConfigError when the discussion cannot start.
 
-    With `from_discussion_id` (提問轉共識討論) the question and participants come from
-    that ask, whose answers become round 1; the other settings come from `start`.
+    With `from_discussion_id` (提問轉共識討論) the question and participants (with their
+    models and extra participants) come from that ask, whose answers become round 1;
+    the other settings come from `start`.
     """
     store = DiscussionStore()
     requested = start.settings
@@ -53,12 +54,18 @@ def _build_engine(start: m.StartMessage, websocket: WebSocket) -> DiscussionEngi
         source = load_source(store, start.from_discussion_id)
         if requested.mode != "consensus":
             raise SettingsError("提問只能轉成共識討論")
-        requested = requested.model_copy(update={"participant_ids": list(source.settings.participant_ids)})
+        requested = requested.model_copy(
+            update={
+                "participant_ids": list(source.settings.participant_ids),
+                "models": dict(source.settings.models),
+                "extra_participants": list(source.settings.extra_participants),
+            }
+        )
     config = load_participants(participants_file_path())
     settings = resolve_settings(requested, config)
     common = dict(
         settings=settings,
-        participants=[config.get(pid) for pid in settings.participant_ids],
+        participants=build_participants(settings, config),
         mode=get_mode(settings.mode),
         order=get_speaking_order(settings.speaking_order),
         store=store,

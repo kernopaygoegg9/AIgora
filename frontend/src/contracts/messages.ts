@@ -1,7 +1,9 @@
 // WebSocket message types (spec "WebSocket 訊息").
 //
 // FROZEN after ticket 02. Tickets that need a new message type or field must
-// stop and report instead of editing this file. The Python twin is
+// stop and report instead of editing this file. (ui-redesign ticket 10
+// deliberately added `models` / `extra_participants` to the start settings and
+// the snapshot: spec "參與者與模型選擇".) The Python twin is
 // `backend/aigora/api/messages.py` (read its docstring for the additions
 // beyond the spec table); `backend/tests/test_ws_messages.py` checks that both
 // define the same types and fields, so keep the one-field-per-line layout.
@@ -26,7 +28,22 @@ export type Outcome =
 
 // --- shared shapes --------------------------------------------------------------
 
-/** Settings sent with `start`; omitted / null fields are filled from `[defaults]`. */
+/**
+ * A participant that exists only in one discussion (臨時參與者), copied from the
+ * configured participant `template_id`. `model` null: the template's model.
+ * Its `id` (`^[a-z0-9][a-z0-9_-]{0,63}$`) also goes into `participant_ids`.
+ */
+export interface ExtraParticipant {
+  id: string
+  template_id: string
+  model: string | null
+}
+
+/**
+ * Settings sent with `start`; omitted / null fields are filled from `[defaults]`.
+ * `models`: participant id -> model for this discussion. `extra_participants`:
+ * definitions of the extra ids in `participant_ids`. Omitting both behaves like v1.
+ */
 export interface StartSettings {
   mode: ModeId
   participant_ids: string[]
@@ -36,9 +53,15 @@ export interface StartSettings {
   max_rounds?: number | null
   turn_timeout_seconds?: number | null
   jev_threshold?: number | null
+  models?: Record<string, string> | null
+  extra_participants?: ExtraParticipant[] | null
 }
 
-/** Full settings snapshot, locked when the discussion starts. */
+/**
+ * Full settings snapshot, locked when the discussion starts. The server always sends
+ * `models` / `extra_participants` (empty in v1 records); optional here so code and
+ * tests written against v1 still type-check.
+ */
 export interface DiscussionSettings {
   mode: ModeId
   participant_ids: string[]
@@ -48,6 +71,8 @@ export interface DiscussionSettings {
   max_rounds: number
   turn_timeout_seconds: number
   jev_threshold: number
+  models?: Record<string, string>
+  extra_participants?: ExtraParticipant[]
 }
 
 export interface Capabilities {
@@ -55,6 +80,7 @@ export interface Capabilities {
   streaming: boolean
 }
 
+/** `model`: the model actually used; `display_name`: unique within the discussion. */
 export interface ParticipantSnapshot {
   id: string
   display_name: string
