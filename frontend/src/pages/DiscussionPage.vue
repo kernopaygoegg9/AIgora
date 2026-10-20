@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 
 import { openDiscussionSocket, type DiscussionSocket } from '../api/discussionSocket'
 import { fetchParticipants } from '../api/participants'
 import AskForm from '../components/discussion/AskForm.vue'
+import RecordView from '../components/history/RecordView.vue'
 import RoundSection from '../components/discussion/RoundSection.vue'
 import type { ParticipantInfo } from '../contracts/http'
 import { useDiscussionStore } from '../stores/discussion'
@@ -20,14 +21,16 @@ let socket: DiscussionSocket | null = null
 const STATUS_LABELS = { idle: '', running: '討論中', finished: '已結束' } as const
 const statusLabel = computed(() => STATUS_LABELS[store.status])
 
-onMounted(async () => {
-  if (props.id) return
+// The router reuses this instance between `/` and `/discussions/:id`, so load whenever
+// the live view is shown, not only on mount.
+watch(() => props.id, async (id) => {
+  if (id || participants.value.length) return
   try {
     participants.value = await fetchParticipants()
   } catch (err) {
     loadError.value = err instanceof Error ? err.message : String(err)
   }
-})
+}, { immediate: true })
 
 onBeforeUnmount(() => socket?.close())
 
@@ -47,7 +50,9 @@ function startAsk(question: string, participantIds: string[]) {
 </script>
 
 <template>
-  <section class="discussion-page" data-testid="discussion-page">
+  <!-- Past discussion: read-only record view only (ticket 09). -->
+  <RecordView v-if="id" :id="id" />
+  <section v-else class="discussion-page" data-testid="discussion-page">
     <h1 class="page-title">討論</h1>
 
     <template v-if="!id">
