@@ -18,4 +18,6 @@
 - [ ] 手動驗收：Claude、Codex、Gemini 三個參與者完成一場共識討論並輸出結果；未取得共識時能輸出各方立場與分歧點
 - [ ] 手動驗收：在 `participants.toml` 加入 Ollama 參與者即可參加討論，不需改其他程式
 
+## Comments
+
 - 2026-10-20 (orchestrator): Asset swap, non-real test suites, AGENTS.md, and code-review fixes merged into `aigora-v1`. Per user decision, real-AI canary/smoke runs, the full real-AI consensus run, and human acceptance are left to the user — checklist in `.scratch/aigora-v1/acceptance.md`.

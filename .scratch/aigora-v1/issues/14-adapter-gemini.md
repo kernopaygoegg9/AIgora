@@ -20,4 +20,6 @@
 - [ ] Smoke 測試：問一個簡短問題，收到回覆且能解析表態；能用網路搜尋並附網址
 - [ ] 真實 CLI 的測試以標記區隔，預設不執行
 
+## Comments
+
 - 2026-10-20 (orchestrator): Adapter code + unit tests merged into `aigora-v1`. Gemini CLI install was blocked by the permission system; user must run `npm install -g @google/gemini-cli`, log in, then run the real_ai tests per `.scratch/aigora-v1/acceptance.md`. Resolve after canary/smoke pass.
