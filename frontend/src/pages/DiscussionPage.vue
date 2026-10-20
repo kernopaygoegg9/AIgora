@@ -14,7 +14,7 @@ import SettingsPanel from '../components/settings/SettingsPanel.vue'
 import type { OptionsResponse, ParticipantInfo } from '../contracts/http'
 import type { StartSettings } from '../contracts/messages'
 import { useDiscussionStore } from '../stores/discussion'
-import { outcomeLabel } from '../components/labels'
+import { outcomeLabel, outcomePillClass } from '../components/labels'
 import '../styles/discussion.css'
 
 // `id` is set when viewing a past discussion read-only (route `discussion-record`, ticket 09).
@@ -30,12 +30,6 @@ let socket: DiscussionSocket | null = null
 const STATUS_LABELS = { idle: '', running: '討論中', finished: '已結束' } as const
 const statusLabel = computed(() => STATUS_LABELS[store.status])
 const currentRound = computed(() => store.rounds[store.rounds.length - 1]?.number ?? null)
-const OUTCOME_PILLS: Record<string, string> = {
-  consensus: 'pill-ok',
-  no_consensus: 'pill-warn',
-  completed: '',
-}
-const outcomePill = computed(() => (store.outcome ? (OUTCOME_PILLS[store.outcome] ?? 'pill-bad') : ''))
 
 // Stop is pressed once; a new discussion gets a fresh button.
 const stopping = ref(false)
@@ -106,7 +100,7 @@ function startDiscussion(question: string, settings: StartSettings, fromDiscussi
             <span data-testid="discussion-status">{{ statusLabel }}</span>
             <span v-if="store.status === 'running' && currentRound && store.settings?.mode !== 'ask'"> · 第 {{ currentRound }} 輪</span>
           </span>
-          <span v-if="store.outcome" class="pill" :class="outcomePill">{{ outcomeLabel(store.outcome) }}</span>
+          <span v-if="store.outcome" class="pill" :class="outcomePillClass(store.outcome)">{{ outcomeLabel(store.outcome) }}</span>
           <button
             v-if="store.status === 'running' && !store.readOnly"
             type="button"

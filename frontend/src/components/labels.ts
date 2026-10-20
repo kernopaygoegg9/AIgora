@@ -1,6 +1,7 @@
 // Display labels shared by the live discussion page and the read-only record views.
 // Wording follows GLOSSARY.md (討論模式、共識裁定方式、表態、取得共識).
 import type { JudgeId, JudgeOutcome, ModeId, Outcome, Stance } from '../contracts/messages'
+import type { TurnStateStatus } from '../stores/discussion'
 
 export const MODE_LABELS: Record<ModeId, string> = { ask: '提問', consensus: '共識討論' }
 
@@ -38,6 +39,36 @@ export const OUTCOME_LABELS: Record<Outcome, string> = {
 
 export function outcomeLabel(outcome: Outcome | null): string {
   return outcome ? OUTCOME_LABELS[outcome] : '進行中'
+}
+
+/** Pill colour for a discussion's outcome (null = still in progress). */
+export function outcomePillClass(outcome: Outcome | null): string {
+  switch (outcome) {
+    case null:
+      return 'pill-accent'
+    case 'consensus':
+      return 'pill-ok'
+    case 'no_consensus':
+      return 'pill-warn'
+    case 'completed':
+      return ''
+    default:
+      return 'pill-bad'
+  }
+}
+
+/** A turn's status (turn cards, the inspector's participant list). */
+export const TURN_STATUS_LABELS: Record<TurnStateStatus, string> = {
+  running: '回覆中',
+  ok: '完成',
+  failed: '失敗',
+  timeout: '逾時',
+}
+export const TURN_STATUS_PILLS: Record<TurnStateStatus, string> = {
+  running: 'pill-accent',
+  ok: '',
+  failed: 'pill-bad',
+  timeout: 'pill-bad',
 }
 
 /** A participant's 表態 on the draft; none (failed turn / no valid stance line) counts as disagreeing. */
