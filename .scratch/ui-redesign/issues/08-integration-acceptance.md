@@ -2,7 +2,7 @@
 
 Status: ready-for-human
 
-Blocked by: 01, 02, 03, 04, 05, 06, 07
+Blocked by: 01, 02, 03, 04, 05, 06, 07, 09, 10, 11
 
 **What to build:** 確認整個新介面一致、沒有遺漏，交給使用者目視驗收。
 
@@ -14,6 +14,9 @@ Blocked by: 01, 02, 03, 04, 05, 06, 07
 - [ ] 用 Fake Adapter 跑完提問、提問轉共識討論、共識討論（方式 A）、未取得共識、停止、失敗與移出，亮色與暗色各截一張圖
 - [ ] 1280px、1024px、760px 三種寬度都沒有破版，頁面沒有水平捲軸
 - [ ] 兩種主題下文字與背景的對比都符合 WCAG AA（一般文字 4.5:1）
+- [ ] 後端測試全部通過（`uv run --directory backend pytest`）；有安裝的 CLI 跑一次 `list_models` 的 `real_ai` 測試
+- [ ] 用 Fake Adapter 跑一場「同一個 Adapter 不同模型＋臨時參與者當主持人」的共識討論，打開它的唯讀紀錄，並打開一份 schema 1 的舊紀錄
+- [ ] 使用者用真實參與者跑一場「2 個 Claude（不同模型）＋1 個 Codex」的討論
 - [ ] 使用者用真實參與者（Claude、Codex，加上選用的 Ollama）跑一場討論並目視驗收
 
 ## Comments

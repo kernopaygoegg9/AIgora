@@ -15,6 +15,7 @@ Blocked by: 04
 - 修改 `frontend/src/components/discussion/DiscussionInspector.vue`：從 store 推導資料，傳給這兩個元件。
 - 不修改 store、契約、router、後端，也不修改 `DiscussionInspector.vue` 以外屬於 04 的元件。
 
+- [ ] 參與者的每一列用 04 的 `ParticipantLabel`（含模型標籤）；表態追蹤表頭的頭像有 `title`，內容是「名稱（模型）」，讓同一個 Adapter 的參與者分得出來
 - [ ] 參與者：主持人 pill 跟著 `moderatorId`（主持人接手後會更新）；狀態取最新一輪該參與者的發言狀態；已移出的整列淡化並顯示「已移出」
 - [ ] 表態追蹤只在共識討論中、從第 2 輪開始出現：同意是綠點，不同意是紅點，失敗或未表態是紅色空心，該輪沒有發言就空白；下方有圖例
 - [ ] 提問模式不顯示表態追蹤

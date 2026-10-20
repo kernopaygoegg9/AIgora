@@ -17,6 +17,7 @@ Blocked by: 03
 **Scope:**
 - 修改 `frontend/src/pages/DiscussionPage.vue` 與 `frontend/src/components/discussion/` 底下所有現有元件（`RoundSection`、`TurnCard`、`RoundConsensus`、`RoundNotices`、`DiscussionControls`、`DiscussionOutcome`、`StartConsensusButton`、`ParticipantAvatar`）。
 - 新增 `frontend/src/components/discussion/DiscussionInspector.vue`。這張 ticket 只放「插話佇列」與「設定（已鎖定）」兩個區塊，參與者與表態追蹤由 05 加入。
+- 新增 `frontend/src/components/discussion/ParticipantLabel.vue`：頭像＋名稱＋無上網 pill＋模型標籤（`ParticipantSnapshot.model`，`null` 時顯示「預設模型」），見 spec「參與者與模型選擇」的介面段落。發言卡片、裁定與反問的表態清單都改用它；05、07、11 也會重用。`model` 欄位本來就在快照裡，所以不需要等後端的 ticket。
 - 新增 `frontend/src/styles/discussion.css`：發言卡片、草案、裁定、通知、結果區塊的共用 class，07 的唯讀紀錄會重用。
 - 刻意修改的測試：`settings-panel.spec.ts` 中「討論進行中設定鎖定」的斷言，改成檢查檢視器的 `settings-locked` 可見、設定表單不可見。
 - 不修改 store、契約、router、後端、`SettingsPanel.vue`。
@@ -25,6 +26,7 @@ Blocked by: 03
 - [ ] 頂部列：`discussion-question`（單行省略，hover 顯示全文）、`discussion-status` pill；進行中顯示「停止」，提問結束後顯示「開始共識討論」與提示文字（保留 `start-consensus`）
 - [ ] 結果區塊（`discussion-result`、`discussion-stopped`）在第 1 輪之前；取得共識、未取得共識、參與者不足各用不同的色系
 - [ ] 發言卡片依 spec 呈現各種狀態；串流文字結尾有游標；表態用等寬字顯示
+- [ ] 發言卡片、表態清單、反問回答的名稱旁都有模型標籤（`ParticipantLabel`）；`turn-card` 的 `hasText: <顯示名稱>` 篩選仍然可以用
 - [ ] 輪下方有通知（`participant-removed`、`moderator-changed`），以及「草案／額外呼叫｜裁定結果」兩格（`consensus-draft`、`extra-call`、`judge-result`、`stance`、`jev-probability`、`confirmation-result`、`confirmation-answer`）；Jev 機率有橫條與門檻刻度
 - [ ] 底部固定插話列：label「插話」、按鈕「送出插話」，只在討論中、非唯讀、非提問時出現
 - [ ] 檢視器：插話佇列（`interjection`，標示「第 N 輪起生效」）、設定（已鎖定）（`settings-locked`）

@@ -10,6 +10,7 @@ Blocked by: 01
 - 修改 `frontend/src/components/settings/SettingsPanel.vue`（可以拆出 `components/settings/` 底下的子元件）。
 - 刻意修改的測試：所有 E2E 檔案中的 `getByRole('button', { name: '送出' })` 改成 `{ name: '開始討論' }`，涉及 `ask-to-consensus`、`ask`、`consensus-jev`、`consensus`、`failure-handling`、`history`、`interject-and-stop`、`settings-panel` 這些 spec。這張 ticket 只能改這一種斷言。
 - 不修改 `DiscussionPage.vue`（屬於 04）；不修改 store、契約、router、後端。
+- 模型欄位與「新增參與者」屬於 11，這張不做；但參與者表格的欄位排列要留出「模型」欄的位置（在 Adapter／模型與能力之間）。
 
 - [ ] `SettingsPanel` 自己排成舞台＋檢視器（300px）兩欄；1024px 以下檢視器移到下方
 - [ ] 問題 `<textarea>` 的 label 是「問題」，Ctrl+Enter 送出

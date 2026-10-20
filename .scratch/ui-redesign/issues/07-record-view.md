@@ -19,6 +19,7 @@ Blocked by: 05
 - 刻意修改的測試：`history.spec.ts` 中「沒有 button／textbox」的斷言，改成只檢查 `record-view` 範圍內（側欄有主題切換按鈕）。
 - 不修改 store、契約、router、後端、`DiscussionPage.vue`。
 
+- [ ] 名稱旁的模型標籤沿用 04 的 `ParticipantLabel`（資料來自紀錄的 `participants[].model`）；schema 1 的舊紀錄同樣顯示
 - [ ] 所有 `record-*` testid 以及 `turn-card`、`turn-text` 都保留在語意相同的元素上
 - [ ] 頂部列有問題、結果 pill、「唯讀紀錄」標示；`record-derived-from` 顯示在附近
 - [ ] 結果區塊（`record-result`）在第 1 輪之前，配色和討論中畫面一致
