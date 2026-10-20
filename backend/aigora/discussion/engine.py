@@ -3,9 +3,10 @@
 The engine owns execution: rounds, parallel turns, timeouts, events, saving.
 It owns no rules: what each round asks for and what happens after it come
 from the `DiscussionMode`; how a round is split into batches comes from the
-`SpeakingOrder` (see `interfaces.py` for the flow). Ticket chain 04 -> 06 ->
-07 -> 08 extends this file (extra calls, interjections / stop, failure
-counting and removal, judge B).
+`SpeakingOrder` (see `interfaces.py` for the flow). Extra calls (moderator
+draft / summary) and judge reports are run and emitted here (ticket 04);
+tickets 06 -> 07 -> 08 extend it (interjections / stop, failure counting and
+removal, judge B confirmations).
 
 The discussion record (`aigora.record.DiscussionRecord`) is the engine's
 single source of state; the read-only `DiscussionView` handed to modes and
@@ -32,6 +33,8 @@ from aigora.discussion.interfaces import (
     ContinueRound,
     DiscussionMode,
     DiscussionView,
+    ExtraCall,
+    ExtraCallResult,
     ExtraCalls,
     Finish,
     RoundView,
@@ -42,7 +45,7 @@ from aigora.discussion.prompt_builder import build_prompt
 from aigora.discussion.store import DiscussionStore
 from aigora.domain import TurnPurpose
 from aigora.participant_info import snapshot_of
-from aigora.record import DiscussionRecord, RecordRound, RecordTurn
+from aigora.record import DiscussionRecord, RecordJudge, RecordRound, RecordTurn
 from aigora.stance import parse_stance
 
 log = logging.getLogger("aigora.engine")
@@ -125,9 +128,10 @@ class DiscussionEngine:
             await self._run_round(round_number)
             decision = await self.mode.after_round(self.view(), None)
             while isinstance(decision, ExtraCalls):
-                # Ticket 04: run `decision.calls` with `_run_call` in parallel, record drafts,
-                # then ask the mode again with the results.
-                raise NotImplementedError("extra calls are added by the consensus mode (ticket 04)")
+                await self._apply_reports(round_number, decision)
+                results = await self._run_extra_calls(round_number, decision.calls)
+                decision = await self.mode.after_round(self.view(), results)
+            await self._apply_reports(round_number, decision)
             await self._complete_round(round_number)
             if isinstance(decision, Finish):
                 await self._finish(decision)
@@ -146,6 +150,35 @@ class DiscussionEngine:
                 for pid in batch
             ]
             round_.turns.extend(await asyncio.gather(*calls))
+
+    async def _run_extra_calls(self, number: int, calls: Sequence[ExtraCall]) -> list[ExtraCallResult]:
+        """Run the mode's extra calls in parallel; a finished `draft` call becomes the round's draft."""
+        view = self.view()
+        turns = await asyncio.gather(
+            *(self._run_call(c.participant_id, number, c.purpose, c.instructions, view) for c in calls)
+        )
+        round_ = self.record.rounds[-1]
+        results: list[ExtraCallResult] = []
+        for call, turn in zip(calls, turns):
+            if call.purpose == "draft" and turn.status == "ok" and turn.text:
+                round_.draft = turn.text
+                await self._emit(m.DraftCreated, round=number, text=turn.text)
+            results.append(
+                ExtraCallResult(call=call, status=turn.status, text=turn.text, stance=turn.stance, error=turn.error)
+            )
+        return results
+
+    async def _apply_reports(self, number: int, decision: ContinueRound | ExtraCalls | Finish) -> None:
+        """Store and emit the judge / confirmation reports a decision carries."""
+        round_ = self.record.rounds[-1]
+        if decision.judge_report is not None:
+            r = decision.judge_report
+            round_.judge = RecordJudge(judge=r.judge, outcome=r.outcome, detail=r.detail)
+            await self._emit(m.JudgeResult, round=number, judge=r.judge, outcome=r.outcome, detail=r.detail)
+        if decision.confirmation_report is not None:
+            answers = list(decision.confirmation_report.answers)
+            round_.confirmations = answers
+            await self._emit(m.ConfirmationResult, round=number, answers=answers)
 
     async def _complete_round(self, number: int) -> None:
         self.store.save(self.record)

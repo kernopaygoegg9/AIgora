@@ -4,8 +4,10 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { openDiscussionSocket, type DiscussionSocket } from '../api/discussionSocket'
 import { fetchParticipants } from '../api/participants'
 import AskForm from '../components/discussion/AskForm.vue'
+import DiscussionOutcome from '../components/discussion/DiscussionOutcome.vue'
 import RoundSection from '../components/discussion/RoundSection.vue'
 import type { ParticipantInfo } from '../contracts/http'
+import type { ModeId } from '../contracts/messages'
 import { useDiscussionStore } from '../stores/discussion'
 
 // `id` is set when viewing a past discussion read-only (route `discussion-record`, ticket 09).
@@ -31,7 +33,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => socket?.close())
 
-function startAsk(question: string, participantIds: string[]) {
+function startAsk(question: string, participantIds: string[], mode: ModeId = 'ask') {
   socket?.close()
   store.reset()
   connectionLost.value = false
@@ -42,7 +44,7 @@ function startAsk(question: string, participantIds: string[]) {
     },
   )
   socket = current
-  current.start(question, { mode: 'ask', participant_ids: participantIds })
+  current.start(question, { mode, participant_ids: participantIds })
 }
 </script>
 
@@ -69,7 +71,9 @@ function startAsk(question: string, participantIds: string[]) {
         :round="round"
         :participant-by-id="store.participantById"
         :show-number="store.settings?.mode !== 'ask'"
+        :moderator-id="store.moderatorId"
       />
+      <DiscussionOutcome :outcome="store.outcome" :result="store.result" :reason="store.finishReason" />
     </div>
   </section>
 </template>
