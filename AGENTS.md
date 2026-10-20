@@ -20,7 +20,7 @@ Run from the repo root unless noted.
   - gemini: `uv run --directory backend pytest -m real_ai tests/test_gemini_adapter_real.py` (needs `npm install -g @google/gemini-cli` + login)
   - ollama: `uv run --directory backend pytest -m real_ai tests/test_ollama_real.py` (local, no quota; env `AIGORA_TEST_OLLAMA_MODEL`, `AIGORA_TEST_OLLAMA_URL`; default = first installed model at http://127.0.0.1:11434)
   - Jev (TypeSafe): `uv run --directory backend pytest -m real_ai tests/test_jev_client.py` (skipped without `TYPESAFE_API_KEY` in `.env`)
-- Frontend type check: `npm run typecheck --prefix frontend`. Production build: `npm run build --prefix frontend` (output `frontend/dist`, served by the backend). Delete `frontend/dist` before running backend tests (ticket 19: one test fails while it exists).
+- Frontend type check: `npm run typecheck --prefix frontend`. Production build: `npm run build --prefix frontend` (output `frontend/dist`, served by the backend).
 - E2E: `cd frontend && npx playwright test`. Starts its own backend (:8766, Fake Adapter participants from `frontend/e2e/participants.e2e.toml`) and Vite (:5174); two runs at the same time collide on those ports.
 - Assets: app icon / favicons in `assets/brand/` (Vite `publicDir`, served at the site root); avatars in `assets/avatars/`, served by `GET /api/avatars/{file}` (unknown file -> `default.png`).
 - Backend env vars: `TYPESAFE_API_KEY`, `AIGORA_HOST`, `AIGORA_PORT`, `AIGORA_PARTICIPANTS_FILE`, `AIGORA_DATA_DIR`, `AIGORA_ENV_FILE` (path of the `.env` to read; default repo-root `.env`).
