@@ -78,3 +78,12 @@ async def test_smoke_short_question_gets_a_reply_with_a_parseable_stance(ollama_
     assert isinstance(events[-1], Completed)
     assert any(isinstance(e, Delta) for e in events)
     assert parse_stance(events[-1].text) == "AGREE"
+
+
+async def test_model_list_includes_the_installed_test_model(ollama_participant):
+    choices = await get_adapter("ollama").list_models(ollama_participant)
+
+    assert choices.error is None, choices.error
+    assert ollama_participant.model in {m.id for m in choices.models} | {
+        m.id.removesuffix(":latest") for m in choices.models}
+    assert choices.free_text is False

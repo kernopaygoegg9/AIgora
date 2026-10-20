@@ -21,15 +21,23 @@ class _Model(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class ModelOption(_Model):
+    id: str  # what to send as the participant's model
+    label: str
+
+
 class ParticipantInfo(_Model):
     id: str
     display_name: str
     adapter: str
-    model: str | None
+    model: str | None  # as in participants.toml; null = adapter default
     avatar: str  # filename under /api/avatars/
     capabilities: Capabilities
     available: bool
     unavailable_reason: str | None = None
+    models: list[ModelOption]  # models it can switch to; empty when unavailable or not listable
+    free_text_model: bool  # may a model name outside `models` be typed in?
+    models_error: str | None = None  # why `models` could not be loaded
 
 
 class ModeOption(_Model):
@@ -81,6 +89,7 @@ class DiscussionSummary(_Model):
 HTTP_MODELS: dict[str, type[BaseModel]] = {
     m.__name__: m
     for m in (
+        ModelOption,
         ParticipantInfo,
         ModeOption,
         JudgeOption,

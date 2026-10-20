@@ -67,3 +67,12 @@ async def test_smoke_web_search_returns_a_url(adapter, tmp_path):
         "version. Reply in two sentences and include the URL you found."
     ), tmp_path)
     assert re.search(r"https?://\S+", text)
+
+
+async def test_model_list_comes_from_the_cli_catalog_without_spending_quota(adapter):
+    choices = await adapter.list_models(PARTICIPANT)
+
+    assert choices.error is None, choices.error
+    assert choices.models, "codex debug models listed no visible model"
+    assert all(m.id and m.label for m in choices.models)
+    assert choices.free_text is True

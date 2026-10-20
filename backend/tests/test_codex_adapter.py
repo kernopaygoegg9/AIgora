@@ -7,7 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from aigora.adapters.base import Completed, Delta, Failed, TurnRequest
+from aigora.adapters import codex
+from aigora.adapters.base import Completed, Delta, Failed, ModelOption, TurnRequest
 from aigora.adapters.codex import CodexAdapter
 from aigora.config import ParticipantConfig
 
@@ -225,3 +226,56 @@ def test_registry_returns_the_codex_adapter():
     from aigora.adapters.base import get_adapter
 
     assert isinstance(get_adapter("codex"), CodexAdapter)
+
+
+
+def catalog_entry(slug: str, priority: int, visibility: str = "list") -> dict:
+    return {"slug": slug, "display_name": slug.upper(), "visibility": visibility, "priority": priority,
+            "supported_in_api": True}
+
+
+async def test_model_list_is_the_listed_catalog_models_by_priority_and_allows_free_text(fake_cli):
+    catalog = {"models": [catalog_entry("gpt-b", 5), catalog_entry("gpt-hidden", 1, visibility="hide"),
+                          catalog_entry("gpt-a", 2)]}
+    adapter = fake_cli(debug_models={"stdout": json.dumps(catalog)})
+
+    choices = await adapter.list_models(participant())
+
+    assert choices.models == (ModelOption("gpt-a", "GPT-A"), ModelOption("gpt-b", "GPT-B"))
+    assert choices.free_text is True
+    assert choices.error is None
+
+
+async def test_model_list_reports_why_when_the_cli_is_missing(monkeypatch):
+    monkeypatch.setattr(codex.shutil, "which", lambda name: None)
+
+    choices = await CodexAdapter().list_models(participant())
+
+    assert choices.models == ()
+    assert choices.free_text is True
+    assert "not found" in choices.error
+
+
+@pytest.mark.parametrize(
+    ("debug_models", "expected"),
+    [
+        ({"stdout": "not json"}, "unreadable"),
+        ({"stdout": json.dumps({"no_models": []})}, "unreadable"),
+        ({"stderr": "config.toml: key with no value", "exit": 1}, "config.toml: key with no value"),
+    ],
+)
+async def test_model_list_reports_unreadable_output_and_cli_errors(fake_cli, debug_models, expected):
+    choices = await fake_cli(debug_models=debug_models).list_models(participant())
+
+    assert choices.models == ()
+    assert expected in choices.error
+
+
+async def test_model_list_gives_up_after_the_timeout(fake_cli, monkeypatch):
+    monkeypatch.setattr(codex, "_MODELS_TIMEOUT_SECONDS", 0.5)
+    adapter = fake_cli(debug_models={"hang": True})
+
+    choices = await asyncio.wait_for(adapter.list_models(participant()), timeout=10)
+
+    assert choices.models == ()
+    assert "did not answer" in choices.error
