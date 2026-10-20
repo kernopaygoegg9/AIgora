@@ -109,12 +109,15 @@ test('the chosen settings are sent with start and the panel locks while the disc
   await p.getByRole('button', { name: '開始討論' }).click()
 
   await expect(page.getByTestId('discussion-status')).toHaveText('討論中')
-  await expect(p.getByTestId('settings-locked')).toBeVisible()
+  // ui-redesign 04: the locked settings show in the inspector; the form is hidden (still
+  // mounted and disabled, so the inputs survive).
+  await expect(page.getByTestId('discussion-inspector').getByTestId('settings-locked')).toBeVisible()
+  await expect(p).toBeHidden()
   await expect(p.getByLabel('問題')).toBeDisabled()
-  await expect(p.getByRole('radio', { name: '共識討論' })).toBeDisabled()
-  await expect(p.getByRole('checkbox', { name: 'Fake A' })).toBeDisabled()
+  await expect(p.getByRole('radio', { name: '共識討論', includeHidden: true })).toBeDisabled()
+  await expect(p.getByRole('checkbox', { name: 'Fake A', includeHidden: true })).toBeDisabled()
   await expect(p.getByLabel('逾時（秒）')).toBeDisabled()
-  await expect(p.getByRole('button', { name: '開始討論' })).toBeDisabled()
+  await expect(p.getByRole('button', { name: '開始討論', includeHidden: true })).toBeDisabled()
 
   const start = JSON.parse(sent.find((s) => s.includes('"start"'))!)
   expect(start.settings).toEqual({
@@ -129,4 +132,10 @@ test('the chosen settings are sent with start and the panel locks while the disc
   })
   await expect(p.getByTestId('settings-locked')).toHaveCount(0)
   await expect(p.getByLabel('問題')).toBeEnabled()
+
+  // Back to the settings page: the previous inputs are still there.
+  await page.getByRole('link', { name: '討論', exact: true }).click()
+  await expect(p).toBeVisible()
+  await expect(p.getByLabel('問題')).toHaveValue('Lock me?')
+  await expect(p.getByLabel('逾時（秒）')).toHaveValue('120')
 })

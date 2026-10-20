@@ -5,6 +5,7 @@ import { openDiscussionSocket, type DiscussionSocket } from '../api/discussionSo
 import { fetchOptions } from '../api/options'
 import { fetchParticipants } from '../api/participants'
 import DiscussionControls from '../components/discussion/DiscussionControls.vue'
+import DiscussionInspector from '../components/discussion/DiscussionInspector.vue'
 import DiscussionOutcome from '../components/discussion/DiscussionOutcome.vue'
 import RecordView from '../components/history/RecordView.vue'
 import RoundSection from '../components/discussion/RoundSection.vue'
@@ -13,6 +14,8 @@ import SettingsPanel from '../components/settings/SettingsPanel.vue'
 import type { OptionsResponse, ParticipantInfo } from '../contracts/http'
 import type { StartSettings } from '../contracts/messages'
 import { useDiscussionStore } from '../stores/discussion'
+import { outcomeLabel } from '../components/labels'
+import '../styles/discussion.css'
 
 // `id` is set when viewing a past discussion read-only (route `discussion-record`, ticket 09).
 const props = defineProps<{ id?: string }>()
@@ -26,10 +29,27 @@ let socket: DiscussionSocket | null = null
 
 const STATUS_LABELS = { idle: '', running: '討論中', finished: '已結束' } as const
 const statusLabel = computed(() => STATUS_LABELS[store.status])
+const currentRound = computed(() => store.rounds[store.rounds.length - 1]?.number ?? null)
+const OUTCOME_PILLS: Record<string, string> = {
+  consensus: 'pill-ok',
+  no_consensus: 'pill-warn',
+  completed: '',
+}
+const outcomePill = computed(() => (store.outcome ? (OUTCOME_PILLS[store.outcome] ?? 'pill-bad') : ''))
+
+// Stop is pressed once; a new discussion gets a fresh button.
+const stopping = ref(false)
+function stop() {
+  stopping.value = true
+  socket?.stop()
+}
 
 // The router reuses this instance between `/` and `/discussions/:id`, so load whenever
 // the live view is shown, not only on mount.
 watch(() => props.id, async (id) => {
+  // Coming back to the live view after a discussion finished (it is in the history now):
+  // start from the settings again. A running discussion keeps showing.
+  if (!id && store.status === 'finished') store.reset()
   if (id || participants.value.length) return
   try {
     ;[participants.value, options.value] = await Promise.all([fetchParticipants(), fetchOptions()])
@@ -46,6 +66,7 @@ function startDiscussion(question: string, settings: StartSettings, fromDiscussi
   socket?.close()
   store.reset()
   connectionLost.value = false
+  stopping.value = false
   const current = openDiscussionSocket(
     (msg) => store.applyMessage(msg),
     () => {
@@ -61,89 +82,131 @@ function startDiscussion(question: string, settings: StartSettings, fromDiscussi
   <!-- Past discussion: read-only record view only (ticket 09). -->
   <RecordView v-if="id" :id="id" />
   <section v-else class="discussion-page" data-testid="discussion-page">
-    <h1 class="page-title">討論</h1>
-
-    <template v-if="!id">
-      <p v-if="loadError" class="error">{{ loadError }}</p>
+    <!-- Settings stay mounted while a discussion runs, so the inputs survive (ui-redesign 04). -->
+    <div v-show="store.status === 'idle'" class="setup">
+      <h1 class="page-title">新討論</h1>
+      <p v-if="loadError" class="error-bar">{{ loadError }}</p>
+      <p v-for="(message, i) in store.status === 'idle' ? store.errors : []" :key="i" class="error-bar" data-testid="discussion-error">{{ message }}</p>
       <SettingsPanel
         :participants="participants"
         :options="options"
         :locked="store.status === 'running'"
         @submit="startDiscussion"
       />
-    </template>
-
-    <p v-for="(message, i) in store.errors" :key="i" class="error" data-testid="discussion-error">{{ message }}</p>
-    <p v-if="connectionLost" class="error">與後端的連線中斷</p>
+    </div>
 
     <div v-if="store.status !== 'idle'" class="discussion">
-      <header class="discussion-header">
-        <h2 class="question" data-testid="discussion-question">{{ store.question }}</h2>
-        <span class="discussion-status" data-testid="discussion-status">{{ statusLabel }}</span>
-      </header>
-      <RoundSection
-        v-for="round in store.rounds"
-        :key="round.number"
-        :round="round"
-        :participant-by-id="store.participantById"
-        :show-number="store.settings?.mode !== 'ask'"
-        :moderator-id="store.moderatorId"
-        :removed="store.removed.filter((r) => r.round === round.number)"
-        :moderator-changes="store.moderatorChanges.filter((c) => c.round === round.number)"
-      />
-      <DiscussionControls
-        :key="store.discussionId ?? ''"
-        :status="store.status"
-        :mode="store.settings?.mode ?? null"
-        :interjections="store.interjections"
-        :outcome="store.outcome"
-        :read-only="store.readOnly"
-        @interject="(text) => socket?.interject(text)"
-        @stop="() => socket?.stop()"
-      />
-      <DiscussionOutcome :outcome="store.outcome" :result="store.result" :reason="store.finishReason" />
-      <StartConsensusButton
-        :discussion-id="store.discussionId"
+      <div class="stage">
+        <header class="topbar">
+          <h1 class="question" data-testid="discussion-question" :title="store.question">{{ store.question }}</h1>
+          <span class="pill" :class="{ 'pill-accent': store.status === 'running' }">
+            <span v-if="store.status === 'running'" aria-hidden="true">●</span>
+            <span data-testid="discussion-status">{{ statusLabel }}</span>
+            <span v-if="store.status === 'running' && currentRound && store.settings?.mode !== 'ask'"> · 第 {{ currentRound }} 輪</span>
+          </span>
+          <span v-if="store.outcome" class="pill" :class="outcomePill">{{ outcomeLabel(store.outcome) }}</span>
+          <button
+            v-if="store.status === 'running' && !store.readOnly"
+            type="button"
+            class="btn btn-danger"
+            :disabled="stopping"
+            @click="stop"
+          >
+            <span aria-hidden="true">■ </span>停止
+          </button>
+          <StartConsensusButton
+            :discussion-id="store.discussionId"
+            :settings="store.settings"
+            :outcome="store.outcome"
+            :options="options"
+            @start="(settings, fromId) => startDiscussion(store.question, settings, fromId)"
+          />
+        </header>
+
+        <p v-for="(message, i) in store.errors" :key="i" class="error-bar" data-testid="discussion-error">{{ message }}</p>
+        <p v-if="connectionLost" class="error-bar">與後端的連線中斷</p>
+
+        <DiscussionOutcome :outcome="store.outcome" :result="store.result" :reason="store.finishReason" />
+        <RoundSection
+          v-for="round in store.rounds"
+          :key="round.number"
+          :round="round"
+          :participant-by-id="store.participantById"
+          :show-number="store.settings?.mode !== 'ask'"
+          :moderator-id="store.moderatorId"
+          :removed="store.removed.filter((r) => r.round === round.number)"
+          :moderator-changes="store.moderatorChanges.filter((c) => c.round === round.number)"
+        />
+        <DiscussionControls
+          :key="store.discussionId ?? ''"
+          :status="store.status"
+          :mode="store.settings?.mode ?? null"
+          :read-only="store.readOnly"
+          @interject="(text) => socket?.interject(text)"
+        />
+      </div>
+      <DiscussionInspector
         :settings="store.settings"
-        :outcome="store.outcome"
         :options="options"
-        @start="(settings, fromId) => startDiscussion(store.question, settings, fromId)"
+        :interjections="store.interjections"
+        :participant-by-id="store.participantById"
       />
     </div>
   </section>
 </template>
 
 <style scoped>
-.discussion-page {
+.setup {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--space-4);
 }
 .page-title {
-  font-size: 1.25rem;
-  margin: 0;
+  font-size: var(--fs-lg);
+  font-weight: 600;
 }
 .discussion {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--inspector-width);
+  gap: var(--space-4);
+  align-items: start;
+}
+.stage {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--space-4);
+  min-width: 0;
 }
-.discussion-header {
+.topbar {
   display: flex;
-  align-items: baseline;
-  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2) 10px;
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--line);
 }
 .question {
-  font-size: 1.1rem;
+  flex: 1 1 12rem;
+  min-width: 0;
   margin: 0;
-  white-space: pre-wrap;
+  font-size: var(--fs-md);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.discussion-status {
-  font-size: 0.85rem;
-  color: #6b7280;
-}
-.error {
-  color: #a1260d;
+.error-bar {
   margin: 0;
+  padding: 8px 12px;
+  color: var(--bad);
+  background: var(--bad-bg);
+  border: 1px solid var(--bad-line);
+  border-radius: var(--radius);
+  overflow-wrap: anywhere;
+}
+@media (max-width: 1023px) {
+  .discussion {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 </style>
