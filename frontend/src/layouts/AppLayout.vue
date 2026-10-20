@@ -17,17 +17,6 @@
   </div>
 </template>
 
-<style>
-:root {
-  font-family: system-ui, -apple-system, 'Segoe UI', 'Noto Sans TC', sans-serif;
-  color: #1f2328;
-  background: #f6f7f9;
-}
-body {
-  margin: 0;
-}
-</style>
-
 <style scoped>
 .app-layout {
   min-height: 100vh;

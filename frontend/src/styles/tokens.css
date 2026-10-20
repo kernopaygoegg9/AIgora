@@ -1,0 +1,128 @@
+/*
+  Design tokens (ui-redesign spec "設計 token 與主題"). HOT FILE (owner: ui-redesign ticket 01).
+
+  Dark is the default; light applies when the system prefers it, unless the user forced a
+  theme with <html data-theme="light|dark"> (see composables/useTheme.ts).
+  The light block appears twice because CSS cannot share one block between the media query
+  and the attribute selector; keep both copies identical.
+*/
+
+:root {
+  color-scheme: dark;
+
+  --bg: #0e1116;
+  --panel: #151a21;
+  --panel-2: #1b212a;
+  --line: #262e39;
+  --text: #e6e9ee;
+  --text-2: #cfd5dd; /* body text inside cards */
+  --muted: #8b95a3;
+
+  --accent: #7c9cff;
+  --on-accent: #0b1020;
+  --accent-bg: #161d33;
+  --accent-line: #33427a;
+
+  --ok: #3ecf8e;
+  --ok-bg: #0f2a20;
+  --ok-line: #1f5a41;
+
+  --bad: #ff6b6b;
+  --bad-bg: #2a1517;
+  --bad-line: #5a2a2a;
+
+  --warn: #f5b84b;
+  --warn-bg: #2a2210;
+  --warn-line: #6b5222;
+
+  --shadow: 0 6px 24px rgb(0 0 0 / 0.35);
+
+  /* Not colour: identical in both themes. */
+  --font: 'Segoe UI', 'Noto Sans TC', 'Microsoft JhengHei', system-ui, sans-serif;
+  --font-mono: Consolas, 'Cascadia Mono', ui-monospace, monospace;
+
+  --fs-xs: 11px;
+  --fs-sm: 12.5px;
+  --fs-base: 13.5px;
+  --fs-md: 15px;
+  --fs-lg: 17px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+
+  --radius-sm: 6px;
+  --radius: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-pill: 999px;
+
+  --sidebar-width: 232px;
+  --inspector-width: 300px;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) {
+    color-scheme: light;
+
+    --bg: #f5f6f8;
+    --panel: #ffffff;
+    --panel-2: #eef1f5;
+    --line: #dde2e9;
+    --text: #1c2230;
+    --text-2: #2b3242;
+    --muted: #626d7f;
+
+    --accent: #3d63dd;
+    --on-accent: #ffffff;
+    --accent-bg: #eef2ff;
+    --accent-line: #b8c7f5;
+
+    --ok: #13854f;
+    --ok-bg: #effaf4;
+    --ok-line: #a9dcc2;
+
+    --bad: #c9302c;
+    --bad-bg: #fff4f3;
+    --bad-line: #f0c9c6;
+
+    --warn: #9a6100;
+    --warn-bg: #fff8ea;
+    --warn-line: #ecd29f;
+
+    --shadow: 0 6px 24px rgb(20 30 60 / 0.12);
+  }
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --bg: #f5f6f8;
+  --panel: #ffffff;
+  --panel-2: #eef1f5;
+  --line: #dde2e9;
+  --text: #1c2230;
+  --text-2: #2b3242;
+  --muted: #626d7f;
+
+  --accent: #3d63dd;
+  --on-accent: #ffffff;
+  --accent-bg: #eef2ff;
+  --accent-line: #b8c7f5;
+
+  --ok: #13854f;
+  --ok-bg: #effaf4;
+  --ok-line: #a9dcc2;
+
+  --bad: #c9302c;
+  --bad-bg: #fff4f3;
+  --bad-line: #f0c9c6;
+
+  --warn: #9a6100;
+  --warn-bg: #fff8ea;
+  --warn-line: #ecd29f;
+
+  --shadow: 0 6px 24px rgb(20 30 60 / 0.12);
+}
