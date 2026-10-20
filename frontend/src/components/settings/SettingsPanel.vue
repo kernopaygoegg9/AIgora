@@ -2,6 +2,7 @@
   設定面板: question + per-discussion settings. Defaults come from `/api/options`
   (participants.toml `[defaults]`); only the fields the chosen mode uses are shown
   and sent. `locked` (the discussion is running) disables everything.
+  Laid out as stage (question, mode, participants) + inspector (other settings, start).
   Emits `submit` with the question and the `start` settings.
 -->
 <script setup lang="ts">
@@ -98,220 +99,395 @@ function submit() {
   }
   emit('submit', question.value.trim(), settings)
 }
+
+function orderLabel(name: string, implemented: boolean): string {
+  return implemented ? name : `${name}（尚未提供）`
+}
 </script>
 
 <template>
   <form class="settings-panel" data-testid="settings-panel" @submit.prevent="submit">
-    <p v-if="locked" class="locked" data-testid="settings-locked">討論進行中，設定已鎖定</p>
+    <fieldset class="layout" :disabled="locked">
+      <!-- Stage: the question, the mode and who takes part. -->
+      <div class="stage">
+        <p v-if="locked" class="locked" data-testid="settings-locked">討論進行中，設定已鎖定</p>
 
-    <fieldset class="all" :disabled="locked">
-      <label class="field-label" for="question-input">問題</label>
-      <textarea
-        id="question-input"
-        v-model="question"
-        class="question-input"
-        rows="3"
-        placeholder="輸入要問參與者的問題"
-        @keydown.enter.ctrl.prevent="submit"
-      />
+        <label class="visually-hidden" for="question-input">問題</label>
+        <textarea
+          id="question-input"
+          v-model="question"
+          class="question-input"
+          rows="4"
+          placeholder="輸入要問參與者的問題（Ctrl+Enter 開始討論）"
+          @keydown.enter.ctrl.prevent="submit"
+        />
 
-      <fieldset v-if="options" class="group">
-        <legend>討論模式</legend>
-        <label v-for="m in options.modes" :key="m.id" class="choice">
-          <input v-model="mode" type="radio" name="mode" :value="m.id" />
-          <span>{{ m.name }}</span>
-        </label>
-      </fieldset>
+        <fieldset v-if="options" class="mode-row">
+          <legend class="row-label">討論模式</legend>
+          <div class="segmented">
+            <label v-for="m in options.modes" :key="m.id" class="segment" :class="{ on: mode === m.id }">
+              <input v-model="mode" type="radio" name="mode" :value="m.id" />
+              <span>{{ m.name }}</span>
+            </label>
+          </div>
+        </fieldset>
 
-      <fieldset class="group">
-        <legend>參與者</legend>
-        <p v-if="participants.length === 0" class="muted">沒有可用的參與者（請檢查 participants.toml）</p>
-        <label
-          v-for="p in participants"
-          :key="p.id"
-          class="choice"
-          :class="{ unavailable: !p.available }"
-          data-testid="participant-option"
-          :title="p.available ? undefined : (p.unavailable_reason ?? '不可用')"
-        >
-          <input v-model="selected" type="checkbox" :value="p.id" :disabled="!p.available" />
-          <ParticipantAvatar :avatar="p.avatar" :size="20" />
-          <span>{{ p.display_name }}</span>
-          <span v-if="!p.capabilities.web_access" class="badge">無上網</span>
-          <span v-if="!p.available" class="badge badge-warn">不可用：{{ p.unavailable_reason ?? '原因不明' }}</span>
-        </label>
-        <p v-if="tooFewParticipants && participants.length > 0" class="hint" data-testid="participants-hint">
-          請選擇至少 {{ MIN_PARTICIPANTS }} 個參與者
-        </p>
-      </fieldset>
-
-      <fieldset v-if="options && uses.has('judge')" class="group" data-testid="judge-options">
-        <legend>共識裁定方式</legend>
-        <label
-          v-for="j in options.judges"
-          :key="j.id"
-          class="choice"
-          :class="{ unavailable: !j.available }"
-          data-testid="judge-option"
-        >
-          <input v-model="judge" type="radio" name="judge" :value="j.id" :disabled="!j.available" />
-          <span>{{ j.name }}</span>
-          <span v-if="!j.available" class="badge badge-warn">不可用：{{ j.unavailable_reason ?? '原因不明' }}</span>
-        </label>
-      </fieldset>
-
-      <div v-if="options" class="row">
-        <span v-if="uses.has('moderator_id')" class="inline">
-          <label for="moderator-select">主持人</label>
-          <select
-            id="moderator-select"
-            v-model="moderatorId"
-            @change="moderatorPicked = true"
-            :disabled="moderatorChoices.length === 0"
-          >
-            <option v-for="p in moderatorChoices" :key="p.id" :value="p.id">
-              {{ p.display_name }}
-            </option>
-          </select>
-        </span>
-
-        <span v-if="uses.has('speaking_order')" class="inline">
-          <label for="speaking-order-select">發言順序</label>
-          <select id="speaking-order-select" v-model="speakingOrder">
-            <option v-for="o in options.speaking_orders" :key="o.id" :value="o.id" :disabled="!o.implemented">
-              {{ o.implemented ? o.name : `${o.name}（尚未提供）` }}
-            </option>
-          </select>
-        </span>
-
-        <span v-if="uses.has('max_rounds')" class="inline">
-          <label for="max-rounds-input">輪數上限</label>
-          <input id="max-rounds-input" v-model.number="maxRounds" type="number" min="1" step="1" class="number" />
-        </span>
-
-        <span v-if="uses.has('turn_timeout_seconds')" class="inline">
-          <label for="turn-timeout-input">逾時（秒）</label>
-          <input id="turn-timeout-input" v-model.number="turnTimeout" type="number" min="1" step="1" class="number" />
-        </span>
-
-        <span v-if="uses.has('judge') && uses.has('jev_threshold') && judge === 'jev'" class="inline">
-          <label for="jev-threshold-input">Jev 門檻</label>
-          <input
-            id="jev-threshold-input"
-            v-model.number="jevThreshold"
-            type="number"
-            min="0"
-            max="1"
-            step="0.05"
-            class="number"
-          />
-        </span>
+        <fieldset class="participants">
+          <legend class="section-label">參與者</legend>
+          <p v-if="participants.length === 0" class="muted">沒有可用的參與者（請檢查 participants.toml）</p>
+          <table v-else class="participant-table">
+            <thead>
+              <tr>
+                <th scope="col">參與者</th>
+                <th scope="col">Adapter · 模型</th>
+                <th scope="col">能力</th>
+                <th scope="col">狀態</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="p in participants"
+                :key="p.id"
+                :class="{ unavailable: !p.available, chosen: selected.includes(p.id) }"
+                data-testid="participant-option"
+                :title="p.available ? undefined : (p.unavailable_reason ?? '不可用')"
+              >
+                <td>
+                  <label class="participant-name">
+                    <input v-model="selected" type="checkbox" :value="p.id" :disabled="!p.available" />
+                    <ParticipantAvatar :avatar="p.avatar" :size="22" />
+                    <span>{{ p.display_name }}</span>
+                  </label>
+                </td>
+                <td class="muted">{{ p.adapter }} · {{ p.model ?? 'Adapter 預設' }}</td>
+                <td>
+                  <span v-if="p.capabilities.web_access" class="pill">可上網</span>
+                  <span v-else class="pill pill-warn">無上網</span>
+                </td>
+                <td>
+                  <span v-if="p.available" class="pill pill-ok">可用</span>
+                  <span v-else class="pill pill-bad reason">不可用：{{ p.unavailable_reason ?? '原因不明' }}</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <p v-if="tooFewParticipants && participants.length > 0" class="hint" data-testid="participants-hint">
+            請選擇至少 {{ MIN_PARTICIPANTS }} 個參與者
+          </p>
+        </fieldset>
       </div>
 
-      <button type="submit" class="submit" :disabled="!canSubmit">送出</button>
+      <!-- Inspector: the rest of this discussion's settings, and start. -->
+      <aside class="inspector">
+        <section v-if="options && uses.has('judge')" class="section" data-testid="judge-options">
+          <h3 class="section-title">共識裁定方式</h3>
+          <label
+            v-for="j in options.judges"
+            :key="j.id"
+            class="judge"
+            :class="{ on: judge === j.id, unavailable: !j.available }"
+            data-testid="judge-option"
+          >
+            <input v-model="judge" type="radio" name="judge" :value="j.id" :disabled="!j.available" />
+            <span class="judge-text">
+              <span>{{ j.name }}</span>
+              <small v-if="!j.available">不可用：{{ j.unavailable_reason ?? '原因不明' }}</small>
+            </span>
+          </label>
+        </section>
+
+        <section v-if="options" class="section">
+          <h3 class="section-title">討論設定</h3>
+          <div class="fields">
+            <div v-if="uses.has('moderator_id')" class="field wide">
+              <label for="moderator-select">主持人</label>
+              <select
+                id="moderator-select"
+                v-model="moderatorId"
+                @change="moderatorPicked = true"
+                :disabled="moderatorChoices.length === 0"
+              >
+                <option v-for="p in moderatorChoices" :key="p.id" :value="p.id">
+                  {{ p.display_name }}
+                </option>
+              </select>
+            </div>
+
+            <div v-if="uses.has('speaking_order')" class="field wide">
+              <label for="speaking-order-select">發言順序</label>
+              <select id="speaking-order-select" v-model="speakingOrder">
+                <option v-for="o in options.speaking_orders" :key="o.id" :value="o.id" :disabled="!o.implemented">
+                  {{ orderLabel(o.name, o.implemented) }}
+                </option>
+              </select>
+            </div>
+
+            <div v-if="uses.has('max_rounds')" class="field">
+              <label for="max-rounds-input">輪數上限</label>
+              <input id="max-rounds-input" v-model.number="maxRounds" type="number" min="1" step="1" />
+            </div>
+
+            <div v-if="uses.has('turn_timeout_seconds')" class="field">
+              <label for="turn-timeout-input">逾時（秒）</label>
+              <input id="turn-timeout-input" v-model.number="turnTimeout" type="number" min="1" step="1" />
+            </div>
+
+            <div v-if="uses.has('judge') && uses.has('jev_threshold') && judge === 'jev'" class="field">
+              <label for="jev-threshold-input">Jev 門檻</label>
+              <input id="jev-threshold-input" v-model.number="jevThreshold" type="number" min="0" max="1" step="0.05" />
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <button type="submit" class="btn btn-primary submit" :disabled="!canSubmit">開始討論</button>
+          <p class="submit-note muted">已選 {{ selectedIds.length }} 個參與者 · 預設值來自 participants.toml</p>
+        </section>
+      </aside>
     </fieldset>
   </form>
 </template>
 
 <style scoped>
-.settings-panel {
-  max-width: 60rem;
-}
-.all {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+fieldset {
   border: none;
   margin: 0;
   padding: 0;
   min-width: 0;
 }
-.field-label {
-  font-weight: 600;
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--inspector-width);
+  gap: var(--space-4);
+  align-items: start;
 }
-.question-input {
-  font: inherit;
-  padding: 0.5rem;
-  border: 1px solid #c4cad1;
-  border-radius: 6px;
-  resize: vertical;
-}
-.group {
+.stage {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 1rem;
-  border: 1px solid #d8dde3;
-  border-radius: 6px;
-  padding: 0.5rem 0.75rem;
-}
-.choice {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  cursor: pointer;
-}
-.choice.unavailable {
-  color: #8a9097;
-  cursor: not-allowed;
-}
-.row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 1.25rem;
-}
-.inline {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-.inline select,
-.number {
-  font: inherit;
-  padding: 0.2rem 0.4rem;
-  border: 1px solid #c4cad1;
-  border-radius: 6px;
-}
-.number {
-  width: 6rem;
-}
-.badge {
-  font-size: 0.75rem;
-  padding: 0 0.4rem;
-  border-radius: 999px;
-  background: #e8ebef;
-  color: #4a5159;
-}
-.badge-warn {
-  background: #fdecea;
-  color: #a1260d;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
 }
 .locked {
-  margin: 0 0 0.5rem;
-  font-size: 0.85rem;
-  color: #6b7280;
+  font-size: var(--fs-sm);
+  color: var(--muted);
 }
-.submit {
-  align-self: flex-start;
-  font: inherit;
-  padding: 0.4rem 1.2rem;
-  border: none;
-  border-radius: 6px;
-  background: #2f6feb;
-  color: #fff;
+.question-input {
+  width: 100%;
+  min-height: 110px;
+  padding: var(--space-3);
+  font-size: var(--fs-md);
+  line-height: 1.6;
+  background: var(--panel);
+  border-radius: var(--radius-lg);
+  resize: vertical;
+}
+
+/* Mode: a segmented control over native radios. Each radio covers its whole segment
+   (transparent), so clicks and tests hit the input itself. */
+.mode-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.row-label {
+  float: left;
+  padding: 0;
+  margin-right: var(--space-3);
+  color: var(--muted);
+}
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--panel);
+}
+.segment {
+  position: relative;
+  padding: 6px 16px;
   cursor: pointer;
 }
-.submit:disabled {
-  background: #a9bde6;
+.segment + .segment {
+  border-left: 1px solid var(--line);
+}
+.segment input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.segment.on {
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+.segment:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.section-label {
+  padding: 0;
+  margin-bottom: var(--space-2);
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.participant-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.participant-table th,
+.participant-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: middle;
+}
+.participant-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.participant-table th {
+  font-weight: normal;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: var(--panel-2);
+}
+.participant-table tbody tr:hover {
+  background: var(--panel-2);
+}
+.participant-table tr.chosen {
+  background: var(--accent-bg);
+}
+.participant-table tr.unavailable td {
+  color: var(--muted);
+}
+.participant-table tr.unavailable .participant-name {
   cursor: not-allowed;
 }
-.hint {
-  flex-basis: 100%;
-  margin: 0;
-  font-size: 0.85rem;
-  color: #a1260d;
+.participant-name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  font-weight: 500;
 }
-.muted {
-  color: #6b7280;
-  margin: 0;
+.reason {
+  white-space: normal;
+}
+.hint {
+  margin-top: var(--space-2);
+  font-size: var(--fs-sm);
+  color: var(--bad);
+}
+
+/* Inspector column. */
+.inspector {
+  position: sticky;
+  top: var(--space-4);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+.section {
+  padding: var(--space-3) 14px;
+  border-bottom: 1px solid var(--line);
+}
+.section:last-child {
+  border-bottom: none;
+}
+.section-title {
+  margin-bottom: var(--space-2);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.judge {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.judge:last-child {
+  margin-bottom: 0;
+}
+.judge input {
+  margin-top: 3px;
+}
+.judge.on {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+}
+.judge.unavailable {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.judge-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.judge-text small {
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  overflow-wrap: anywhere;
+}
+.fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--fs-sm);
+  min-width: 0;
+}
+.field.wide {
+  grid-column: 1 / -1;
+}
+.field label {
+  color: var(--muted);
+}
+.submit {
+  width: 100%;
+  padding: 9px 14px;
+}
+.submit-note {
+  margin-top: var(--space-2);
+  font-size: var(--fs-xs);
+}
+
+@media (max-width: 1023px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .inspector {
+    position: static;
+  }
+}
+@media (max-width: 640px) {
+  .participant-table th:nth-child(2),
+  .participant-table td:nth-child(2) {
+    display: none;
+  }
 }
 </style>

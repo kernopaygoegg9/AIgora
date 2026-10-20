@@ -9,7 +9,7 @@ test('asking a question streams every participant side by side and finishes', as
   await page.getByRole('checkbox', { name: 'Fake A' }).check()
   await page.getByRole('checkbox', { name: 'Fake B' }).check()
   await page.getByRole('checkbox', { name: 'Fake Slow' }).check()
-  await page.getByRole('button', { name: '送出' }).click()
+  await page.getByRole('button', { name: '開始討論' }).click()
 
   const card = (name: string) => page.getByTestId('turn-card').filter({ hasText: name })
 

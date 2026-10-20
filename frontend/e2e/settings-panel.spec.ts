@@ -83,7 +83,7 @@ test('starting needs at least 2 participants', async ({ page }) => {
   await page.goto('/')
   const p = panel(page)
   await p.getByLabel('問題').fill('Alone?')
-  const submit = p.getByRole('button', { name: '送出' })
+  const submit = p.getByRole('button', { name: '開始討論' })
   await expect(submit).toBeDisabled()
   await expect(p.getByTestId('participants-hint')).toHaveText('請選擇至少 2 個參與者')
 
@@ -106,7 +106,7 @@ test('the chosen settings are sent with start and the panel locks while the disc
   await p.getByRole('checkbox', { name: 'Fake Slow' }).check()
   await p.getByRole('checkbox', { name: 'Fake B' }).check()
   await p.getByLabel('逾時（秒）').fill('120')
-  await p.getByRole('button', { name: '送出' }).click()
+  await p.getByRole('button', { name: '開始討論' }).click()
 
   await expect(page.getByTestId('discussion-status')).toHaveText('討論中')
   await expect(p.getByTestId('settings-locked')).toBeVisible()
@@ -114,7 +114,7 @@ test('the chosen settings are sent with start and the panel locks while the disc
   await expect(p.getByRole('radio', { name: '共識討論' })).toBeDisabled()
   await expect(p.getByRole('checkbox', { name: 'Fake A' })).toBeDisabled()
   await expect(p.getByLabel('逾時（秒）')).toBeDisabled()
-  await expect(p.getByRole('button', { name: '送出' })).toBeDisabled()
+  await expect(p.getByRole('button', { name: '開始討論' })).toBeDisabled()
 
   const start = JSON.parse(sent.find((s) => s.includes('"start"'))!)
   expect(start.settings).toEqual({

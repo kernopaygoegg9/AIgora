@@ -12,7 +12,7 @@ test('a finished ask can be found in the history and opened read-only', async ({
   await page.getByLabel('問題').fill(question)
   await page.getByRole('checkbox', { name: 'Fake A' }).check()
   await page.getByRole('checkbox', { name: 'Fake B' }).check()
-  await page.getByRole('button', { name: '送出' }).click()
+  await page.getByRole('button', { name: '開始討論' }).click()
   await expect(page.getByTestId('discussion-status')).toHaveText('已結束')
 
   await page.getByRole('link', { name: '歷史' }).click()
@@ -34,7 +34,7 @@ test('a finished ask can be found in the history and opened read-only', async ({
 
   // Read-only: nothing to continue the discussion with.
   await expect(page.getByRole('textbox')).toHaveCount(0)
-  await expect(page.getByRole('button', { name: '送出' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '開始討論' })).toHaveCount(0)
 
   // Back to a live discussion straight from the record: the ask form works again.
   await page.getByRole('link', { name: '討論', exact: true }).click()
