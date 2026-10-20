@@ -1,6 +1,6 @@
 # 10: 後端：開始設定的模型覆寫、臨時參與者與紀錄
 
-Status: ready-for-agent
+Status: resolved
 
 Blocked by: —
 
@@ -18,18 +18,28 @@ Blocked by: —
 - 測試：`backend/tests/` 中新增 `test_participant_models.py`（或擴充現有的測試），加一份 schema 1 的紀錄 fixture。
 - 不修改討論引擎（`engine.py`）、Adapter、`http_models.py`、`http.ts`（屬於 09），也不修改前端元件或 store。
 
-- [ ] 不帶新欄位的 `start` 行為和 v1 完全相同（既有測試不改就能通過）
-- [ ] `models` 覆寫使 Fake Adapter 收到該模型（`TurnRequest.participant.model`），`discussion_started` 與紀錄中的 `participants[].model` 是覆寫後的值
-- [ ] 臨時參與者可以發言、可以當主持人、可以在主持人接手時被選中；它的 id 出現在 `participant_ids` 與紀錄中
-- [ ] 不合法的情況回傳 `error`，而且不會開始討論：
+- [x] 不帶新欄位的 `start` 行為和 v1 完全相同（既有測試不改就能通過）
+- [x] `models` 覆寫使 Fake Adapter 收到該模型（`TurnRequest.participant.model`），`discussion_started` 與紀錄中的 `participants[].model` 是覆寫後的值
+- [x] 臨時參與者可以發言、可以當主持人、可以在主持人接手時被選中；它的 id 出現在 `participant_ids` 與紀錄中
+- [x] 不合法的情況回傳 `error`，而且不會開始討論：
   - id 格式錯誤、和設定檔參與者或其他臨時參與者重複
   - 範本不存在或已停用
   - 模型字串不合法
   - `models` 的鍵不在 `participant_ids` 中
   - `participant_ids` 中的臨時參與者 id 沒有對應的 `extra_participants`
-- [ ] 顯示名稱不重複：重複時加上「（模型）」或「（預設模型）」，仍然重複時依順序加「 2」「 3」；prompt 中參與者互相稱呼用的是改過的名稱
-- [ ] 提問轉共識討論後，參與者、模型、臨時參與者和原本的提問相同；範本已經從設定檔移除時回傳 `error`
-- [ ] schema 1 的紀錄 fixture 能被 `GET /api/discussions/{id}` 讀取，也出現在 `GET /api/discussions` 中
-- [ ] `tests/test_ws_messages.py` 的契約比對通過；`uv run --directory backend pytest`、`npm run typecheck --prefix frontend` 與全部 E2E 通過
+- [x] 顯示名稱不重複：重複時加上「（模型）」或「（預設模型）」，仍然重複時依順序加「 2」「 3」；prompt 中參與者互相稱呼用的是改過的名稱
+- [x] 提問轉共識討論後，參與者、模型、臨時參與者和原本的提問相同；範本已經從設定檔移除時回傳 `error`
+- [x] schema 1 的紀錄 fixture 能被 `GET /api/discussions/{id}` 讀取，也出現在 `GET /api/discussions` 中
+- [x] `tests/test_ws_messages.py` 的契約比對通過；`uv run --directory backend pytest`、`npm run typecheck --prefix frontend` 與全部 E2E 通過
 
 ## Comments
+
+- 實作：`resolve_settings` 驗證新欄位（模型字串去掉頭尾空白後記下）；`build_participants` 在 `backend/aigora/discussion/settings.py`；`_build_engine` 與提問轉共識討論都改用它。範本已移除時由 `resolve_settings` 回傳「範本不存在或已停用」的 `error`。
+- 契約補充（給 ticket 11）：
+  - `models` 也可以指定臨時參與者的模型，優先於 `ExtraParticipant.model`。
+  - `extra_participants` 中不在 `participant_ids` 的定義仍會驗證，但不寫進快照（快照只記參與這場討論的臨時參與者）。
+  - 臨時參與者 id 不能和任何設定檔參與者重複，包含已停用的。
+- TS 的 `DiscussionSettings.models` / `extra_participants` 標成可省略（`?`）：既有 E2E spec（`discussion-store.spec.ts`、`history.spec.ts`）自己建 `DiscussionSettings` 物件，而 spec 檔不在本 ticket 可改範圍；後端一律會送這兩欄。
+- 刻意修改的測試：`tests/test_ask.py`、`tests/test_history.py` 中 `schema_version == 1` 的斷言改成 `2`（`SCHEMA_VERSION` 升版）。
+- 新增 `backend/tests/test_participant_models.py` 與 fixture `backend/tests/fixtures/record-schema1-ask.json`（schema 1 的已完成提問：列表、讀取、轉共識討論都測）。
+

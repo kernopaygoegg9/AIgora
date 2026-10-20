@@ -100,7 +100,7 @@ def test_finished_ask_is_saved_as_a_discussion_record(client, write_participants
         "derived_from", "rounds", "interjections", "removed_participants", "moderator_changes",
         "outcome", "result",
     }
-    assert record["schema_version"] == 1
+    assert record["schema_version"] == 2
     assert record["id"] == discussion_id
     assert record["question"] == "Tabs or spaces?"
     assert record["created_at"] <= record["finished_at"]
