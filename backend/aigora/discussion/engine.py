@@ -50,7 +50,7 @@ from aigora.discussion.interfaces import (
 )
 from aigora.discussion.prompt_builder import build_prompt
 from aigora.discussion.store import DiscussionStore
-from aigora.domain import TurnPurpose
+from aigora.domain import FailureKind, TurnPurpose, TurnStatus
 from aigora.participant_info import snapshot_of
 from aigora.record import (
     DiscussionRecord,
@@ -78,6 +78,16 @@ MIN_PARTICIPANTS = 2
 # Extra calls that are the moderator's job: when the moderator fails one, the next
 # active participant takes over (the mode decides whether to retry the call).
 MODERATOR_PURPOSES: frozenset[str] = frozenset({"draft", "final_result", "no_consensus_summary"})
+
+
+def _status_of(kind: str) -> TurnStatus:
+    """A failed call's record status from its `turn_failed` kind."""
+    return "timeout" if kind == "timeout" else "failed"
+
+
+def _kind_of(status: TurnStatus) -> FailureKind:
+    """The `turn_failed` kind for a recorded non-ok turn (the inverse of `_status_of`)."""
+    return "timeout" if status == "timeout" else "unknown"
 
 
 def _turn_of(round_: RecordRound, participant_id: str) -> RecordTurn | None:
@@ -114,7 +124,12 @@ class DiscussionEngine:
         store: DiscussionStore,
         send: Send,
         discussion_id: str | None = None,
+        derived_from: str | None = None,
+        first_round: RecordRound | None = None,
     ):
+        """`first_round`: a prefilled round 1 (提問轉共識討論: the source ask's round 1). Its
+        turns of the discussion's participants are replayed as events; nobody is called.
+        `derived_from`: the id of the discussion this one continues."""
         self.mode = mode
         self.order = order
         self.store = store
@@ -127,12 +142,14 @@ class DiscussionEngine:
         self._stop_requested = False
         self._cancelled_calls: list[_CancelledCall] = []
         self._schedule_order: dict[int, list[str]] = {}  # round -> participant ids in scheduled order
+        self._first_round = first_round
         self.record = DiscussionRecord(
             id=discussion_id or new_discussion_id(),
             question=question,
             created_at=now_iso(),
             settings=settings,
             participants=[snapshot_of(p) for p in participants],
+            derived_from=derived_from,
         )
 
     @property
@@ -259,6 +276,9 @@ class DiscussionEngine:
             assert isinstance(decision, ContinueRound)
 
     async def _run_round(self, number: int) -> None:
+        if number == 1 and self._first_round is not None:
+            await self._replay_first_round(self._first_round)
+            return
         round_ = RecordRound(number=number, turns=[])
         self.record.rounds.append(round_)
         order = self._schedule_order.setdefault(number, [])
@@ -276,6 +296,21 @@ class DiscussionEngine:
             order.extend(batch)
             await asyncio.gather(*(turn(pid, view) for pid in batch))
             self._sort_turns(round_)
+
+    async def _replay_first_round(self, source: RecordRound) -> None:
+        """Round 1 from a prefilled round: shown through the ordinary events, turns kept as they were."""
+        active = set(self.active_participant_ids())
+        turns = [t.model_copy() for t in source.turns if t.participant_id in active]
+        self.record.rounds.append(RecordRound(number=1, turns=turns))
+        self._schedule_order[1] = [t.participant_id for t in turns]
+        await self._emit(m.RoundStarted, round=1)
+        for turn in turns:
+            ids = {"round": 1, "participant_id": turn.participant_id, "purpose": "turn"}
+            await self._emit(m.TurnStarted, **ids)
+            if turn.status == "ok":
+                await self._emit(m.TurnCompleted, **ids, text=turn.text or "", stance=turn.stance)
+            else:
+                await self._emit(m.TurnFailed, **ids, reason=turn.error or "發言失敗", kind=_kind_of(turn.status))
 
     async def _remove_failing(self, number: int) -> None:
         """Remove every active participant whose turns failed in this round and the one before."""
@@ -398,7 +433,7 @@ class DiscussionEngine:
             await self._emit(m.TurnFailed, **ids, reason=reason, kind=kind)
             return RecordTurn(
                 participant_id=participant_id,
-                status="timeout" if kind == "timeout" else "failed",
+                status=_status_of(kind),
                 text=text or None,
                 stance=None,
                 started_at=started_at,

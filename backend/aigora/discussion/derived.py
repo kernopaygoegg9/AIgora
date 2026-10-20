@@ -4,19 +4,19 @@ The new discussion keeps the ask's question and participants; the ask's answers
 become its round 1 as they are (no participant is called for round 1), so the
 mode goes straight to the moderator's first draft. The ask's record is only read.
 
-`DerivedDiscussionEngine` replays round 1 through the ordinary events
-(`round_started`, `turn_started`, then `turn_completed` / `turn_failed`), so the
-live page shows it like any other round; every later round is the engine's own.
+`derived_engine` passes the ask's round 1 to the engine as its prefilled round 1
+(`DiscussionEngine(first_round=...)`); the engine replays it through the ordinary
+events (`round_started`, `turn_started`, then `turn_completed` / `turn_failed`), so
+the live page shows it like any other round; every later round is the engine's own.
 """
 
 from __future__ import annotations
 
 from typing import Any
 
-from aigora.api import messages as m
 from aigora.discussion.engine import DiscussionEngine
 from aigora.discussion.store import DiscussionStore
-from aigora.record import DiscussionRecord, RecordRound
+from aigora.record import DiscussionRecord
 
 
 class SourceError(ValueError):
@@ -35,28 +35,7 @@ def load_source(store: DiscussionStore, discussion_id: str) -> DiscussionRecord:
     return record
 
 
-class DerivedDiscussionEngine(DiscussionEngine):
-    """A discussion engine whose round 1 is the source ask's round 1."""
-
-    def __init__(self, *, source: DiscussionRecord, **kwargs: Any):
-        super().__init__(question=source.question, **kwargs)
-        self.record.derived_from = source.id
-        self._first_round = source.rounds[0]
-
-    async def _run_round(self, number: int) -> None:
-        if number != 1:
-            await super()._run_round(number)
-            return
-        active = set(self.active_participant_ids())
-        turns = [t.model_copy() for t in self._first_round.turns if t.participant_id in active]
-        self.record.rounds.append(RecordRound(number=1, turns=turns))
-        self._schedule_order[1] = [t.participant_id for t in turns]
-        await self._emit(m.RoundStarted, round=1)
-        for turn in turns:
-            ids = {"round": 1, "participant_id": turn.participant_id, "purpose": "turn"}
-            await self._emit(m.TurnStarted, **ids)
-            if turn.status == "ok":
-                await self._emit(m.TurnCompleted, **ids, text=turn.text or "", stance=turn.stance)
-            else:
-                kind = "timeout" if turn.status == "timeout" else "unknown"
-                await self._emit(m.TurnFailed, **ids, reason=turn.error or "發言失敗", kind=kind)
+def derived_engine(*, source: DiscussionRecord, **kwargs: Any) -> DiscussionEngine:
+    """A discussion engine that continues the finished ask `source`: same question, and the
+    ask's round 1 as its prefilled round 1. `kwargs`: the other `DiscussionEngine` arguments."""
+    return DiscussionEngine(question=source.question, derived_from=source.id, first_round=source.rounds[0], **kwargs)
