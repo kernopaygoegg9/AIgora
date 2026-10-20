@@ -24,7 +24,16 @@ const STATUS_PILLS: Record<TurnState['status'], string> = {
   timeout: 'pill-bad',
 }
 
-const html = computed(() => renderMarkdown(props.turn.text))
+// The reply ends with its raw `STANCE: …` line; with a parsed stance the footer below shows
+// it, so leave that line out of the text (display only; same rule as backend stance.py).
+const STANCE_LINE = /^STANCE:\s*(AGREE|DISAGREE)$/i
+function withoutStanceLine(text: string): string {
+  const lines = text.trimEnd().split(/\r?\n/)
+  const last = lines[lines.length - 1]
+  return last !== undefined && STANCE_LINE.test(last.trim()) ? lines.slice(0, -1).join('\n').trimEnd() : text
+}
+
+const html = computed(() => renderMarkdown(props.turn.stance ? withoutStanceLine(props.turn.text) : props.turn.text))
 const failed = computed(() => props.turn.status === 'failed' || props.turn.status === 'timeout')
 </script>
 
