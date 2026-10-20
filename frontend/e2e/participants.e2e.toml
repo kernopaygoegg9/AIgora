@@ -36,3 +36,22 @@ display_name = "Fake Offline"
 adapter = "fake"
 [participant.options]
 web_access = false
+
+# Ticket 06: replies with the prompt it received (shows interjections) after a pause,
+# so a test can interject while round 1 is still running.
+[[participant]]
+id = "fake-echo"
+display_name = "Fake Echo"
+adapter = "fake"
+[participant.options]
+echo_prompt = true
+stream = false
+delay_seconds = 1.5
+
+# Ticket 06: never finishes on its own, so a test can stop it mid-turn.
+[[participant]]
+id = "fake-sleepy"
+display_name = "Fake Sleepy"
+adapter = "fake"
+[participant.options]
+delay_seconds = 600

@@ -84,7 +84,7 @@ async def discussion_socket(websocket: WebSocket):
 
 
 async def _read_until_closed(websocket: WebSocket, engine: DiscussionEngine) -> None:
-    """Client messages after `start`. `interject` / `stop` arrive in ticket 06."""
+    """Client messages after `start`: `interject` queues an interjection, `stop` ends the discussion."""
     while True:
         data = await websocket.receive_json()
         try:
@@ -92,4 +92,9 @@ async def _read_until_closed(websocket: WebSocket, engine: DiscussionEngine) -> 
         except ValidationError as exc:
             await engine.report_error(f"訊息格式錯誤：{exc.errors()[0]['msg']}")
             continue
-        await engine.report_error(f"`{msg.type}` 尚未提供")
+        if isinstance(msg, m.InterjectMessage):
+            await engine.interject(msg.text)
+        elif isinstance(msg, m.StopMessage):
+            await engine.stop()
+        else:
+            await engine.report_error("討論已經開始：不能再送出 start")

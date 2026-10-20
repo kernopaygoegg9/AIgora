@@ -4,6 +4,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { openDiscussionSocket, type DiscussionSocket } from '../api/discussionSocket'
 import { fetchParticipants } from '../api/participants'
 import AskForm from '../components/discussion/AskForm.vue'
+import DiscussionControls from '../components/discussion/DiscussionControls.vue'
 import DiscussionOutcome from '../components/discussion/DiscussionOutcome.vue'
 import RoundSection from '../components/discussion/RoundSection.vue'
 import type { ParticipantInfo } from '../contracts/http'
@@ -72,6 +73,16 @@ function startAsk(question: string, participantIds: string[], mode: ModeId = 'as
         :participant-by-id="store.participantById"
         :show-number="store.settings?.mode !== 'ask'"
         :moderator-id="store.moderatorId"
+      />
+      <DiscussionControls
+        :key="store.discussionId ?? ''"
+        :status="store.status"
+        :mode="store.settings?.mode ?? null"
+        :interjections="store.interjections"
+        :outcome="store.outcome"
+        :read-only="store.readOnly"
+        @interject="(text) => socket?.interject(text)"
+        @stop="() => socket?.stop()"
       />
       <DiscussionOutcome :outcome="store.outcome" :result="store.result" :reason="store.finishReason" />
     </div>
