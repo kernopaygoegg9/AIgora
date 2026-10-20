@@ -9,7 +9,7 @@
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 - [ ] 可用性檢查：未安裝或未登入時回報不可用並附原因
 - [ ] 串流：解析 CLI 的串流輸出成 `delta` / `completed`
