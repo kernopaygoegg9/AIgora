@@ -63,6 +63,13 @@
   --inspector-width: 300px;
 }
 
+/* 1024–1279px: the inspector narrows (spec "支援寬度"; added in ticket 08). */
+@media (max-width: 1279px) {
+  :root {
+    --inspector-width: 260px;
+  }
+}
+
 @media (prefers-color-scheme: light) {
   :root:not([data-theme='dark']) {
     color-scheme: light;
@@ -80,7 +87,7 @@
     --accent-bg: #eef2ff;
     --accent-line: #b8c7f5;
 
-    --ok: #13854f;
+    --ok: #117e4b;
     --ok-bg: #effaf4;
     --ok-line: #a9dcc2;
 
@@ -112,7 +119,7 @@
   --accent-bg: #eef2ff;
   --accent-line: #b8c7f5;
 
-  --ok: #13854f;
+  --ok: #117e4b;
   --ok-bg: #effaf4;
   --ok-line: #a9dcc2;
 

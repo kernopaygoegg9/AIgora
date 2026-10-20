@@ -561,7 +561,7 @@ fieldset {
 }
 .participant-table th,
 .participant-table td {
-  padding: 8px 12px;
+  padding: 8px 10px;
   border-bottom: 1px solid var(--line);
   text-align: left;
   vertical-align: middle;
@@ -603,8 +603,9 @@ fieldset {
   align-items: center;
   gap: var(--space-1) var(--space-2);
 }
-/* Wide screens: name, model badge and 臨時 on one line (narrow ones may wrap). */
-@media (min-width: 1024px) {
+/* Wide screens: name, model badge and 臨時 on one line (narrower ones may wrap; below
+   1280px the unwrapped table overflowed the stage under the inspector, ticket 08). */
+@media (min-width: 1280px) {
   .participant-cell,
   .participant-name :deep(.participant-label) {
     flex-wrap: nowrap;

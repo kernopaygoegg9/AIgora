@@ -47,6 +47,5 @@ const model = computed(() => props.participant?.model ?? '預設模型')
   font-family: var(--font-mono);
   font-size: 10.5px;
   padding: 0 6px;
-  opacity: 0.85;
 }
 </style>

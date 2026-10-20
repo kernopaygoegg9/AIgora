@@ -78,8 +78,12 @@ const STATUS_PILLS: Record<TurnStateStatus, string> = {
   margin-left: auto;
   font-size: var(--fs-xs);
 }
+/* Faded with the muted colour, not opacity, so the name keeps WCAG AA contrast (ticket 08). */
 .seat.removed .who {
-  opacity: 0.5;
+  color: var(--muted);
   text-decoration: line-through;
+}
+.seat.removed .who :deep(.avatar) {
+  opacity: 0.5;
 }
 </style>
