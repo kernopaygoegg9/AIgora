@@ -9,7 +9,7 @@
 
 **Blocked by:** 03
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 - [ ] 第 1 輪不要求表態；第 1 輪結束後收到 `draft_created`
 - [ ] 第 2 輪起每輪結束後收到 `judge_result`（細節含各參與者表態）
