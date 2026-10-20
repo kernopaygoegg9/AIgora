@@ -16,5 +16,5 @@ test('main layout loads and switches between the discussion and history pages', 
 
 test('frontend reaches the backend through the dev proxy', async ({ request }) => {
   const response = await request.get('/api/participants')
-  expect(response.status()).toBe(501)
+  expect(response.status()).toBe(200)
 })
