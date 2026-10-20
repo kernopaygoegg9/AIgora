@@ -2,10 +2,12 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 import { openDiscussionSocket, type DiscussionSocket } from '../api/discussionSocket'
+import { fetchOptions } from '../api/options'
 import { fetchParticipants } from '../api/participants'
-import AskForm from '../components/discussion/AskForm.vue'
 import RoundSection from '../components/discussion/RoundSection.vue'
-import type { ParticipantInfo } from '../contracts/http'
+import SettingsPanel from '../components/settings/SettingsPanel.vue'
+import type { OptionsResponse, ParticipantInfo } from '../contracts/http'
+import type { StartSettings } from '../contracts/messages'
 import { useDiscussionStore } from '../stores/discussion'
 
 // `id` is set when viewing a past discussion read-only (route `discussion-record`, ticket 09).
@@ -13,6 +15,7 @@ const props = defineProps<{ id?: string }>()
 
 const store = useDiscussionStore()
 const participants = ref<ParticipantInfo[]>([])
+const options = ref<OptionsResponse | null>(null)
 const loadError = ref<string | null>(null)
 const connectionLost = ref(false)
 let socket: DiscussionSocket | null = null
@@ -23,7 +26,7 @@ const statusLabel = computed(() => STATUS_LABELS[store.status])
 onMounted(async () => {
   if (props.id) return
   try {
-    participants.value = await fetchParticipants()
+    ;[participants.value, options.value] = await Promise.all([fetchParticipants(), fetchOptions()])
   } catch (err) {
     loadError.value = err instanceof Error ? err.message : String(err)
   }
@@ -31,7 +34,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => socket?.close())
 
-function startAsk(question: string, participantIds: string[]) {
+function startDiscussion(question: string, settings: StartSettings) {
   socket?.close()
   store.reset()
   connectionLost.value = false
@@ -42,7 +45,7 @@ function startAsk(question: string, participantIds: string[]) {
     },
   )
   socket = current
-  current.start(question, { mode: 'ask', participant_ids: participantIds })
+  current.start(question, settings)
 }
 </script>
 
@@ -52,7 +55,12 @@ function startAsk(question: string, participantIds: string[]) {
 
     <template v-if="!id">
       <p v-if="loadError" class="error">{{ loadError }}</p>
-      <AskForm :participants="participants" :disabled="store.status === 'running'" @submit="startAsk" />
+      <SettingsPanel
+        :participants="participants"
+        :options="options"
+        :locked="store.status === 'running'"
+        @submit="startDiscussion"
+      />
     </template>
 
     <p v-for="(message, i) in store.errors" :key="i" class="error" data-testid="discussion-error">{{ message }}</p>
