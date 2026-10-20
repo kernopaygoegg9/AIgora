@@ -85,6 +85,8 @@ function startDiscussion(question: string, settings: StartSettings) {
         :participant-by-id="store.participantById"
         :show-number="store.settings?.mode !== 'ask'"
         :moderator-id="store.moderatorId"
+        :removed="store.removed.filter((r) => r.round === round.number)"
+        :moderator-changes="store.moderatorChanges.filter((c) => c.round === round.number)"
       />
       <DiscussionControls
         :key="store.discussionId ?? ''"

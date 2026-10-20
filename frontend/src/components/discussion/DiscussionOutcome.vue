@@ -1,6 +1,7 @@
 <!-- The end of a consensus discussion, shown on its own: the consensus result, or the
-     moderator's final positions and remaining disagreements. Ask results are the turns
-     themselves, so nothing extra is shown for them. -->
+     moderator's final positions and remaining disagreements, or (ticket 07) why it ended
+     with too few participants. Ask results are the turns themselves, so nothing extra is
+     shown for them. -->
 <script setup lang="ts">
 import { computed } from 'vue'
 
@@ -16,23 +17,27 @@ const props = defineProps<{
 const title = computed(() => {
   if (props.result?.kind === 'consensus') return '共識結果'
   if (props.result?.kind === 'no_consensus') return '未取得共識：各參與者最終立場與仍有分歧的重點'
+  if (props.outcome === 'insufficient_participants') return '討論結束：在場參與者不足'
   return null
 })
+const kind = computed(() => props.result?.kind ?? props.outcome)
 </script>
 
 <template>
   <section
     v-if="title"
     class="discussion-result"
-    :class="`kind-${result!.kind}`"
+    :class="`kind-${kind}`"
     data-testid="discussion-result"
     :data-outcome="outcome"
   >
     <h2 class="result-title">{{ title }}</h2>
     <p v-if="reason" class="reason">{{ reason }}</p>
-    <!-- eslint-disable-next-line vue/no-v-html -- sanitised in renderMarkdown -->
-    <div v-if="result!.text" class="text" v-html="renderMarkdown(result!.text)" />
-    <p v-else class="reason">（沒有內容）</p>
+    <template v-if="result">
+      <!-- eslint-disable-next-line vue/no-v-html -- sanitised in renderMarkdown -->
+      <div v-if="result.text" class="text" v-html="renderMarkdown(result.text)" />
+      <p v-else class="reason">（沒有內容）</p>
+    </template>
   </section>
 </template>
 
@@ -45,6 +50,10 @@ const title = computed(() => {
   border-radius: 10px;
   border: 2px solid #9fd3ae;
   background: #f0faf3;
+}
+.discussion-result.kind-insufficient_participants {
+  border-color: #e5a29a;
+  background: #fdeeec;
 }
 .discussion-result.kind-no_consensus {
   border-color: #e8c27a;

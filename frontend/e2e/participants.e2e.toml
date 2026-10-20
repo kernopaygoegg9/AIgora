@@ -64,3 +64,14 @@ adapter = "fake"
 [participant.options]
 available = false
 unavailable_reason = "fake: CLI not installed"
+
+# Ticket 07: every normal turn fails in rounds 1 and 2, so it is removed after round 2
+# (and, as moderator, hands over to the next participant).
+[[participant]]
+id = "fake-flaky"
+display_name = "Fake Flaky"
+adapter = "fake"
+[participant.options]
+stream = false
+fail_rounds = [1, 2]
+fail_reason = "fake: simulated crash"
