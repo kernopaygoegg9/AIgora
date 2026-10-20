@@ -64,7 +64,7 @@ graph LR
 | `frontend/src/styles/discussion.css`、`frontend/src/components/discussion/ParticipantLabel.vue` | 04 | 05、07、11 只能使用；07 只能新增 modifier class，不能改變討論中畫面的外觀 |
 | `frontend/src/components/discussion/DiscussionInspector.vue` | 04 建立 → 05 | 其他 ticket 不得修改 |
 | `frontend/src/components/discussion/InspectorParticipants.vue`、`StanceTracker.vue` | 05 | 07 只能使用；需要新的 prop 時只能新增，不能改變現有行為 |
-| 既有的 E2E spec 檔案（`frontend/e2e/*.spec.ts`） | 03（按鈕改名）→ 04（`settings-panel.spec.ts` 的鎖定斷言）→ 05（新增參與者斷言）→ 07（`history.spec.ts` 的唯讀斷言） | 只能做 spec「刻意修改的測試」列出的改動。02 只新增 `theme.spec.ts`，11 只新增 `participant-models.spec.ts` |
+| 既有的 E2E spec 檔案（`frontend/e2e/*.spec.ts`） | 03（按鈕改名）→ 04（`settings-panel.spec.ts` 的鎖定斷言）→ 05（新增參與者斷言）→ 07 | 只能做 spec「刻意修改的測試」列出的改動。02 新增 `theme.spec.ts`，並且（實作時發現有必要）在 03 之後修改 `history.spec.ts` 的唯讀斷言，11 只新增 `participant-models.spec.ts` |
 | `frontend/e2e/participants.e2e.toml` | 09（加 fake 模型） | 其他 ticket 不得修改 |
 | HTTP 契約（`backend/aigora/api/http_models.py`、`frontend/src/contracts/http.ts`）、`backend/aigora/participant_info.py`、`backend/aigora/api/handlers/participants.py` | 09 | 不得修改 |
 | `backend/aigora/adapters/base.py`、`claude.py`、`codex.py`、`ollama.py`、`fake.py` | 09（只能新增 `list_models`） | 不得修改。`gemini.py`、`registry.py`、隔離參數任何人都不能改（agy／gemini 另有 session） |

@@ -177,7 +177,7 @@ v1 功能完整、使用者滿意，但介面很陽春：瀏覽器預設的表�
 
 1. 送出按鈕改名：`getByRole('button', { name: '送出' })` → `{ name: '開始討論' }`。
 2. 鎖定設定：`settings-panel.spec.ts` 中討論進行中的斷言改成檢查檢視器的 `settings-locked` 是否可見，並確認設定表單已經不顯示；不再要求面板內的「問題」是 disabled。
-3. 唯讀頁「沒有任何按鈕／文字輸入框」：側欄的主題切換是按鈕，所以 `history.spec.ts` 的 `page.getByRole('button')`、`page.getByRole('textbox')` 改成在 `record-view` 範圍內檢查。
+3. 唯讀頁「沒有任何按鈕／文字輸入框」（由 02 修改）：側欄的主題切換是按鈕，所以 `history.spec.ts` 的 `page.getByRole('button')`、`page.getByRole('textbox')` 改成在 `record-view` 範圍內檢查。
 4. 其他因為 DOM 結構改變而必須調整的選擇器，在對應 ticket 的 Comments 寫明原因；**不可以**用刪除斷言的方式讓測試通過。
 
 ## Testing Decisions

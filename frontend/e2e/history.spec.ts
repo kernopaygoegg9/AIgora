@@ -32,8 +32,9 @@ test('a finished ask can be found in the history and opened read-only', async ({
   await expect(card('Fake A').getByTestId('turn-text')).toHaveText('Fake A: reply for round 1.')
   await expect(card('Fake B').getByTestId('turn-text')).toHaveText('Fake B: reply for round 1.')
 
-  // Read-only: nothing to continue the discussion with.
-  await expect(page.getByRole('textbox')).toHaveCount(0)
+  // Read-only: nothing to continue the discussion with (the sidebar's theme toggle is not
+  // part of the record, so look inside the record view).
+  await expect(view.getByRole('textbox')).toHaveCount(0)
   await expect(page.getByRole('button', { name: '開始討論' })).toHaveCount(0)
 
   // Back to a live discussion straight from the record: the ask form works again.
@@ -164,7 +165,7 @@ test('the read-only view shows every part of a record', async ({ page }) => {
 
   await expect(view.getByTestId('record-result')).toContainText('Use whichever editor you like.')
   await expect(page.getByRole('textbox')).toHaveCount(0)
-  await expect(page.getByRole('button')).toHaveCount(0)
+  await expect(view.getByRole('button')).toHaveCount(0)
 })
 
 test('an unknown discussion shows an error', async ({ page }) => {

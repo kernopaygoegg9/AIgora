@@ -16,7 +16,7 @@ Blocked by: 05
 **Scope:**
 - 修改 `frontend/src/components/history/RecordView.vue`、`frontend/src/components/history/RecordRound.vue`。
 - 重用 `frontend/src/styles/discussion.css` 的 class，以及 05 的 `InspectorParticipants`、`StanceTracker`（props 從紀錄 JSON 推導）。如果需要調整共用的樣式或元件，只能**新增**變化（例如新的 modifier class），不能改變討論中畫面的外觀。
-- 刻意修改的測試：`history.spec.ts` 中「沒有 button／textbox」的斷言，改成只檢查 `record-view` 範圍內（側欄有主題切換按鈕）。
+- （「沒有 button／textbox」的斷言已經在 02 改成只檢查 `record-view` 範圍內，這張 ticket 不用再改測試。）
 - 不修改 store、契約、router、後端、`DiscussionPage.vue`。
 
 - [ ] 名稱旁的模型標籤沿用 04 的 `ParticipantLabel`（資料來自紀錄的 `participants[].model`）；schema 1 的舊紀錄同樣顯示
