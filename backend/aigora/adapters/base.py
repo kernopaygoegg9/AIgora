@@ -28,6 +28,8 @@ Rules every adapter follows (spec "Adapter 介面", ADR 0001 / 0002):
   (shell, file read/write, MCP, plugins, hooks, skills), ignore the user's own
   CLI config, keep only web search/fetch tools.
 - Adapters never build prompts, parse stances or judge consensus.
+- `list_models` (like `check_availability`) must not spend quota; expected
+  failures go into `ModelChoices.error`, not raised.
 """
 
 from __future__ import annotations
@@ -46,7 +48,8 @@ if TYPE_CHECKING:
 
 __all__ = [
     "FAILURE_KINDS", "TURN_PURPOSES", "FailureKind", "TurnPurpose", "Capabilities", "Availability",
-    "TurnRequest", "Delta", "Completed", "Failed", "AdapterEvent", "Adapter", "get_adapter",
+    "ModelOption", "ModelChoices", "TurnRequest", "Delta", "Completed", "Failed", "AdapterEvent", "Adapter",
+    "get_adapter",
 ]
 
 
@@ -60,6 +63,21 @@ class Capabilities:
 class Availability:
     available: bool
     reason: str | None = None  # why it is unavailable (shown in the participant picker)
+
+
+@dataclass(frozen=True)
+class ModelOption:
+    id: str  # passed as the participant's `model`
+    label: str  # shown in the model picker
+
+
+@dataclass(frozen=True)
+class ModelChoices:
+    """The models a participant can be switched to (spec "參與者與模型選擇")."""
+
+    models: tuple[ModelOption, ...] = ()
+    free_text: bool = False  # may the user type a model name that is not in `models`?
+    error: str | None = None  # why the list could not be loaded (then `models` is empty)
 
 
 @dataclass(frozen=True)
@@ -111,6 +129,13 @@ class Adapter(ABC):
     @abstractmethod
     def run_turn(self, request: TurnRequest) -> AsyncIterator[AdapterEvent]:
         """Run one turn. Implement as `async def run_turn(...)` with `yield`."""
+
+    async def list_models(self, participant: ParticipantConfig) -> ModelChoices:
+        """Models this participant can use instead of its configured one. Must not spend quota.
+
+        Default: no list and no free-text model.
+        """
+        return ModelChoices()
 
     def validate_options(self, options: Mapping[str, Any]) -> None:
         """Raise ValueError if the participant's `options` table is invalid.

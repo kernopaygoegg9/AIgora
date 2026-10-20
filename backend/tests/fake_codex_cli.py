@@ -4,6 +4,7 @@ Behaviour comes from the JSON file named by env `AIGORA_FAKE_CODEX_SCENARIO`:
 
     {
       "login_status": {"stdout": "Logged in using ChatGPT", "exit": 0},
+      "debug_models": {"stdout": "{...}", "stderr": "", "exit": 0, "hang": false},  # `debug models`
       "events": [{"type": "turn.started"}, "raw line", ...],  # JSONL printed by `exec`
       "stderr": "...",          # printed to stderr by `exec`
       "exit": 0,                # exit code of `exec`
@@ -31,6 +32,16 @@ def main() -> int:
         status = scenario.get("login_status", {"stdout": "Logged in using ChatGPT", "exit": 0})
         print(status.get("stdout", ""))
         return status.get("exit", 0)
+
+    if args[:2] == ["debug", "models"]:
+        catalog = scenario.get("debug_models", {"stdout": '{"models": []}'})
+        sys.stdout.write(catalog.get("stdout", ""))
+        sys.stderr.write(catalog.get("stderr", ""))
+        sys.stdout.flush()
+        sys.stderr.flush()
+        while catalog.get("hang"):
+            time.sleep(1)
+        return catalog.get("exit", 0)
 
     stdin = sys.stdin.buffer.read().decode("utf-8")
     if scenario.get("record"):

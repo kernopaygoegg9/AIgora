@@ -8,7 +8,16 @@ from pathlib import Path
 
 import pytest
 
-from aigora.adapters.base import Availability, Capabilities, Completed, Delta, Failed, TurnRequest, get_adapter
+from aigora.adapters.base import (
+    Availability,
+    Capabilities,
+    Completed,
+    Delta,
+    Failed,
+    ModelOption,
+    TurnRequest,
+    get_adapter,
+)
 from aigora.adapters.claude import ClaudeAdapter
 from aigora.config import ParticipantConfig
 
@@ -260,3 +269,15 @@ def test_rejects_unknown_options():
     with pytest.raises(ValueError):
         ClaudeAdapter().validate_options({"tools": "Bash"})
     ClaudeAdapter().validate_options({})
+
+
+
+async def test_model_list_is_the_fixed_aliases_and_any_full_name_may_be_typed():
+    p = ParticipantConfig(id="claude", display_name="Claude", adapter="claude")
+
+    choices = await get_adapter("claude").list_models(p)
+
+    assert [m.id for m in choices.models] == ["fable", "opus", "sonnet", "haiku"]
+    assert choices.models[0] == ModelOption("fable", "Fable")
+    assert choices.free_text is True
+    assert choices.error is None

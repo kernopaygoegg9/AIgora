@@ -9,15 +9,20 @@ max_rounds = 15
 turn_timeout_seconds = 300
 jev_threshold = 0.8
 
+# Ticket 09: `models` fills the model picker (ticket 11).
 [[participant]]
 id = "fake-a"
 display_name = "Fake A"
 adapter = "fake"
+[participant.options]
+models = ["fake-small", "fake-large"]
 
 [[participant]]
 id = "fake-b"
 display_name = "Fake B"
 adapter = "fake"
+[participant.options]
+models = ["fake-small", "fake-large"]
 
 # Ticket 03: streams slowly so the E2E test can see text arriving.
 [[participant]]

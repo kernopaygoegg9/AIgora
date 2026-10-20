@@ -44,12 +44,22 @@ from aigora.adapters.base import (
     Delta,
     Failed,
     FailureKind,
+    ModelChoices,
+    ModelOption,
     TurnRequest,
 )
 from aigora.adapters.subprocesses import kill_tree, process_group_options
 from aigora.config import ParticipantConfig
 
 WEB_TOOLS = "WebSearch,WebFetch"
+
+# Aliases `--model` resolves to the newest model of each family (`claude --help`).
+MODEL_ALIASES: tuple[ModelOption, ...] = (
+    ModelOption("fable", "Fable"),
+    ModelOption("opus", "Opus"),
+    ModelOption("sonnet", "Sonnet"),
+    ModelOption("haiku", "Haiku"),
+)
 
 ISOLATION_ARGS: tuple[str, ...] = (
     "-p",
@@ -155,6 +165,10 @@ class ClaudeAdapter(Adapter):
             return Availability(False, "Claude Code CLI is not logged in (run `claude auth login`)")
         detail = stderr or stdout.strip() or f"exit code {proc.returncode}"
         return Availability(False, f"cannot read Claude Code login status: {detail[:300]}")
+
+    async def list_models(self, participant: ParticipantConfig) -> ModelChoices:
+        """The CLI cannot list models; `--model` takes these aliases or any full model name."""
+        return ModelChoices(models=MODEL_ALIASES, free_text=True)
 
     def build_args(self, participant: ParticipantConfig) -> list[str]:
         args = list(ISOLATION_ARGS)
