@@ -317,13 +317,13 @@ AIgora 是一個本機執行的網頁應用程式（之後包成桌面 App）。
 
 ### 素材規格
 
-App icon、Favicon 與 `fake`、`default` 頭像由 Codex（`codex-imagegen`）產生；`claude`、`codex`、`gemini`、`ollama` 四張 Adapter 頭像改用官方產品 logo（來源：`simple-icons` 套件，見下方「Adapter 頭像例外」）。素材不走 TDD；程式端先用佔位圖，依檔名與尺寸開發，不必等素材完成。驗收需要使用者目視確認。
+App icon、Favicon 與 `fake`、`default` 頭像由 Codex（`codex-imagegen`）產生；`claude`、`codex`、`gemini`、`ollama` 四張 Adapter 頭像改用官方產品 logo（來源：`simple-icons` 與 `@lobehub/icons-static-svg` 套件，見下方「Adapter 頭像例外」）。素材不走 TDD；程式端先用佔位圖，依檔名與尺寸開發，不必等素材完成。驗收需要使用者目視確認。
 
 **風格指南**
 
 - 原創風格：扁平、幾何、簡潔，圓角，柔和但可辨識的配色。
 - App icon、Favicon 與 `fake`、`default` 頭像：**不使用、不模仿任何公司或產品的 logo、商標、吉祥物或品牌配色組合**（包括 Anthropic、OpenAI、Google、Ollama 等），也不放任何文字或字母。
-- **Adapter 頭像例外**（使用者決定，2026-10-20）：`claude`、`codex`、`gemini`、`ollama` 四張頭像使用該產品的官方 logo 與官方品牌色，來源為 `simple-icons` 套件（SVG 與 hex）；做法為品牌色圓形（約 84% 直徑）內置白色 logo，品牌色過深或過淺時改用淺色圓形配品牌色 logo。僅限本機自用；公開或散布本專案前需依各家品牌規範重新檢視。
+- **Adapter 頭像例外**（使用者決定，2026-10-20）：`claude`、`codex`、`gemini`、`ollama` 四張頭像使用該產品的官方 logo 與官方品牌色，`claude`、`gemini`、`ollama` 來源為 `simple-icons` 套件（SVG 與 hex），`codex` 來源為 `@lobehub/icons-static-svg` 1.95.1（MIT）的 Codex 圖示 `codex.svg`，圓形填色用同套件 `codex-color.svg` 的官方漸層；做法為品牌色圓形（約 84% 直徑）內置白色 logo，品牌色過深或過淺時改用淺色圓形配品牌色 logo。僅限本機自用；公開或散布本專案前需依各家品牌規範重新檢視。
 - 頭像之間風格一致（同樣的線條粗細、圓角、構圖比例），以不同主色與不同抽象圖形區分。
 - 淺色與深色背景上都要清楚可辨。
 
@@ -334,7 +334,7 @@ App icon、Favicon 與 `fake`、`default` 頭像由 Codex（`codex-imagegen`）�
 | App icon（母檔） | 代表「多個聲音在廣場聚集討論」的抽象圖形 | 1024×1024 | PNG，透明背景 | `assets/brand/app-icon.png` |
 | Favicon | 由母檔縮小，需在 32px 下仍可辨識 | 32×32、16×16 | PNG | `assets/brand/favicon-32.png`、`assets/brand/favicon-16.png` |
 | 頭像：claude | `claude` Adapter 的預設頭像（官方 logo，來源 `simple-icons`；僅限本機自用；公開或散布本專案前需依各家品牌規範重新檢視。） | 256×256 | PNG，透明背景，主體置中、可裁成圓形 | `assets/avatars/claude.png` |
-| 頭像：codex | `codex` Adapter 的預設頭像（官方 logo，來源 `simple-icons`；僅限本機自用；公開或散布本專案前需依各家品牌規範重新檢視。） | 同上 | 同上 | `assets/avatars/codex.png` |
+| 頭像：codex | `codex` Adapter 的預設頭像（官方 logo，來源 `@lobehub/icons-static-svg` 1.95.1 的 `codex.svg`；僅限本機自用；公開或散布本專案前需依各家品牌規範重新檢視。） | 同上 | 同上 | `assets/avatars/codex.png` |
 | 頭像：gemini | `gemini` Adapter 的預設頭像（官方 logo，來源 `simple-icons`；僅限本機自用；公開或散布本專案前需依各家品牌規範重新檢視。） | 同上 | 同上 | `assets/avatars/gemini.png` |
 | 頭像：ollama | `ollama` Adapter 的預設頭像（官方 logo，來源 `simple-icons`；僅限本機自用；公開或散布本專案前需依各家品牌規範重新檢視。） | 同上 | 同上 | `assets/avatars/ollama.png` |
 | 頭像：fake | Fake Adapter 的頭像（開發用，可明顯看出是測試用） | 同上 | 同上 | `assets/avatars/fake.png` |
