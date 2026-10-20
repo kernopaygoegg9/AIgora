@@ -6,6 +6,7 @@
 import { computed, ref, watch } from 'vue'
 
 import '../../styles/discussion.css'
+import '../../styles/inspector.css'
 import { fetchDiscussion } from '../../api/discussions'
 import { fetchOptions } from '../../api/options'
 import type { OptionsResponse } from '../../contracts/http'
@@ -184,8 +185,8 @@ const orderName = computed(() => {
       </div>
 
       <aside class="inspector" aria-label="檢視器">
-        <section class="section">
-          <h3 class="section-title">參與者</h3>
+        <section class="inspector-section">
+          <h3 class="inspector-title">參與者</h3>
           <InspectorParticipants
             :participants="record.participants"
             :moderator-id="moderatorId"
@@ -193,13 +194,13 @@ const orderName = computed(() => {
             :statuses="statuses"
           />
         </section>
-        <section v-if="consensus && stanceRounds.length" class="section">
-          <h3 class="section-title">表態追蹤</h3>
+        <section v-if="consensus && stanceRounds.length" class="inspector-section">
+          <h3 class="inspector-title">表態追蹤</h3>
           <StanceTracker :participants="record.participants" :rounds="stanceRounds" />
         </section>
-        <section class="section">
-          <h3 class="section-title">設定快照</h3>
-          <dl class="kv" data-testid="record-meta">
+        <section class="inspector-section">
+          <h3 class="inspector-title">設定快照</h3>
+          <dl class="inspector-kv" data-testid="record-meta">
             <dt>討論模式</dt>
             <dd>{{ MODE_LABELS[record.settings.mode] ?? record.settings.mode }}</dd>
             <template v-if="consensus">
@@ -305,53 +306,9 @@ const orderName = computed(() => {
   border: 1px solid var(--bad-line);
   border-radius: var(--radius);
 }
-
-/* Inspector: same look as the live page's DiscussionInspector. */
-.inspector {
-  position: sticky;
-  top: var(--space-4);
-  max-height: calc(100vh - 2 * var(--space-4));
-  overflow: auto;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-}
-.section {
-  padding: var(--space-3) 14px;
-  border-bottom: 1px solid var(--line);
-}
-.section:last-child {
-  border-bottom: none;
-}
-.section-title {
-  margin: 0 0 var(--space-2);
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-.kv {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 5px var(--space-3);
-  margin: 0;
-  font-size: var(--fs-sm);
-}
-.kv dt {
-  color: var(--muted);
-}
-.kv dd {
-  margin: 0;
-  overflow-wrap: anywhere;
-}
 @media (max-width: 1023px) {
   .record {
     grid-template-columns: minmax(0, 1fr);
-  }
-  .inspector {
-    position: static;
-    max-height: none;
   }
 }
 </style>

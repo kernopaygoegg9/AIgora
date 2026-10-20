@@ -5,6 +5,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
+import '../../styles/inspector.css'
 import type { OptionsResponse } from '../../contracts/http'
 import type { DiscussionSettings, ParticipantSnapshot } from '../../contracts/messages'
 import { useDiscussionStore, type Interjection, type TurnStateStatus } from '../../stores/discussion'
@@ -61,8 +62,8 @@ const rows = computed(() => {
 
 <template>
   <aside class="inspector" aria-label="檢視器" data-testid="discussion-inspector">
-    <section class="section">
-      <h3 class="section-title">參與者</h3>
+    <section class="inspector-section">
+      <h3 class="inspector-title">參與者</h3>
       <InspectorParticipants
         :participants="store.participants"
         :moderator-id="consensus ? store.moderatorId : null"
@@ -71,13 +72,13 @@ const rows = computed(() => {
       />
     </section>
 
-    <section v-if="consensus && stanceRounds.length" class="section">
-      <h3 class="section-title">表態追蹤</h3>
+    <section v-if="consensus && stanceRounds.length" class="inspector-section">
+      <h3 class="inspector-title">表態追蹤</h3>
       <StanceTracker :participants="store.participants" :rounds="stanceRounds" />
     </section>
 
-    <section v-if="consensus" class="section">
-      <h3 class="section-title">插話佇列</h3>
+    <section v-if="consensus" class="inspector-section">
+      <h3 class="inspector-title">插話佇列</h3>
       <ul v-if="interjections.length" class="queue">
         <li v-for="(item, i) in interjections" :key="i" class="interjection" data-testid="interjection">
           <small class="applies">第 {{ item.appliesToRound }} 輪起生效</small>
@@ -87,9 +88,9 @@ const rows = computed(() => {
       <p v-else class="muted empty">還沒有插話</p>
     </section>
 
-    <section class="section" data-testid="settings-locked">
-      <h3 class="section-title">設定（已鎖定）</h3>
-      <dl class="kv">
+    <section class="inspector-section" data-testid="settings-locked">
+      <h3 class="inspector-title">設定（已鎖定）</h3>
+      <dl class="inspector-kv">
         <template v-for="[k, v] in rows" :key="k">
           <dt>{{ k }}</dt>
           <dd>{{ v }}</dd>
@@ -100,30 +101,6 @@ const rows = computed(() => {
 </template>
 
 <style scoped>
-.inspector {
-  position: sticky;
-  top: var(--space-4);
-  max-height: calc(100vh - 2 * var(--space-4));
-  overflow: auto;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-}
-.section {
-  padding: var(--space-3) 14px;
-  border-bottom: 1px solid var(--line);
-}
-.section:last-child {
-  border-bottom: none;
-}
-.section-title {
-  margin: 0 0 var(--space-2);
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
 .queue {
   display: flex;
   flex-direction: column;
@@ -151,25 +128,5 @@ const rows = computed(() => {
 .empty {
   margin: 0;
   font-size: var(--fs-sm);
-}
-.kv {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 5px var(--space-3);
-  margin: 0;
-  font-size: var(--fs-sm);
-}
-.kv dt {
-  color: var(--muted);
-}
-.kv dd {
-  margin: 0;
-  overflow-wrap: anywhere;
-}
-@media (max-width: 1023px) {
-  .inspector {
-    position: static;
-    max-height: none;
-  }
 }
 </style>

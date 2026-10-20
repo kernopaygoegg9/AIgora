@@ -8,6 +8,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 
+import '../../styles/inspector.css'
 import type { OptionsResponse, ParticipantInfo } from '../../contracts/http'
 import type { ExtraParticipant, JudgeId, ModeId, SpeakingOrderId, StartSettings } from '../../contracts/messages'
 import ParticipantLabel from '../discussion/ParticipantLabel.vue'
@@ -394,8 +395,8 @@ function orderLabel(name: string, implemented: boolean): string {
 
       <!-- Inspector: the rest of this discussion's settings, and start. -->
       <aside class="inspector">
-        <section v-if="options && uses.has('judge')" class="section" data-testid="judge-options">
-          <h3 class="section-title">共識裁定方式</h3>
+        <section v-if="options && uses.has('judge')" class="inspector-section" data-testid="judge-options">
+          <h3 class="inspector-title">共識裁定方式</h3>
           <label
             v-for="j in options.judges"
             :key="j.id"
@@ -411,8 +412,8 @@ function orderLabel(name: string, implemented: boolean): string {
           </label>
         </section>
 
-        <section v-if="options" class="section">
-          <h3 class="section-title">討論設定</h3>
+        <section v-if="options" class="inspector-section">
+          <h3 class="inspector-title">討論設定</h3>
           <div class="fields">
             <div v-if="uses.has('moderator_id')" class="field wide">
               <label for="moderator-select">主持人</label>
@@ -454,7 +455,7 @@ function orderLabel(name: string, implemented: boolean): string {
           </div>
         </section>
 
-        <section class="section">
+        <section class="inspector-section">
           <button type="submit" class="btn btn-primary submit" :disabled="!canSubmit">開始討論</button>
           <p class="submit-note muted">已選 {{ selectedIds.length }} 個參與者 · 預設值來自 participants.toml</p>
         </section>
@@ -657,27 +658,8 @@ fieldset {
   color: var(--bad);
 }
 
-/* Inspector column. */
-.inspector {
-  position: sticky;
-  top: var(--space-4);
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-}
-.section {
-  padding: var(--space-3) 14px;
-  border-bottom: 1px solid var(--line);
-}
-.section:last-child {
-  border-bottom: none;
-}
-.section-title {
-  margin-bottom: var(--space-2);
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  color: var(--muted);
-  text-transform: uppercase;
+/* Inspector column: shared look (styles/inspector.css); titles spaced a little wider here. */
+.inspector-title {
   letter-spacing: 0.08em;
 }
 .judge {
@@ -744,9 +726,6 @@ fieldset {
 @media (max-width: 1023px) {
   .layout {
     grid-template-columns: minmax(0, 1fr);
-  }
-  .inspector {
-    position: static;
   }
 }
 @media (max-width: 640px) {
