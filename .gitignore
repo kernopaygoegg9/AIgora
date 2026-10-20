@@ -1,3 +1,28 @@
 # Claude Code
 .claude/worktrees/
 .claude/settings.local.json
+
+# Secrets (TypeSafe key). Only .env.example is committed.
+.env
+.env.*
+!.env.example
+
+# Local config (copy from participants.example.toml)
+/participants.toml
+
+# Discussion records
+/data/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+
+# Frontend
+node_modules/
+frontend/dist/
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/
+frontend/playwright/.cache/
