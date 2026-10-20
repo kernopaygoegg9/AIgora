@@ -48,8 +48,10 @@ function stop() {
 // the live view is shown, not only on mount.
 watch(() => props.id, async (id) => {
   // Coming back to the live view after a discussion finished (it is in the history now):
-  // start from the settings again. A running discussion keeps showing.
-  if (!id && store.status === 'finished') store.reset()
+  // start from the settings again. A running discussion keeps showing while this page
+  // still holds its socket; one left behind (the page was left, closing the socket and
+  // cancelling it; it is in the history) can never update again, so start over too.
+  if (!id && (store.status === 'finished' || (store.status === 'running' && !socket))) store.reset()
   if (id || participants.value.length) return
   try {
     ;[participants.value, options.value] = await Promise.all([fetchParticipants(), fetchOptions()])
