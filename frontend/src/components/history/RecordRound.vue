@@ -14,7 +14,7 @@ import type {
 import type { TurnState } from '../../stores/discussion'
 import { renderMarkdown } from '../discussion/markdown'
 import TurnCard from '../discussion/TurnCard.vue'
-import { JUDGE_LABELS, JUDGE_OUTCOME_LABELS, formatTime, stanceLabel } from './labels'
+import { JUDGE_LABELS, agreeLabel, formatTime, judgeOutcomeLabel, stanceLabel } from './labels'
 
 const props = defineProps<{
   round: RecordRound
@@ -77,7 +77,7 @@ const stances = computed(() => Object.entries(judge.value?.detail.stances ?? {})
 
     <div v-if="judge" class="block" data-testid="record-judge">
       <h3 class="block-title">
-        共識裁定（{{ JUDGE_LABELS[judge.judge] ?? judge.judge }}）：{{ JUDGE_OUTCOME_LABELS[judge.outcome] ?? judge.outcome }}
+        共識裁定（{{ JUDGE_LABELS[judge.judge] ?? judge.judge }}）：{{ judgeOutcomeLabel(judge.judge, judge.outcome) }}
       </h3>
       <ul v-if="stances.length" class="plain-list">
         <li v-for="[pid, stance] in stances" :key="pid">{{ name(pid) }}：{{ stanceLabel(stance) }}</li>
@@ -93,7 +93,7 @@ const stances = computed(() => Object.entries(judge.value?.detail.stances ?? {})
       <h3 class="block-title">反問確認</h3>
       <ul class="plain-list">
         <li v-for="c in round.confirmations" :key="c.participant_id">
-          {{ name(c.participant_id) }}：{{ c.agree ? '同意' : '不同意' }}<template v-if="c.reason">（{{ c.reason }}）</template>
+          {{ name(c.participant_id) }}：{{ agreeLabel(c.agree) }}<template v-if="c.reason">（{{ c.reason }}）</template>
         </li>
       </ul>
     </div>

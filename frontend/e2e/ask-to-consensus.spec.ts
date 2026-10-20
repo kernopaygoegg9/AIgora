@@ -12,6 +12,7 @@ test('an ask can be continued as a consensus discussion that reuses its answers 
   await expect(page.getByTestId('discussion-status')).toHaveText('已結束')
 
   const button = page.getByRole('button', { name: '開始共識討論' })
+  await expect(page.getByText('現有的發言當作第 1 輪')).toBeVisible()
   await button.click()
 
   await expect(page.getByTestId('discussion-question')).toHaveText('Which editor?')

@@ -102,7 +102,7 @@ test('judge B shows Jev\'s probability, the confirmation answers with reasons, a
   // Round 2: Jev was above the threshold, but one participant disagreed when asked.
   const judge2 = round(2).getByTestId('judge-result')
   await expect(judge2).toContainText('Jev 判斷')
-  await expect(judge2).toContainText('尚未取得共識')
+  await expect(judge2).toContainText('未取得共識')
   await expect(judge2.getByTestId('jev-probability')).toContainText('0.91')
   await expect(judge2.getByTestId('jev-probability')).toContainText('門檻 0.8')
   const answers2 = round(2).getByTestId('confirmation-result')
