@@ -11,7 +11,7 @@
 
 **Blocked by:** None (can start immediately；只依賴 spec 的素材規格)
 
-**Status:** ready-for-human
+**Status:** claimed
 
 - [ ] 尺寸、格式、檔名、位置與素材清單一致；背景透明
 - [ ] Favicon 在 16px、32px 下仍可辨識
