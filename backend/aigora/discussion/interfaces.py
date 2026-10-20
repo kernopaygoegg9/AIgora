@@ -77,9 +77,9 @@ class DiscussionView:
     active_participant_ids: Sequence[str]  # still in the discussion, in settings order
     moderator_id: str | None
     rounds: Sequence[RoundView]  # completed rounds plus the current one (last)
-    # Reasons from participants who disagreed in the latest confirmation (judge B) of the
-    # current or the previous round (participant id -> reason), carried into the next
-    # round's instructions and the moderator's draft.
+    # Reasons from participants who disagreed in the previous round's confirmation (judge B)
+    # (participant id -> reason), carried into the current round's instructions. The
+    # current round's own reasons reach its moderator call directly from the mode.
     pending_disagreements: Mapping[str, str] = field(default_factory=dict)
 
     @property

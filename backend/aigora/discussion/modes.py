@@ -6,7 +6,6 @@ does not change.
 
 from __future__ import annotations
 
-import dataclasses
 from collections.abc import Mapping, Sequence
 
 from aigora.api.messages import ConfirmationAnswer, DiscussionResult, ResultAnswer
@@ -96,7 +95,7 @@ class ConsensusMode(DiscussionMode):
             parts = ["There is no consensus draft for this round. Continue the discussion and respond to the others."]
         parts.append(STANCE_FORMAT)
         if view.pending_disagreements:
-            parts.append(self._disagreements_note(view))
+            parts.append(self._disagreements_note(view, view.pending_disagreements))
         own = next((t for t in previous.turns if t.participant_id == participant_id), None)
         if previous.number >= 2 and own is not None and own.status == "ok" and own.stance is None:
             parts.append(
@@ -133,8 +132,10 @@ class ConsensusMode(DiscussionMode):
             report = JudgeReport(judge=judge.id, outcome="not_reached", detail=evaluation.detail)
         return ExtraCalls(calls=[self._moderator_call(view)], judge_report=report)
 
-    def _moderator_call(self, view: DiscussionView) -> ExtraCall:
-        """Not reached: the next draft, or at the round limit the final positions."""
+    def _moderator_call(self, view: DiscussionView, disagreements: Mapping[str, str] | None = None) -> ExtraCall:
+        """Not reached: the next draft, or at the round limit the final positions.
+
+        `disagreements`: this round's confirmation reasons (judge B), for the draft."""
         current = view.current_round
         assert current is not None
         moderator = view.moderator_id
@@ -142,8 +143,8 @@ class ConsensusMode(DiscussionMode):
         if current.number >= view.settings.max_rounds:
             return ExtraCall(moderator, "no_consensus_summary", self._summary_instructions(view))
         instructions = self._draft_instructions(current.number)
-        if view.pending_disagreements:
-            instructions += "\n\n" + self._disagreements_note(view)
+        if disagreements:
+            instructions += "\n\n" + self._disagreements_note(view, disagreements)
         return ExtraCall(moderator, "draft", instructions)
 
     def __init__(self) -> None:
@@ -196,19 +197,17 @@ class ConsensusMode(DiscussionMode):
                 confirmation_report=confirmation,
             )
         # Not reached: the round goes on like any other (draft, or the summary at the limit),
-        # and the moderator sees the reasons. The engine keeps them for the next round too
+        # and the moderator sees the reasons. The engine hands them to the next round only
         # (`pending_disagreements`, from the reported answers).
         return ExtraCalls(
-            calls=[self._moderator_call(_with_disagreements(view, verdict.disagreements))],
+            calls=[self._moderator_call(view, verdict.disagreements)],
             judge_report=JudgeReport(judge=judge.id, outcome="not_reached", detail=verdict.detail),
             confirmation_report=confirmation,
         )
 
     @staticmethod
-    def _disagreements_note(view: DiscussionView) -> str:
-        lines = [
-            f"- {view.participant_names.get(pid, pid)}: {reason}" for pid, reason in view.pending_disagreements.items()
-        ]
+    def _disagreements_note(view: DiscussionView, disagreements: Mapping[str, str]) -> str:
+        lines = [f"- {view.participant_names.get(pid, pid)}: {reason}" for pid, reason in disagreements.items()]
         return (
             "When asked whether consensus had been reached, these participants did not agree. "
             "Address their reasons:\n" + "\n".join(lines)
@@ -253,10 +252,6 @@ def _confirmation_answer(result: ExtraCallResult) -> ConfirmationAnswer:
     return ConfirmationAnswer(
         participant_id=result.call.participant_id, agree=result.stance == "AGREE", reason=reason
     )
-
-
-def _with_disagreements(view: DiscussionView, disagreements: Mapping[str, str]) -> DiscussionView:
-    return dataclasses.replace(view, pending_disagreements=dict(disagreements))
 
 
 MODES: dict[str, type[DiscussionMode]] = {AskMode.id: AskMode, ConsensusMode.id: ConsensusMode}

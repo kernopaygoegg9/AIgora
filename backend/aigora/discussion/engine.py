@@ -490,11 +490,11 @@ class DiscussionEngine:
         )
 
     def _pending_disagreements(self) -> dict[str, str]:
-        """Disagreeing confirmation answers of the current round, else of the previous one."""
-        for round_ in self.record.rounds[::-1][:2]:
-            if round_.confirmations is not None:
-                return {a.participant_id: a.reason for a in round_.confirmations if not a.agree}
-        return {}
+        """Disagreeing confirmation answers of the previous round only (older ones are stale)."""
+        if len(self.record.rounds) < 2:
+            return {}
+        previous = self.record.rounds[-2]
+        return {a.participant_id: a.reason for a in previous.confirmations or () if not a.agree}
 
     # --- events --------------------------------------------------------------
 
