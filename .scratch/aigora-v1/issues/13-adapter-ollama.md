@@ -9,7 +9,7 @@
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 - [ ] 可用性檢查：Ollama 沒在執行或模型不存在時回報不可用並附原因
 - [ ] 串流：解析串流回應成 `delta` / `completed`

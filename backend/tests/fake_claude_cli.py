@@ -1,0 +1,57 @@
+"""Stand-in for the `claude` executable in the claude adapter's unit tests.
+
+Behaviour comes from the JSON file named by `FAKE_CLAUDE_SCENARIO`:
+
+    {
+      "auth": {"stdout": "...", "stderr": "...", "exit_code": 0},   # `claude auth status ...`
+      "turn": {"lines": [{...}, "raw text"], "stderr": "...", "exit_code": 0,
+               "sleep_before_seconds": 0, "sleep_after_seconds": 0},
+      "record": "path/to/record.json"   # optional: argv / cwd / stdin / env are written here
+    }
+
+`lines` entries are JSON-encoded unless they are strings (written verbatim).
+"""
+
+import json
+import os
+import sys
+import time
+
+
+def main() -> int:
+    scenario = json.loads(open(os.environ["FAKE_CLAUDE_SCENARIO"], encoding="utf-8").read())
+    args = sys.argv[1:]
+    is_auth = args[:2] == ["auth", "status"]
+    stdin = "" if is_auth else sys.stdin.buffer.read().decode("utf-8")
+
+    if record := scenario.get("record"):
+        with open(record, "w", encoding="utf-8") as f:
+            json.dump({
+                "argv": args,
+                "cwd": os.getcwd(),
+                "stdin": stdin,
+                "env_CLAUDECODE": os.environ.get("CLAUDECODE"),
+                "env_ENABLE_CLAUDEAI_MCP_SERVERS": os.environ.get("ENABLE_CLAUDEAI_MCP_SERVERS"),
+                "pid": os.getpid(),
+            }, f)
+
+    if is_auth:
+        auth = scenario.get("auth", {})
+        sys.stdout.write(auth.get("stdout", ""))
+        sys.stderr.write(auth.get("stderr", ""))
+        return auth.get("exit_code", 0)
+
+    turn = scenario.get("turn", {})
+    time.sleep(turn.get("sleep_before_seconds", 0))
+    for line in turn.get("lines", []):
+        text = line if isinstance(line, str) else json.dumps(line)
+        sys.stdout.buffer.write(text.encode("utf-8") + b"\n")
+        sys.stdout.flush()
+    sys.stderr.write(turn.get("stderr", ""))
+    sys.stderr.flush()
+    time.sleep(turn.get("sleep_after_seconds", 0))
+    return turn.get("exit_code", 0)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

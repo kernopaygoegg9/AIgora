@@ -10,7 +10,7 @@
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 - [ ] 已取得使用者同意並安裝 Gemini CLI
 - [ ] 可用性檢查：未安裝或未登入時回報不可用並附原因
