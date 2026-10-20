@@ -9,7 +9,7 @@
 
 **Blocked by:** 08、09
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 - [ ] `start` 帶 `from_discussion_id` 時，新討論的第 1 輪等於原提問的發言，不再呼叫參與者
 - [ ] 新討論的紀錄 `derived_from` 指向原提問；原提問紀錄不變

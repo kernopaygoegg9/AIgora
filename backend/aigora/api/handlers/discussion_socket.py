@@ -15,6 +15,7 @@ from pydantic import ValidationError
 
 from aigora.api import messages as m
 from aigora.config import ConfigError, load_participants, participants_file_path
+from aigora.discussion.derived import DerivedDiscussionEngine, SourceError, load_source
 from aigora.discussion.engine import DiscussionEngine
 from aigora.discussion.modes import get_mode
 from aigora.discussion.orders import get_speaking_order
@@ -40,20 +41,32 @@ async def _receive_start(websocket: WebSocket) -> m.StartMessage | None:
 
 
 def _build_engine(start: m.StartMessage, websocket: WebSocket) -> DiscussionEngine:
-    """Raises SettingsError / ConfigError when the discussion cannot start."""
+    """Raises SettingsError / SourceError / ConfigError when the discussion cannot start.
+
+    With `from_discussion_id` (提問轉共識討論) the question and participants come from
+    that ask, whose answers become round 1; the other settings come from `start`.
+    """
+    store = DiscussionStore()
+    requested = start.settings
+    source = None
     if start.from_discussion_id is not None:
-        raise SettingsError("提問轉共識討論尚未提供")  # ticket 10
+        source = load_source(store, start.from_discussion_id)
+        if requested.mode != "consensus":
+            raise SettingsError("提問只能轉成共識討論")
+        requested = requested.model_copy(update={"participant_ids": list(source.settings.participant_ids)})
     config = load_participants(participants_file_path())
-    settings = resolve_settings(start.settings, config)
-    return DiscussionEngine(
-        question=start.question,
+    settings = resolve_settings(requested, config)
+    common = dict(
         settings=settings,
         participants=[config.get(pid) for pid in settings.participant_ids],
         mode=get_mode(settings.mode),
         order=get_speaking_order(settings.speaking_order),
-        store=DiscussionStore(),
+        store=store,
         send=websocket.send_json,
     )
+    if source is not None:
+        return DerivedDiscussionEngine(source=source, **common)
+    return DiscussionEngine(question=start.question, **common)
 
 
 async def discussion_socket(websocket: WebSocket):
@@ -65,7 +78,7 @@ async def discussion_socket(websocket: WebSocket):
             return
         try:
             engine = _build_engine(start, websocket)
-        except (SettingsError, ConfigError) as exc:
+        except (SettingsError, SourceError, ConfigError) as exc:
             await _send_error(websocket, str(exc))
             await websocket.close()
             return
