@@ -1,8 +1,9 @@
-<!-- One round: the participants' turns side by side, then (consensus) the judge result and draft. -->
+<!-- One round: the participants' turns side by side, removals / moderator handoffs, then (consensus) the judge result and draft. -->
 <script setup lang="ts">
 import type { ParticipantSnapshot } from '../../contracts/messages'
-import type { RoundState } from '../../stores/discussion'
+import type { ModeratorChange, RemovedParticipant, RoundState } from '../../stores/discussion'
 import RoundConsensus from './RoundConsensus.vue'
+import RoundNotices from './RoundNotices.vue'
 import TurnCard from './TurnCard.vue'
 
 defineProps<{
@@ -10,6 +11,9 @@ defineProps<{
   participantById: (id: string) => ParticipantSnapshot | undefined
   showNumber?: boolean
   moderatorId?: string | null
+  /** This round's removals and moderator handoffs (ticket 07). */
+  removed?: RemovedParticipant[]
+  moderatorChanges?: ModeratorChange[]
 }>()
 </script>
 
@@ -24,6 +28,7 @@ defineProps<{
         :participant="participantById(turn.participantId)"
       />
     </div>
+    <RoundNotices :removed="removed ?? []" :moderator-changes="moderatorChanges ?? []" :participant-by-id="participantById" />
     <RoundConsensus :round="round" :participant-by-id="participantById" :moderator-id="moderatorId" />
   </section>
 </template>

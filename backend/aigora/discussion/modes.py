@@ -127,8 +127,20 @@ class ConsensusMode(DiscussionMode):
             call = ExtraCall(moderator, "draft", self._draft_instructions(current.number))
         return ExtraCalls(calls=[call], judge_report=report)
 
+    def __init__(self) -> None:
+        # (round, purpose) -> participants who already tried that moderator call.
+        self._tried: dict[tuple[int, str], set[str]] = {}
+
     def _after_extra_calls(self, view: DiscussionView, results: Sequence[ExtraCallResult]) -> Decision:
         result = results[0]
+        assert view.current_round is not None
+        tried = self._tried.setdefault((view.current_round.number, result.call.purpose), set())
+        tried.add(result.call.participant_id)
+        # A failed moderator call hands over to the next participant (the engine records
+        # it); the new moderator retries the call once, unless it has already tried.
+        moderator_call = result.call.purpose in ("draft", "final_result", "no_consensus_summary")
+        if moderator_call and result.status != "ok" and view.moderator_id is not None and view.moderator_id not in tried:
+            return ExtraCalls(calls=[ExtraCall(view.moderator_id, result.call.purpose, result.call.instructions)])
         if result.call.purpose == "no_consensus_summary":
             reason = f"到達輪數上限（{view.settings.max_rounds} 輪）仍未取得共識"
             if result.status != "ok":

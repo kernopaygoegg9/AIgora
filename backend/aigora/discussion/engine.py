@@ -5,8 +5,11 @@ It owns no rules: what each round asks for and what happens after it come
 from the `DiscussionMode`; how a round is split into batches comes from the
 `SpeakingOrder` (see `interfaces.py` for the flow). Extra calls (moderator
 draft / summary) and judge reports are run and emitted here (ticket 04);
-interjections and stop are ticket 06; tickets 07 -> 08 extend it (failure
-counting and removal, judge B confirmations).
+interjections and stop are ticket 06; failure handling is ticket 07: a
+participant whose turns fail in 2 rounds in a row is removed, fewer than 2
+active participants ends the discussion as `insufficient_participants`, and a
+moderator who is removed or fails a moderator call hands over to the next
+active participant in the list. Ticket 08 adds judge B confirmations.
 
 The discussion record (`aigora.record.DiscussionRecord`) is the engine's
 single source of state; the read-only `DiscussionView` handed to modes and
@@ -46,7 +49,15 @@ from aigora.discussion.prompt_builder import build_prompt
 from aigora.discussion.store import DiscussionStore
 from aigora.domain import TurnPurpose
 from aigora.participant_info import snapshot_of
-from aigora.record import DiscussionRecord, RecordInterjection, RecordJudge, RecordRound, RecordTurn
+from aigora.record import (
+    DiscussionRecord,
+    RecordInterjection,
+    RecordJudge,
+    RecordModeratorChange,
+    RecordRemoval,
+    RecordRound,
+    RecordTurn,
+)
 from aigora.stance import parse_stance
 
 log = logging.getLogger("aigora.engine")
@@ -56,6 +67,18 @@ Send = Callable[[dict[str, Any]], Awaitable[None]]
 
 
 STOPPED_REASON = "使用者停止了討論，這次發言已取消"
+
+# A participant whose turns fail in this many rounds in a row is removed (移出).
+FAILED_ROUNDS_TO_REMOVE = 2
+# With fewer participants left the discussion ends as `insufficient_participants`.
+MIN_PARTICIPANTS = 2
+# Extra calls that are the moderator's job: when the moderator fails one, the next
+# active participant takes over (the mode decides whether to retry the call).
+MODERATOR_PURPOSES: frozenset[str] = frozenset({"draft", "final_result", "no_consensus_summary"})
+
+
+def _turn_of(round_: RecordRound, participant_id: str) -> RecordTurn | None:
+    return next((t for t in round_.turns if t.participant_id == participant_id), None)
 
 
 @dataclass
@@ -204,6 +227,18 @@ class DiscussionEngine:
         while True:
             round_number += 1
             await self._run_round(round_number)
+            await self._remove_failing(round_number)
+            active = len(self.active_participant_ids())
+            if active < MIN_PARTICIPANTS:
+                await self._complete_round(round_number)
+                await self._finish(
+                    Finish(
+                        outcome="insufficient_participants",
+                        result=None,
+                        reason=f"在場參與者只剩 {active} 個（少於 {MIN_PARTICIPANTS} 個），討論結束",
+                    )
+                )
+                return self.record
             decision = await self.mode.after_round(self.view(), None)
             while isinstance(decision, ExtraCalls):
                 await self._apply_reports(round_number, decision)
@@ -235,6 +270,37 @@ class DiscussionEngine:
             await asyncio.gather(*(turn(pid, view) for pid in batch))
             self._sort_turns(round_)
 
+    async def _remove_failing(self, number: int) -> None:
+        """Remove every active participant whose turns failed in this round and the one before."""
+        if number < FAILED_ROUNDS_TO_REMOVE:
+            return
+        recent = self.record.rounds[::-1][:FAILED_ROUNDS_TO_REMOVE]  # latest first
+        for pid in self.active_participant_ids():
+            turns = [_turn_of(r, pid) for r in recent]
+            if not all(t is not None and t.status != "ok" for t in turns):
+                continue
+            last_error = turns[0].error if turns[0] is not None else None
+            reason = f"連續 {FAILED_ROUNDS_TO_REMOVE} 輪發言失敗（最後一次：{last_error or '未知原因'}），已移出討論"
+            self.record.removed_participants.append(RecordRemoval(participant_id=pid, round=number, reason=reason))
+            await self._emit(m.ParticipantRemoved, participant_id=pid, reason=reason, round=number)
+            if pid == self.moderator_id():
+                await self._hand_over_moderator(number)
+
+    async def _hand_over_moderator(self, number: int) -> None:
+        """The moderator failed or was removed: the next active participant in the list takes over."""
+        current = self.moderator_id()
+        if current is None:
+            return  # the mode has no moderator (e.g. 提問)
+        ids = list(self.settings.participant_ids)
+        active = set(self.active_participant_ids()) - {current}
+        start = ids.index(current) if current in ids else -1
+        after = ids[start + 1:] + ids[: start + 1]  # the list wraps around
+        successor = next((pid for pid in after if pid in active), None)
+        if successor is None:
+            return
+        self.record.moderator_changes.append(RecordModeratorChange(round=number, participant_id=successor))
+        await self._emit(m.ModeratorChanged, participant_id=successor, round=number)
+
     def _sort_turns(self, round_: RecordRound) -> None:
         """Record a round's turns in speaking order, not in the order they finished."""
         order = self._schedule_order.get(round_.number, [])
@@ -252,6 +318,8 @@ class DiscussionEngine:
             if call.purpose == "draft" and turn.status == "ok" and turn.text:
                 round_.draft = turn.text
                 await self._emit(m.DraftCreated, round=number, text=turn.text)
+            if turn.status != "ok" and call.purpose in MODERATOR_PURPOSES and call.participant_id == self.moderator_id():
+                await self._hand_over_moderator(number)
             results.append(
                 ExtraCallResult(call=call, status=turn.status, text=turn.text, stance=turn.stance, error=turn.error)
             )
