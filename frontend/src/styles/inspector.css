@@ -1,0 +1,53 @@
+/*
+  The inspector column beside a page's stage: the settings page (SettingsPanel), the live
+  discussion (DiscussionInspector) and the read-only record (RecordView). Imported by those
+  components; their own scoped styles only add what is specific to them.
+*/
+
+.inspector {
+  position: sticky;
+  top: var(--space-4);
+  max-height: calc(100vh - 2 * var(--space-4));
+  overflow: auto;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+.inspector-section {
+  padding: var(--space-3) 14px;
+  border-bottom: 1px solid var(--line);
+}
+.inspector-section:last-child {
+  border-bottom: none;
+}
+.inspector-title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* Key / value list (settings snapshot). */
+.inspector-kv {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 5px var(--space-3);
+  margin: 0;
+  font-size: var(--fs-sm);
+}
+.inspector-kv dt {
+  color: var(--muted);
+}
+.inspector-kv dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 1023px) {
+  .inspector {
+    position: static;
+    max-height: none;
+  }
+}

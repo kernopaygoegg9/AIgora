@@ -3,7 +3,7 @@ import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { fetchDiscussions } from '../api/discussions'
-import { MODE_LABELS, formatTime, outcomeLabel } from '../components/history/labels'
+import { MODE_LABELS, formatTime, outcomeLabel, outcomePillClass } from '../components/history/labels'
 import type { DiscussionSummary } from '../contracts/http'
 
 const router = useRouter()
@@ -20,22 +20,6 @@ onMounted(async () => {
     loading.value = false
   }
 })
-
-// Result pill colour per outcome (null = still in progress).
-function outcomePill(d: DiscussionSummary): string {
-  switch (d.outcome) {
-    case null:
-      return 'pill-accent'
-    case 'consensus':
-      return 'pill-ok'
-    case 'no_consensus':
-      return 'pill-warn'
-    case 'completed':
-      return ''
-    default:
-      return 'pill-bad'
-  }
-}
 
 // The whole row opens the record; the question itself is the real link.
 function open(d: DiscussionSummary) {
@@ -74,7 +58,7 @@ function open(d: DiscussionSummary) {
             <time :datetime="d.created_at">{{ formatTime(d.created_at) }}</time>
           </td>
           <td>
-            <span class="pill" :class="outcomePill(d)" data-testid="history-outcome">{{ outcomeLabel(d.outcome) }}</span>
+            <span class="pill" :class="outcomePillClass(d.outcome)" data-testid="history-outcome">{{ outcomeLabel(d.outcome) }}</span>
           </td>
         </tr>
       </tbody>

@@ -6,14 +6,17 @@
 import { computed, ref, watch } from 'vue'
 
 import '../../styles/discussion.css'
+import '../../styles/inspector.css'
 import { fetchDiscussion } from '../../api/discussions'
-import type { ParticipantSnapshot, SpeakingOrderId } from '../../contracts/messages'
+import { fetchOptions } from '../../api/options'
+import type { OptionsResponse } from '../../contracts/http'
+import type { ParticipantSnapshot } from '../../contracts/messages'
 import type { DiscussionRecord } from '../../contracts/record'
 import type { TurnStateStatus } from '../../stores/discussion'
 import InspectorParticipants from '../discussion/InspectorParticipants.vue'
 import { renderMarkdown } from '../discussion/markdown'
 import StanceTracker, { type StanceCell } from '../discussion/StanceTracker.vue'
-import { JUDGE_LABELS, MODE_LABELS, formatTime, outcomeLabel } from './labels'
+import { JUDGE_LABELS, MODE_LABELS, formatTime, outcomeLabel, outcomePillClass } from './labels'
 import RecordRound from './RecordRound.vue'
 
 const props = defineProps<{ id: string }>()
@@ -21,13 +24,19 @@ const props = defineProps<{ id: string }>()
 const record = ref<DiscussionRecord | null>(null)
 const loadError = ref<string | null>(null)
 
+// Speaking order names come from the backend (`/api/options`); without them, the id is shown.
+const options = ref<OptionsResponse | null>(null)
+const optionsLoaded = fetchOptions().catch(() => null)
+
 watch(
   () => props.id,
   async (id) => {
     record.value = null
     loadError.value = null
     try {
-      const loaded = await fetchDiscussion(id)
+      // Wait for the options too, so the order name does not flicker from id to name.
+      const [loaded, opts] = await Promise.all([fetchDiscussion(id), optionsLoaded])
+      options.value = opts
       if (props.id === id) record.value = loaded
     } catch (err) {
       if (props.id === id) loadError.value = err instanceof Error ? err.message : String(err)
@@ -81,11 +90,6 @@ const resultHtml = computed(() => {
   return result && result.kind !== 'answers' && result.text ? renderMarkdown(result.text) : ''
 })
 
-const OUTCOME_PILLS: Record<string, string> = { consensus: 'pill-ok', no_consensus: 'pill-warn', completed: '' }
-const outcomePill = computed(() => {
-  const o = record.value?.outcome
-  return o ? (OUTCOME_PILLS[o] ?? 'pill-bad') : 'pill-accent'
-})
 
 // --- inspector ---------------------------------------------------------------------------
 const removedIds = computed(() => record.value?.removed_participants.map((r) => r.participant_id) ?? [])
@@ -108,7 +112,10 @@ const stanceRounds = computed(() =>
       return { number: r.number, cells }
     }),
 )
-const ORDER_LABELS: Record<SpeakingOrderId, string> = { parallel: '同時', sequential: '依序' }
+const orderName = computed(() => {
+  const id = record.value?.settings.speaking_order ?? ''
+  return options.value?.speaking_orders.find((o) => o.id === id)?.name ?? id
+})
 </script>
 
 <template>
@@ -121,7 +128,7 @@ const ORDER_LABELS: Record<SpeakingOrderId, string> = { parallel: '同時', sequ
         <header class="topbar">
           <h1 class="question" data-testid="record-question" :title="record.question">{{ record.question }}</h1>
           <span class="pill read-only">唯讀紀錄</span>
-          <span class="pill" :class="outcomePill" data-testid="record-outcome">{{ outcomeLabel(record.outcome) }}</span>
+          <span class="pill" :class="outcomePillClass(record.outcome)" data-testid="record-outcome">{{ outcomeLabel(record.outcome) }}</span>
         </header>
         <p class="sub">
           <RouterLink class="back" :to="{ name: 'history' }">← 回到歷史</RouterLink>
@@ -178,8 +185,8 @@ const ORDER_LABELS: Record<SpeakingOrderId, string> = { parallel: '同時', sequ
       </div>
 
       <aside class="inspector" aria-label="檢視器">
-        <section class="section">
-          <h3 class="section-title">參與者</h3>
+        <section class="inspector-section">
+          <h3 class="inspector-title">參與者</h3>
           <InspectorParticipants
             :participants="record.participants"
             :moderator-id="moderatorId"
@@ -187,13 +194,13 @@ const ORDER_LABELS: Record<SpeakingOrderId, string> = { parallel: '同時', sequ
             :statuses="statuses"
           />
         </section>
-        <section v-if="consensus && stanceRounds.length" class="section">
-          <h3 class="section-title">表態追蹤</h3>
+        <section v-if="consensus && stanceRounds.length" class="inspector-section">
+          <h3 class="inspector-title">表態追蹤</h3>
           <StanceTracker :participants="record.participants" :rounds="stanceRounds" />
         </section>
-        <section class="section">
-          <h3 class="section-title">設定快照</h3>
-          <dl class="kv" data-testid="record-meta">
+        <section class="inspector-section">
+          <h3 class="inspector-title">設定快照</h3>
+          <dl class="inspector-kv" data-testid="record-meta">
             <dt>討論模式</dt>
             <dd>{{ MODE_LABELS[record.settings.mode] ?? record.settings.mode }}</dd>
             <template v-if="consensus">
@@ -211,7 +218,7 @@ const ORDER_LABELS: Record<SpeakingOrderId, string> = { parallel: '同時', sequ
               </template>
             </template>
             <dt>發言順序</dt>
-            <dd>{{ ORDER_LABELS[record.settings.speaking_order] ?? record.settings.speaking_order }}</dd>
+            <dd>{{ orderName }}</dd>
             <template v-if="consensus">
               <dt>輪數上限</dt>
               <dd>{{ record.settings.max_rounds }}</dd>
@@ -299,53 +306,9 @@ const ORDER_LABELS: Record<SpeakingOrderId, string> = { parallel: '同時', sequ
   border: 1px solid var(--bad-line);
   border-radius: var(--radius);
 }
-
-/* Inspector: same look as the live page's DiscussionInspector. */
-.inspector {
-  position: sticky;
-  top: var(--space-4);
-  max-height: calc(100vh - 2 * var(--space-4));
-  overflow: auto;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-}
-.section {
-  padding: var(--space-3) 14px;
-  border-bottom: 1px solid var(--line);
-}
-.section:last-child {
-  border-bottom: none;
-}
-.section-title {
-  margin: 0 0 var(--space-2);
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-.kv {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 5px var(--space-3);
-  margin: 0;
-  font-size: var(--fs-sm);
-}
-.kv dt {
-  color: var(--muted);
-}
-.kv dd {
-  margin: 0;
-  overflow-wrap: anywhere;
-}
 @media (max-width: 1023px) {
   .record {
     grid-template-columns: minmax(0, 1fr);
-  }
-  .inspector {
-    position: static;
-    max-height: none;
   }
 }
 </style>

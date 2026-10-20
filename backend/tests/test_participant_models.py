@@ -72,7 +72,8 @@ def test_a_listing_error_is_reported_and_an_adapter_that_raises_does_not_break_t
         return ModelChoices(error="catalog offline")
 
     monkeypatch.setattr(FakeAdapter, "list_models", list_models)
-    write_participants(fake_participant("broken", "Broken") + fake_participant("offline", "Offline"))
+    # Different options, so each gets its own listing (listings are shared per adapter + options).
+    write_participants(fake_participant("broken", "Broken", models=["b"]) + fake_participant("offline", "Offline"))
 
     info = by_id(client.get("/api/participants"))
 
@@ -122,6 +123,48 @@ def test_errors_are_not_cached(client, write_participants, monkeypatch):
 
     assert by_id(client.get("/api/participants"))["fake-a"]["models_error"] == "Ollama is not running"
     assert by_id(client.get("/api/participants"))["fake-a"]["models"] == [{"id": "m", "label": "m"}]
+
+
+def test_participants_sharing_adapter_and_options_trigger_one_listing_at_a_time(client, write_participants, monkeypatch):
+    calls: list[str] = []
+
+    async def list_models(self, participant):
+        calls.append(participant.id)
+        await asyncio.sleep(0.05)  # still listing when the second participant asks
+        return ModelChoices(models=(ModelOption("m", "m"),))
+
+    monkeypatch.setattr(FakeAdapter, "list_models", list_models)
+    write_participants(fake_participant("fake-a", "Fake A", models=["x"])
+                       + fake_participant("fake-b", "Fake B", models=["x"]))
+
+    info = by_id(client.get("/api/participants"))
+
+    assert len(calls) == 1
+    assert info["fake-a"]["models"] == info["fake-b"]["models"] == [{"id": "m", "label": "m"}]
+
+
+def test_a_failed_in_flight_listing_is_shared_but_not_kept(client, write_participants, monkeypatch):
+    calls: list[str] = []
+
+    async def list_models(self, participant):
+        calls.append(participant.id)
+        await asyncio.sleep(0.05)
+        if len(calls) == 1:
+            raise RuntimeError("catalog exploded")
+        return ModelChoices(models=(ModelOption("m", "m"),))
+
+    monkeypatch.setattr(FakeAdapter, "list_models", list_models)
+    write_participants(fake_participant("fake-a", "Fake A", models=["x"])
+                       + fake_participant("fake-b", "Fake B", models=["x"]))
+
+    first = by_id(client.get("/api/participants"))
+    assert len(calls) == 1
+    assert "catalog exploded" in first["fake-a"]["models_error"]
+    assert "catalog exploded" in first["fake-b"]["models_error"]
+
+    second = by_id(client.get("/api/participants"))
+    assert len(calls) == 2
+    assert second["fake-a"]["models"] == [{"id": "m", "label": "m"}]
 
 
 def test_model_listing_runs_at_the_same_time_as_the_availability_check(client, write_participants, monkeypatch):

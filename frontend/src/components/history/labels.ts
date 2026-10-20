@@ -6,6 +6,7 @@ export {
   agreeLabel,
   judgeOutcomeLabel,
   outcomeLabel,
+  outcomePillClass,
   stanceLabel,
 } from '../labels'
 

@@ -168,6 +168,22 @@ test('the read-only view shows every part of a record', async ({ page }) => {
   await expect(view.getByRole('button')).toHaveCount(0)
 })
 
+test('the record names the speaking order as the backend does, or by its id', async ({ page }) => {
+  await page.route(`**/api/discussions/${fullRecord.id}`, (route) => route.fulfill({ json: fullRecord }))
+  await page.route('**/api/options', async (route) => {
+    const options = await (await route.fetch()).json()
+    options.speaking_orders = [{ id: 'parallel', name: '大家一起說', implemented: true }]
+    await route.fulfill({ json: options })
+  })
+  await page.goto(`/discussions/${fullRecord.id}`)
+  await expect(page.getByTestId('record-meta')).toContainText('大家一起說')
+
+  await page.unroute('**/api/options')
+  await page.route('**/api/options', (route) => route.fulfill({ status: 500 }))
+  await page.reload()
+  await expect(page.getByTestId('record-meta')).toContainText('parallel')
+})
+
 test('an unknown discussion shows an error', async ({ page }) => {
   await page.goto('/discussions/20990101-000000-abcdef')
   await expect(page.getByTestId('record-error')).toBeVisible()

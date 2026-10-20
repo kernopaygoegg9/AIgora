@@ -80,3 +80,11 @@ adapter = "fake"
 stream = false
 fail_rounds = [1, 2]
 fail_reason = "fake: simulated crash"
+
+# Code review fix: disabled, so the browser never sees it, but the backend still rejects an
+# extra participant id equal to it. Its id is what an extra copied from Fake A used to get.
+[[participant]]
+id = "fake-a-2"
+display_name = "Fake A Retired"
+adapter = "fake"
+enabled = false

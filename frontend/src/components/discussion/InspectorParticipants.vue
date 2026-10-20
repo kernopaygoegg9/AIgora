@@ -4,6 +4,7 @@
 <script setup lang="ts">
 import type { ParticipantSnapshot } from '../../contracts/messages'
 import type { TurnStateStatus } from '../../stores/discussion'
+import { TURN_STATUS_LABELS, TURN_STATUS_PILLS } from '../labels'
 import ParticipantLabel from './ParticipantLabel.vue'
 
 defineProps<{
@@ -13,19 +14,6 @@ defineProps<{
   /** Each participant's latest turn status; missing = no turn yet. */
   statuses: Record<string, TurnStateStatus | undefined>
 }>()
-
-const STATUS_LABELS: Record<TurnStateStatus, string> = {
-  running: '回覆中',
-  ok: '完成',
-  failed: '失敗',
-  timeout: '逾時',
-}
-const STATUS_PILLS: Record<TurnStateStatus, string> = {
-  running: 'pill-accent',
-  ok: '',
-  failed: 'pill-bad',
-  timeout: 'pill-bad',
-}
 </script>
 
 <template>
@@ -43,8 +31,8 @@ const STATUS_PILLS: Record<TurnStateStatus, string> = {
         <span v-if="p.id === moderatorId" class="pill pill-accent" data-testid="inspector-moderator">主持人</span>
       </div>
       <span v-if="removedIds.includes(p.id)" class="pill pill-bad state">已移出</span>
-      <span v-else-if="statuses[p.id]" class="pill state" :class="STATUS_PILLS[statuses[p.id]!]">
-        {{ STATUS_LABELS[statuses[p.id]!] }}
+      <span v-else-if="statuses[p.id]" class="pill state" :class="TURN_STATUS_PILLS[statuses[p.id]!]">
+        {{ TURN_STATUS_LABELS[statuses[p.id]!] }}
       </span>
       <span v-else class="muted state">—</span>
     </li>

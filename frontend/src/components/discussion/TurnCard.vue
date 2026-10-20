@@ -5,26 +5,23 @@ import { computed } from 'vue'
 import '../../styles/discussion.css'
 import type { ParticipantSnapshot } from '../../contracts/messages'
 import type { TurnState } from '../../stores/discussion'
-import { stanceLabel } from '../labels'
+import { TURN_STATUS_LABELS, TURN_STATUS_PILLS, stanceLabel } from '../labels'
 import { renderMarkdown } from './markdown'
 import ParticipantLabel from './ParticipantLabel.vue'
 
 const props = defineProps<{ turn: TurnState; participant: ParticipantSnapshot | undefined }>()
 
-const STATUS_LABELS: Record<TurnState['status'], string> = {
-  running: '回覆中',
-  ok: '完成',
-  failed: '失敗',
-  timeout: '逾時',
-}
-const STATUS_PILLS: Record<TurnState['status'], string> = {
-  running: 'pill-accent',
-  ok: '',
-  failed: 'pill-bad',
-  timeout: 'pill-bad',
+
+// The reply ends with its raw `STANCE: …` line; with a parsed stance the footer below shows
+// it, so leave that line out of the text (display only; same rule as backend stance.py).
+const STANCE_LINE = /^STANCE:\s*(AGREE|DISAGREE)$/i
+function withoutStanceLine(text: string): string {
+  const lines = text.trimEnd().split(/\r?\n/)
+  const last = lines[lines.length - 1]
+  return last !== undefined && STANCE_LINE.test(last.trim()) ? lines.slice(0, -1).join('\n').trimEnd() : text
 }
 
-const html = computed(() => renderMarkdown(props.turn.text))
+const html = computed(() => renderMarkdown(props.turn.stance ? withoutStanceLine(props.turn.text) : props.turn.text))
 const failed = computed(() => props.turn.status === 'failed' || props.turn.status === 'timeout')
 </script>
 
@@ -37,7 +34,7 @@ const failed = computed(() => props.turn.status === 'failed' || props.turn.statu
   >
     <header class="d-turn-head">
       <ParticipantLabel :participant="participant" :id="turn.participantId" />
-      <span class="pill" :class="STATUS_PILLS[turn.status]" data-testid="turn-status">{{ STATUS_LABELS[turn.status] }}</span>
+      <span class="pill" :class="TURN_STATUS_PILLS[turn.status]" data-testid="turn-status">{{ TURN_STATUS_LABELS[turn.status] }}</span>
     </header>
     <p v-if="turn.failure" class="d-failure" data-testid="turn-failure">{{ turn.failure.reason }}</p>
     <!-- eslint-disable-next-line vue/no-v-html -- sanitised in renderMarkdown -->
