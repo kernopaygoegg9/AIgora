@@ -10,7 +10,7 @@
 
 **Blocked by:** 01–16 全部
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 - [ ] 畫面上使用正式素材
 - [ ] 所有自動測試通過（真實 Adapter 的測試在已安裝的 CLI 上通過）
