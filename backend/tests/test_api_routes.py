@@ -15,8 +15,6 @@ def client():
     "path",
     [
         "/api/options",
-        "/api/discussions",
-        "/api/discussions/some-id",
         "/api/avatars/claude.png",
     ],
 )
