@@ -1,0 +1,46 @@
+# AIgora participants. Copy to participants.toml (git-ignored) and edit.
+# Edit this file by hand; v1 has no UI for it.
+
+[defaults]
+mode = "ask"                # ask | consensus
+judge = "stance_vote"       # stance_vote (A) | jev (B, needs TYPESAFE_API_KEY in .env)
+speaking_order = "parallel" # parallel | sequential (interface only in v1)
+moderator = "claude"        # participant id; omit to use the first participant
+max_rounds = 15
+turn_timeout_seconds = 300
+jev_threshold = 0.8
+
+[[participant]]
+id = "claude"
+display_name = "Claude"
+adapter = "claude"
+# model = "..."            # optional; adapter default when omitted
+# avatar = "claude.png"    # optional; adapter default avatar when omitted
+# enabled = true           # optional; false hides it from the picker
+# persona = "..."          # reserved; ignored in v1 (logged)
+
+[[participant]]
+id = "codex"
+display_name = "Codex"
+adapter = "codex"
+
+[[participant]]
+id = "gemini"
+display_name = "Gemini"
+adapter = "gemini"
+enabled = false
+
+[[participant]]
+id = "ollama"
+display_name = "Ollama"
+adapter = "ollama"
+enabled = false
+[participant.options]
+base_url = "http://127.0.0.1:11434"
+
+# Fake Adapter: quota-free development and tests.
+[[participant]]
+id = "fake"
+display_name = "Fake"
+adapter = "fake"
+enabled = false
