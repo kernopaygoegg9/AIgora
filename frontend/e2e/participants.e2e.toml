@@ -55,3 +55,12 @@ display_name = "Fake Sleepy"
 adapter = "fake"
 [participant.options]
 delay_seconds = 600
+
+# Ticket 05: unavailable (shows the reason; cannot be picked).
+[[participant]]
+id = "fake-down"
+display_name = "Fake Down"
+adapter = "fake"
+[participant.options]
+available = false
+unavailable_reason = "fake: CLI not installed"

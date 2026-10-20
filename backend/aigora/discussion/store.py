@@ -6,11 +6,20 @@ Listing and reading (history, ticket 09) belong here too.
 
 from __future__ import annotations
 
+import logging
 import os
+import re
 from pathlib import Path
+
+from pydantic import ValidationError
 
 from aigora.config import REPO_ROOT
 from aigora.record import DiscussionRecord
+
+log = logging.getLogger(__name__)
+
+# Record ids are `YYYYMMDD-HHMMSS-<6 hex>`; anything else (e.g. `../x`) is never a record.
+_ID_PATTERN = re.compile(r"^[0-9]{8}-[0-9]{6}-[0-9a-f]{6}$")
 
 
 def data_dir_path() -> Path:
@@ -34,3 +43,25 @@ class DiscussionStore:
         tmp.write_text(record.model_dump_json(indent=2), encoding="utf-8")
         os.replace(tmp, path)
         return path
+
+    def read(self, discussion_id: str) -> DiscussionRecord | None:
+        """The record with this id, or None if there is none (or it cannot be parsed)."""
+        if not _ID_PATTERN.match(discussion_id):
+            return None
+        return self._load(self.path_for(discussion_id))
+
+    def list(self) -> list[DiscussionRecord]:
+        """Every readable record, newest first (by `created_at`). In-progress ones included."""
+        if not self.directory.is_dir():
+            return []
+        records = [r for path in self.directory.glob("*.json") if (r := self._load(path)) is not None]
+        return sorted(records, key=lambda r: (r.created_at, r.id), reverse=True)
+
+    def _load(self, path: Path) -> DiscussionRecord | None:
+        try:
+            return DiscussionRecord.model_validate_json(path.read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            return None
+        except (OSError, ValidationError, ValueError) as exc:
+            log.warning("skipping unreadable discussion record %s: %s", path, exc)
+            return None

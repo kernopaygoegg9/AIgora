@@ -1,14 +1,16 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 
 import { openDiscussionSocket, type DiscussionSocket } from '../api/discussionSocket'
+import { fetchOptions } from '../api/options'
 import { fetchParticipants } from '../api/participants'
-import AskForm from '../components/discussion/AskForm.vue'
 import DiscussionControls from '../components/discussion/DiscussionControls.vue'
 import DiscussionOutcome from '../components/discussion/DiscussionOutcome.vue'
+import RecordView from '../components/history/RecordView.vue'
 import RoundSection from '../components/discussion/RoundSection.vue'
-import type { ParticipantInfo } from '../contracts/http'
-import type { ModeId } from '../contracts/messages'
+import SettingsPanel from '../components/settings/SettingsPanel.vue'
+import type { OptionsResponse, ParticipantInfo } from '../contracts/http'
+import type { StartSettings } from '../contracts/messages'
 import { useDiscussionStore } from '../stores/discussion'
 
 // `id` is set when viewing a past discussion read-only (route `discussion-record`, ticket 09).
@@ -16,6 +18,7 @@ const props = defineProps<{ id?: string }>()
 
 const store = useDiscussionStore()
 const participants = ref<ParticipantInfo[]>([])
+const options = ref<OptionsResponse | null>(null)
 const loadError = ref<string | null>(null)
 const connectionLost = ref(false)
 let socket: DiscussionSocket | null = null
@@ -23,18 +26,20 @@ let socket: DiscussionSocket | null = null
 const STATUS_LABELS = { idle: '', running: '討論中', finished: '已結束' } as const
 const statusLabel = computed(() => STATUS_LABELS[store.status])
 
-onMounted(async () => {
-  if (props.id) return
+// The router reuses this instance between `/` and `/discussions/:id`, so load whenever
+// the live view is shown, not only on mount.
+watch(() => props.id, async (id) => {
+  if (id || participants.value.length) return
   try {
-    participants.value = await fetchParticipants()
+    ;[participants.value, options.value] = await Promise.all([fetchParticipants(), fetchOptions()])
   } catch (err) {
     loadError.value = err instanceof Error ? err.message : String(err)
   }
-})
+}, { immediate: true })
 
 onBeforeUnmount(() => socket?.close())
 
-function startAsk(question: string, participantIds: string[], mode: ModeId = 'ask') {
+function startDiscussion(question: string, settings: StartSettings) {
   socket?.close()
   store.reset()
   connectionLost.value = false
@@ -45,17 +50,24 @@ function startAsk(question: string, participantIds: string[], mode: ModeId = 'as
     },
   )
   socket = current
-  current.start(question, { mode, participant_ids: participantIds })
+  current.start(question, settings)
 }
 </script>
 
 <template>
-  <section class="discussion-page" data-testid="discussion-page">
+  <!-- Past discussion: read-only record view only (ticket 09). -->
+  <RecordView v-if="id" :id="id" />
+  <section v-else class="discussion-page" data-testid="discussion-page">
     <h1 class="page-title">討論</h1>
 
     <template v-if="!id">
       <p v-if="loadError" class="error">{{ loadError }}</p>
-      <AskForm :participants="participants" :disabled="store.status === 'running'" @submit="startAsk" />
+      <SettingsPanel
+        :participants="participants"
+        :options="options"
+        :locked="store.status === 'running'"
+        @submit="startDiscussion"
+      />
     </template>
 
     <p v-for="(message, i) in store.errors" :key="i" class="error" data-testid="discussion-error">{{ message }}</p>
