@@ -1,6 +1,8 @@
 # aigora-v1 手動驗收清單（ticket 17）
 
 自動測試（不含真實 AI）已由 ticket 17 跑過：後端 pytest、`npm run typecheck`、`npm run build`、Playwright E2E 全部通過。
+> **v1 暫不使用 Gemini（使用者決定，2026-10-20）**：跳過所有 Gemini 相關步驟；真實討論改用 Claude + Codex（可加 Ollama）。原因與待修項目見 ticket 14 Comments。
+
 以下是需要你本人執行的部分：真實 AI 的 canary / smoke 測試、一場完整的真實共識討論、以及目視驗收。所有指令都在 repo 根目錄執行。
 
 ## 1. 準備
@@ -14,7 +16,7 @@
 - [ ] 確認其他 CLI 已登入：`claude`（Claude Code 能正常對話）、`codex login status`（顯示 Logged in）。
 - [ ] Ollama（選用）：`ollama list` 至少有一個模型；沒有就 `ollama pull llama3.2`。
 - [ ] 安裝依賴：`uv sync --directory backend`、`npm install --prefix frontend`。
-- [ ] `copy participants.example.toml participants.toml`，把 `gemini` 的 `enabled = false` 刪掉（或改成 `true`）。
+- [ ] `copy participants.example.toml participants.toml`。v1 暫不使用 Gemini：保持 `gemini` 的 `enabled = false`。
 - [ ] （選用，方式 B）`copy .env.example .env`，填入 `TYPESAFE_API_KEY`。
 
 ## 2. 真實 Adapter 的 canary 與 smoke 測試
@@ -28,7 +30,7 @@
   （指定模型：PowerShell 先 `$env:AIGORA_TEST_OLLAMA_MODEL = "gemma4:e4b"`；預設用第一個已安裝的模型）
 - [ ] Jev：`uv run --directory backend pytest -m real_ai tests/test_jev_client.py`（`.env` 沒有金鑰時會 skip）
 
-注意：CLI 沒安裝或沒登入時測試會顯示 **skipped** 而不是失敗。請確認 claude / codex / gemini 三組都是 **passed**，不是 skipped（加 `-rs` 可看 skip 原因）。
+注意：CLI 沒安裝或沒登入時測試會顯示 **skipped** 而不是失敗。請確認 claude / codex 兩組都是 **passed**，不是 skipped（加 `-rs` 可看 skip 原因）。
 
 ### 尚未驗證、要靠上面的測試確認的點
 
@@ -41,8 +43,8 @@
 ## 3. 一場完整的真實共識討論
 
 - [ ] 啟動：`npm run dev --prefix frontend`，開 http://127.0.0.1:5173。
-- [ ] 參與者清單：Claude、Codex、Gemini 都顯示為可用、頭像正確；Ollama 若啟用則標示「無上網」。
-- [ ] 設定面板：討論模式「共識討論」，勾選 Claude、Codex、Gemini，共識裁定方式 A，主持人選一位，輪數上限先設 **3**（省額度）。
+- [ ] 參與者清單：Claude、Codex 顯示為可用、頭像正確；Ollama 若啟用則標示「無上網」。
+- [ ] 設定面板：討論模式「共識討論」，勾選 Claude、Codex（可加 Ollama），共識裁定方式 A，主持人選一位，輪數上限先設 **3**（省額度）。
 - [ ] 問一個容易收斂的問題（例如「在一般 Windows 筆電上，Python 專案管理推薦用 uv 還是 pip + venv？請附出處。」），送出。
 - [ ] 確認：發言即時串流、並排顯示；第 1 輪後出現共識草案；第 2 輪起每人有表態；達成共識時出現獨立的共識結果。
 - [ ] 回覆語言與問題相同；引用網路資料時附網址。
@@ -67,7 +69,7 @@
 - [ ] 畫面上使用正式素材（第 5 節）
 - [ ] 所有自動測試通過，真實 Adapter 的測試在已安裝的 CLI 上通過（第 2 節）
 - [ ] 所有真實 Adapter 的 canary 測試通過：參與者無法讀取工作資料夾以外的檔案（第 2 節）
-- [ ] Claude、Codex、Gemini 三個參與者完成一場共識討論並輸出結果；未取得共識時能輸出各方立場與分歧點（第 3 節）
+- [ ] Claude、Codex 參與者（可加 Ollama）完成一場共識討論並輸出結果；未取得共識時能輸出各方立場與分歧點（第 3 節）
 - [ ] 在 `participants.toml` 加入 Ollama 參與者即可參加討論，不需改其他程式（第 4 節）
 
 全部打勾後，把 ticket 17 標為 resolved；過程中發現的問題請開新 ticket（`.scratch/aigora-v1/issues/`，Status: needs-triage）。

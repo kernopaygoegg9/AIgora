@@ -315,6 +315,8 @@ AIgora 是一個本機執行的網頁應用程式（之後包成桌面 App）。
 
 本機尚未安裝。實作 Gemini Adapter 時先經使用者同意安裝，再找出隔離參數並通過 canary 測試。
 
+**v1 暫不使用 Gemini（使用者決定，2026-10-20）**：Google 已停止個人帳號以 Google 登入 Gemini CLI（`IneligibleTierError`），且實測發現 Adapter 的隔離設定在真實 CLI 上有 bug（見 ticket 14 Comments）。Gemini Adapter 程式碼保留，但預設停用、不列入 v1 驗收；v1 的真實討論以 Claude、Codex（加選用的 Ollama）完成。Adapter 修好並通過 canary 前，不要啟用 Gemini 參與者。
+
 ### 素材規格
 
 App icon、Favicon 與 `fake`、`default` 頭像由 Codex（`codex-imagegen`）產生；`claude`、`codex`、`gemini`、`ollama` 四張 Adapter 頭像改用官方產品 logo（來源：`simple-icons` 與 `@lobehub/icons-static-svg` 套件，見下方「Adapter 頭像例外」）。素材不走 TDD；程式端先用佔位圖，依檔名與尺寸開發，不必等素材完成。驗收需要使用者目視確認。

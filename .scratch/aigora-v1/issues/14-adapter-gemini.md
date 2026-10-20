@@ -23,3 +23,9 @@
 ## Comments
 
 - 2026-10-20 (orchestrator): Adapter code + unit tests merged into `aigora-v1`. Gemini CLI install was blocked by the permission system; user must run `npm install -g @google/gemini-cli`, log in, then run the real_ai tests per `.scratch/aigora-v1/acceptance.md`. Resolve after canary/smoke pass.
+- 2026-10-20 (orchestrator): User decided **not to use Gemini in v1**; ticket stays open. Real-CLI probe (no valid login) found, before auth:
+  1. Admin policy / system settings temp dir rejected as insecure on Windows: `OWNER RIGHTS` has write permission on `%TEMP%igora-gemini-*`. Needs a dir ACL granting only the current user (POSIX 0700/0600).
+  2. `aigora-policy.toml` schema validation failed: `rule.3.toolName: Invalid input` (rule #1) — policy is rejected, so isolation would NOT apply. Match the installed CLI's policy schema.
+  3. Headless run needs `--skip-trust` or `GEMINI_CLI_TRUST_WORKSPACE=true`; `security.folderTrust.enabled=false` in the override is not enough.
+  4. Auth: Google personal OAuth now fails with `IneligibleTierError` (client no longer supported for Gemini Code Assist for individuals). Use `GEMINI_API_KEY` (env or `~/.gemini/.env`); user's `~/.gemini/settings.json` still has `security.auth.selectedType = oauth-personal` — consider setting the auth type in the adapter's settings override when an API key is present.
+  5. The real canary "passed" only because the CLI failed to start; real tests must treat a `Failed` turn as failure/skip, not pass. Also make the adapter fail hard if the CLI reports an admin-policy load error.
