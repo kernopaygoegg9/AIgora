@@ -9,7 +9,7 @@
 
 **Blocked by:** 03
 
-**Status:** claimed
+**Status:** resolved
 
 - [ ] 列表依開始時間新到舊排列，欄位符合 spec
 - [ ] 單一討論回傳完整紀錄 JSON

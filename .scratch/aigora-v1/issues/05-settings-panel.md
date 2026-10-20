@@ -9,7 +9,7 @@
 
 **Blocked by:** 03
 
-**Status:** claimed
+**Status:** resolved
 
 - [ ] 設定面板的預設值與 `participants.toml` 的 `[defaults]` 一致
 - [ ] 依所選討論模式只顯示用得到的欄位（提問不顯示主持人、共識裁定方式、輪數上限）

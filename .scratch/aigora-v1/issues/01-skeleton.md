@@ -10,7 +10,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** claimed
+**Status:** resolved
 
 - [ ] 一個指令啟動後，瀏覽器能看到主版面，並能切換到討論頁與歷史頁（空白）
 - [ ] 所有 spec 中的 HTTP / WebSocket 端點都已註冊，呼叫時回傳「未實作」

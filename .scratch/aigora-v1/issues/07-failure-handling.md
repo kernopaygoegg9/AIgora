@@ -9,7 +9,7 @@
 
 **Blocked by:** 06
 
-**Status:** claimed
+**Status:** resolved
 
 - [ ] 發言逾時（依設定秒數）→ `turn_failed`（kind = timeout），其他參與者正常完成
 - [ ] Adapter 回報失敗 → `turn_failed` 附原因

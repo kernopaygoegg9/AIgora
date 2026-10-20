@@ -9,7 +9,7 @@
 
 **Blocked by:** 04
 
-**Status:** claimed
+**Status:** resolved
 
 - [ ] 送出 `interject` 後收到 `interjection_queued`（applies_to_round = 下一輪）
 - [ ] 插話內容出現在下一輪所有參與者的 prompt 中，不影響進行中的這一輪

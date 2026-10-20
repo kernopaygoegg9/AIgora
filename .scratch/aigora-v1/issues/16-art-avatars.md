@@ -14,7 +14,7 @@
 
 **Blocked by:** None (can start immediately；只依賴 spec 的素材規格)
 
-**Status:** claimed
+**Status:** resolved
 
 - [ ] 6 張的尺寸、格式、檔名、位置與素材清單一致；背景透明；裁成圓形不會切到主體
 - [ ] 使用者目視確認：6 張風格一致、彼此容易區分、`fake`、`default` 沒有模仿任何公司的 logo、四張 Adapter 頭像是正確的官方 logo、淺色與深色背景都清楚

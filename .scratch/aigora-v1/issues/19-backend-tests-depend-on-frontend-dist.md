@@ -1,6 +1,6 @@
 # 19: 有 `frontend/dist` 時後端測試失敗（SPA fallback 吃掉未知的 /api 路徑）
 
-**Status:** needs-triage
+**Status:** resolved
 
 **Found in:** 17（整合）。
 

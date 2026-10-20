@@ -10,7 +10,7 @@
 
 **Blocked by:** 02
 
-**Status:** claimed
+**Status:** ready-for-human
 
 - [ ] 已取得使用者同意並安裝 Gemini CLI
 - [ ] 可用性檢查：未安裝或未登入時回報不可用並附原因
@@ -19,3 +19,5 @@
 - [ ] **Participant 無法讀取工作資料夾以外的檔案**：canary 測試通過
 - [ ] Smoke 測試：問一個簡短問題，收到回覆且能解析表態；能用網路搜尋並附網址
 - [ ] 真實 CLI 的測試以標記區隔，預設不執行
+
+- 2026-10-20 (orchestrator): Adapter code + unit tests merged into `aigora-v1`. Gemini CLI install was blocked by the permission system; user must run `npm install -g @google/gemini-cli`, log in, then run the real_ai tests per `.scratch/aigora-v1/acceptance.md`. Resolve after canary/smoke pass.

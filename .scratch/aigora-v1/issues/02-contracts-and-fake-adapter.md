@@ -9,7 +9,7 @@
 
 **Blocked by:** 01
 
-**Status:** claimed
+**Status:** resolved
 
 - [ ] 四種介面的定義與 spec「Implementation Decisions」一致
 - [ ] Python 與 TypeScript 的 WebSocket 訊息型別涵蓋 spec 表格中所有 `type` 與欄位，兩邊一致
