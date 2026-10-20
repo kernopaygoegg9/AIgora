@@ -8,6 +8,7 @@ import DiscussionControls from '../components/discussion/DiscussionControls.vue'
 import DiscussionOutcome from '../components/discussion/DiscussionOutcome.vue'
 import RecordView from '../components/history/RecordView.vue'
 import RoundSection from '../components/discussion/RoundSection.vue'
+import StartConsensusButton from '../components/discussion/StartConsensusButton.vue'
 import SettingsPanel from '../components/settings/SettingsPanel.vue'
 import type { OptionsResponse, ParticipantInfo } from '../contracts/http'
 import type { StartSettings } from '../contracts/messages'
@@ -39,7 +40,9 @@ watch(() => props.id, async (id) => {
 
 onBeforeUnmount(() => socket?.close())
 
-function startDiscussion(question: string, settings: StartSettings) {
+// `fromDiscussionId`: 提問轉共識討論 (ticket 10); the backend takes the question and
+// participants from that ask.
+function startDiscussion(question: string, settings: StartSettings, fromDiscussionId: string | null = null) {
   socket?.close()
   store.reset()
   connectionLost.value = false
@@ -50,7 +53,7 @@ function startDiscussion(question: string, settings: StartSettings) {
     },
   )
   socket = current
-  current.start(question, settings)
+  current.start(question, settings, fromDiscussionId)
 }
 </script>
 
@@ -99,6 +102,13 @@ function startDiscussion(question: string, settings: StartSettings) {
         @stop="() => socket?.stop()"
       />
       <DiscussionOutcome :outcome="store.outcome" :result="store.result" :reason="store.finishReason" />
+      <StartConsensusButton
+        :discussion-id="store.discussionId"
+        :settings="store.settings"
+        :outcome="store.outcome"
+        :options="options"
+        @start="(settings, fromId) => startDiscussion(store.question, settings, fromId)"
+      />
     </div>
   </section>
 </template>
