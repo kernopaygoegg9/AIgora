@@ -26,7 +26,8 @@ async def adapter():
     adapter = get_adapter("gemini")
     availability = await adapter.check_availability(PARTICIPANT)
     if not availability.available:
-        pytest.fail(f"Gemini CLI not available: {availability.reason}")
+        # Spec: a CLI that is not installed (or not logged in) is skipped, like the other adapters.
+        pytest.skip(f"Gemini CLI not available: {availability.reason}")
     return adapter
 
 

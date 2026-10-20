@@ -1,25 +1,10 @@
 <!-- Main layout. HOT FILE (owner: ticket 01; ticket 17 may swap in final assets). -->
-<script setup lang="ts">
-import { ref } from 'vue'
-
-// Hide the logo until the real asset exists (ticket 15).
-// Bound (not a static src) so the build does not fail while the file is absent.
-const logoUrl = '/app-icon.png'
-const logoMissing = ref(false)
-</script>
 
 <template>
   <div class="app-layout">
     <header class="app-header">
-      <img
-        v-if="!logoMissing"
-        class="app-logo"
-        :src="logoUrl"
-        alt=""
-        width="28"
-        height="28"
-        @error="logoMissing = true"
-      />
+      <!-- App icon from assets/brand (Vite publicDir; served at the site root). -->
+      <img class="app-logo" data-testid="app-logo" src="/app-icon.png" alt="" width="28" height="28" />
       <span class="app-title">AIgora</span>
       <nav class="app-nav">
         <RouterLink :to="{ name: 'discussion' }">討論</RouterLink>

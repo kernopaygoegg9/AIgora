@@ -34,7 +34,8 @@ enabled = false
 id = "ollama"
 display_name = "Ollama"
 adapter = "ollama"
-enabled = false
+model = "llama3.2"          # required for ollama: a model you have pulled (`ollama pull llama3.2`; see `ollama list`)
+enabled = false             # set true once Ollama is running with that model
 [participant.options]
 base_url = "http://127.0.0.1:11434"
 
