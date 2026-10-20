@@ -36,3 +36,12 @@ display_name = "Fake Offline"
 adapter = "fake"
 [participant.options]
 web_access = false
+
+# Ticket 05: unavailable (shows the reason; cannot be picked).
+[[participant]]
+id = "fake-down"
+display_name = "Fake Down"
+adapter = "fake"
+[participant.options]
+available = false
+unavailable_reason = "fake: CLI not installed"
