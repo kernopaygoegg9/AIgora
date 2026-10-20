@@ -1,13 +1,18 @@
 <!-- Read-only view of a saved discussion record (route `discussion-record`, ticket 09).
-     Renders straight from the record JSON; it offers no way to continue the discussion. -->
+     Renders straight from the record JSON in the live page's layout (ui-redesign 07): top bar,
+     result block, rounds, and an inspector with participants, stances and the settings
+     snapshot. It offers no way to continue the discussion: no buttons, no text input. -->
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 
+import '../../styles/discussion.css'
 import { fetchDiscussion } from '../../api/discussions'
-import type { ParticipantSnapshot } from '../../contracts/messages'
+import type { ParticipantSnapshot, SpeakingOrderId } from '../../contracts/messages'
 import type { DiscussionRecord } from '../../contracts/record'
+import type { TurnStateStatus } from '../../stores/discussion'
+import InspectorParticipants from '../discussion/InspectorParticipants.vue'
 import { renderMarkdown } from '../discussion/markdown'
-import ParticipantAvatar from '../discussion/ParticipantAvatar.vue'
+import StanceTracker, { type StanceCell } from '../discussion/StanceTracker.vue'
 import { JUDGE_LABELS, MODE_LABELS, formatTime, outcomeLabel } from './labels'
 import RecordRound from './RecordRound.vue'
 
@@ -35,6 +40,7 @@ const participantById = (id: string): ParticipantSnapshot | undefined =>
   record.value?.participants.find((p) => p.id === id)
 const name = (id: string) => participantById(id)?.display_name ?? id
 
+const consensus = computed(() => record.value?.settings.mode === 'consensus')
 const roundNumbers = computed(() => new Set(record.value?.rounds.map((r) => r.number) ?? []))
 const inRound = <T extends { round: number }>(items: T[], n: number) => items.filter((x) => x.round === n)
 const interjectionsFor = (n: number) => record.value?.interjections.filter((i) => i.applies_to_round === n) ?? []
@@ -56,222 +62,290 @@ const hasLeftovers = computed(
     0,
 )
 
-const resultTitle = computed(() =>
-  record.value?.result?.kind === 'no_consensus' ? '最終立場與分歧' : '共識結果',
-)
+// Result block, worded and coloured like the live page's DiscussionOutcome.
+const resultTitle = computed(() => {
+  const r = record.value
+  if (r?.result?.kind === 'consensus') return '共識結果'
+  if (r?.result?.kind === 'no_consensus') return '未取得共識：各參與者最終立場與仍有分歧的重點'
+  if (r?.outcome === 'insufficient_participants') return '討論結束：在場參與者不足'
+  return null
+})
+const resultTone = computed(() => {
+  const r = record.value
+  if (r?.result?.kind === 'no_consensus') return 'is-warn'
+  if (r?.outcome === 'insufficient_participants') return 'is-bad'
+  return ''
+})
 const resultHtml = computed(() => {
   const result = record.value?.result
   return result && result.kind !== 'answers' && result.text ? renderMarkdown(result.text) : ''
 })
+
+const OUTCOME_PILLS: Record<string, string> = { consensus: 'pill-ok', no_consensus: 'pill-warn', completed: '' }
+const outcomePill = computed(() => {
+  const o = record.value?.outcome
+  return o ? (OUTCOME_PILLS[o] ?? 'pill-bad') : 'pill-accent'
+})
+
+// --- inspector ---------------------------------------------------------------------------
+const removedIds = computed(() => record.value?.removed_participants.map((r) => r.participant_id) ?? [])
+const moderatorId = computed(() => {
+  const r = record.value
+  if (!r || !consensus.value) return null
+  return r.moderator_changes[r.moderator_changes.length - 1]?.participant_id ?? r.settings.moderator_id
+})
+const statuses = computed(() => {
+  const out: Record<string, TurnStateStatus | undefined> = {}
+  for (const round of record.value?.rounds ?? []) for (const t of round.turns) out[t.participant_id] = t.status
+  return out
+})
+const stanceRounds = computed(() =>
+  (record.value?.rounds ?? [])
+    .filter((r) => r.number >= 2)
+    .map((r) => {
+      const cells: Record<string, StanceCell | undefined> = {}
+      for (const t of r.turns) cells[t.participant_id] = { status: t.status, stance: t.stance }
+      return { number: r.number, cells }
+    }),
+)
+const ORDER_LABELS: Record<SpeakingOrderId, string> = { parallel: '同時', sequential: '依序' }
 </script>
 
 <template>
   <section class="record-view" data-testid="record-view">
-    <RouterLink class="back" :to="{ name: 'history' }">← 回到歷史</RouterLink>
-    <p v-if="loadError" class="error" data-testid="record-error">{{ loadError }}</p>
+    <p v-if="loadError" class="error-bar" data-testid="record-error">{{ loadError }}</p>
     <p v-else-if="!record" class="muted">載入中…</p>
 
-    <template v-else>
-      <header class="record-header">
-        <h1 class="question" data-testid="record-question">{{ record.question }}</h1>
-        <span class="outcome" :class="{ running: !record.outcome }" data-testid="record-outcome">{{
-          outcomeLabel(record.outcome)
-        }}</span>
-      </header>
-
-      <dl class="meta" data-testid="record-meta">
-        <div>
-          <dt>討論模式</dt>
-          <dd>{{ MODE_LABELS[record.settings.mode] ?? record.settings.mode }}</dd>
-        </div>
-        <div>
-          <dt>開始</dt>
-          <dd><time :datetime="record.created_at">{{ formatTime(record.created_at) }}</time></dd>
-        </div>
-        <div v-if="record.finished_at">
-          <dt>結束</dt>
-          <dd><time :datetime="record.finished_at">{{ formatTime(record.finished_at) }}</time></dd>
-        </div>
-        <template v-if="record.settings.mode !== 'ask'">
-          <div v-if="record.settings.judge">
-            <dt>共識裁定方式</dt>
-            <dd>{{ JUDGE_LABELS[record.settings.judge] ?? record.settings.judge }}</dd>
-          </div>
-          <div v-if="record.settings.moderator_id">
-            <dt>主持人</dt>
-            <dd>{{ name(record.settings.moderator_id) }}</dd>
-          </div>
-          <div>
-            <dt>輪數上限</dt>
-            <dd>{{ record.settings.max_rounds }}</dd>
-          </div>
-        </template>
-        <div v-if="record.derived_from">
-          <dt>轉換自</dt>
-          <dd>
+    <div v-else class="record">
+      <div class="stage">
+        <header class="topbar">
+          <h1 class="question" data-testid="record-question" :title="record.question">{{ record.question }}</h1>
+          <span class="pill read-only">唯讀紀錄</span>
+          <span class="pill" :class="outcomePill" data-testid="record-outcome">{{ outcomeLabel(record.outcome) }}</span>
+        </header>
+        <p class="sub">
+          <RouterLink class="back" :to="{ name: 'history' }">← 回到歷史</RouterLink>
+          <span v-if="record.derived_from">
+            由
             <RouterLink
               data-testid="record-derived-from"
               :to="{ name: 'discussion-record', params: { id: record.derived_from } }"
               >原本的提問</RouterLink
             >
-          </dd>
-        </div>
-      </dl>
-
-      <ul class="participants">
-        <li v-for="p in record.participants" :key="p.id" class="participant">
-          <ParticipantAvatar :avatar="p.avatar" :size="24" />
-          <span>{{ p.display_name }}</span>
-          <span v-if="!p.capabilities.web_access" class="badge">無上網</span>
-        </li>
-      </ul>
-
-      <RecordRound
-        v-for="round in record.rounds"
-        :key="round.number"
-        :round="round"
-        :participant-by-id="participantById"
-        :show-number="record.settings.mode !== 'ask'"
-        :interjections="interjectionsFor(round.number)"
-        :moderator-changes="inRound(record.moderator_changes, round.number)"
-        :removals="inRound(record.removed_participants, round.number)"
-      />
-
-      <section v-if="hasLeftovers" class="leftovers">
-        <p v-for="(i, k) in leftovers.interjections" :key="`i${k}`" class="event" data-testid="record-interjection">
-          <span class="event-label">使用者插話（未生效）</span>
-          <span class="event-text">{{ i.text }}</span>
+            轉換而來
+          </span>
         </p>
-        <p v-for="(c, k) in leftovers.moderatorChanges" :key="`m${k}`" class="event" data-testid="record-moderator-change">
-          <span class="event-label">主持人接手</span>
-          <span>{{ name(c.participant_id) }} 成為主持人</span>
-        </p>
-        <p v-for="(r, k) in leftovers.removals" :key="`r${k}`" class="event removal" data-testid="record-removal">
-          <span class="event-label">移出討論</span>
-          <span>{{ name(r.participant_id) }}：{{ r.reason }}</span>
-        </p>
-      </section>
 
-      <section v-if="resultHtml" class="result" data-testid="record-result">
-        <h2 class="result-title">{{ resultTitle }}</h2>
-        <!-- eslint-disable-next-line vue/no-v-html -- sanitised in renderMarkdown -->
-        <div class="result-text" v-html="resultHtml" />
-      </section>
-    </template>
+        <section
+          v-if="resultTitle"
+          class="d-result"
+          :class="resultTone"
+          :data-testid="resultHtml ? 'record-result' : undefined"
+        >
+          <h2 class="d-result-title">
+            <span v-if="record.result?.kind === 'consensus'" aria-hidden="true">✓ </span>{{ resultTitle }}
+          </h2>
+          <!-- eslint-disable-next-line vue/no-v-html -- sanitised in renderMarkdown -->
+          <div v-if="resultHtml" class="d-md" v-html="resultHtml" />
+        </section>
+        <p v-if="record.outcome === 'stopped'" class="d-result is-bad stopped">討論已停止：進行中的發言已取消，當時的內容已存檔。</p>
+
+        <RecordRound
+          v-for="round in record.rounds"
+          :key="round.number"
+          :round="round"
+          :participant-by-id="participantById"
+          :show-number="record.settings.mode !== 'ask'"
+          :interjections="interjectionsFor(round.number)"
+          :moderator-changes="inRound(record.moderator_changes, round.number)"
+          :removals="inRound(record.removed_participants, round.number)"
+        />
+
+        <section v-if="hasLeftovers" class="leftovers">
+          <p v-for="(i, k) in leftovers.interjections" :key="`i${k}`" class="d-notice" data-testid="record-interjection">
+            <span class="d-notice-label">使用者插話（未生效）</span>
+            <span class="event-text">{{ i.text }}</span>
+          </p>
+          <p v-for="(c, k) in leftovers.moderatorChanges" :key="`m${k}`" class="d-notice" data-testid="record-moderator-change">
+            <span class="d-notice-label">主持人接手</span>
+            <span>改由 {{ name(c.participant_id) }} 擔任主持人</span>
+          </p>
+          <p v-for="(r, k) in leftovers.removals" :key="`r${k}`" class="d-notice is-bad" data-testid="record-removal">
+            <span class="d-notice-label">移出討論</span>
+            <span>{{ name(r.participant_id) }}：{{ r.reason }}</span>
+          </p>
+        </section>
+      </div>
+
+      <aside class="inspector" aria-label="檢視器">
+        <section class="section">
+          <h3 class="section-title">參與者</h3>
+          <InspectorParticipants
+            :participants="record.participants"
+            :moderator-id="moderatorId"
+            :removed-ids="removedIds"
+            :statuses="statuses"
+          />
+        </section>
+        <section v-if="consensus && stanceRounds.length" class="section">
+          <h3 class="section-title">表態追蹤</h3>
+          <StanceTracker :participants="record.participants" :rounds="stanceRounds" />
+        </section>
+        <section class="section">
+          <h3 class="section-title">設定快照</h3>
+          <dl class="kv" data-testid="record-meta">
+            <dt>討論模式</dt>
+            <dd>{{ MODE_LABELS[record.settings.mode] ?? record.settings.mode }}</dd>
+            <template v-if="consensus">
+              <template v-if="record.settings.judge">
+                <dt>共識裁定方式</dt>
+                <dd>{{ JUDGE_LABELS[record.settings.judge] ?? record.settings.judge }}</dd>
+              </template>
+              <template v-if="record.settings.judge === 'jev'">
+                <dt>Jev 門檻</dt>
+                <dd>{{ record.settings.jev_threshold }}</dd>
+              </template>
+              <template v-if="record.settings.moderator_id">
+                <dt>主持人</dt>
+                <dd>{{ name(record.settings.moderator_id) }}</dd>
+              </template>
+            </template>
+            <dt>發言順序</dt>
+            <dd>{{ ORDER_LABELS[record.settings.speaking_order] ?? record.settings.speaking_order }}</dd>
+            <template v-if="consensus">
+              <dt>輪數上限</dt>
+              <dd>{{ record.settings.max_rounds }}</dd>
+            </template>
+            <dt>逾時</dt>
+            <dd>{{ record.settings.turn_timeout_seconds }} 秒</dd>
+            <dt>開始</dt>
+            <dd><time :datetime="record.created_at">{{ formatTime(record.created_at) }}</time></dd>
+            <template v-if="record.finished_at">
+              <dt>結束</dt>
+              <dd><time :datetime="record.finished_at">{{ formatTime(record.finished_at) }}</time></dd>
+            </template>
+          </dl>
+        </section>
+      </aside>
+    </div>
   </section>
 </template>
 
 <style scoped>
-.record-view {
+.record {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--inspector-width);
+  gap: var(--space-4);
+  align-items: start;
+}
+.stage {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--space-4);
+  min-width: 0;
 }
-.back {
-  color: #2f6feb;
-  text-decoration: none;
-  font-size: 0.9rem;
-}
-.record-header {
-  display: flex;
-  align-items: baseline;
-  gap: 0.75rem;
-}
-.question {
-  font-size: 1.15rem;
-  margin: 0;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-.outcome {
-  font-size: 0.85rem;
-  color: #6b7280;
-  white-space: nowrap;
-}
-.outcome.running {
-  color: #2f6feb;
-}
-.meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 1.5rem;
-  margin: 0;
-  font-size: 0.85rem;
-}
-.meta div {
-  display: flex;
-  gap: 0.4rem;
-}
-.meta dt {
-  color: #6b7280;
-}
-.meta dd {
-  margin: 0;
-}
-.participants {
-  list-style: none;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  margin: 0;
-  padding: 0;
-}
-.participant {
+.topbar {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  flex-wrap: wrap;
+  gap: var(--space-2) 10px;
 }
-.badge {
-  font-size: 0.75rem;
-  padding: 0 0.4rem;
-  border-radius: 999px;
-  background: #e8ebef;
-  color: #4a5159;
+.question {
+  flex: 1 1 12rem;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--fs-md);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.read-only {
+  border-style: dashed;
+}
+.sub {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  margin: calc(-1 * var(--space-2)) 0 0;
+  padding-bottom: var(--space-3);
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  border-bottom: 1px solid var(--line);
+}
+.back {
+  color: var(--accent);
+  text-decoration: none;
+}
+.stopped {
+  margin: 0;
+  color: var(--bad);
 }
 .leftovers {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-}
-.event {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin: 0;
-  font-size: 0.9rem;
-}
-.event-label {
-  font-weight: 600;
+  gap: var(--space-2);
 }
 .event-text {
+  color: var(--text);
   white-space: pre-wrap;
-}
-.removal {
-  color: #a1260d;
-}
-.result {
-  padding: 0.75rem 1rem;
-  background: #fff;
-  border: 2px solid #2f6feb;
-  border-radius: 8px;
-}
-.result-title {
-  font-size: 1rem;
-  margin: 0 0 0.5rem;
-}
-.result-text {
   overflow-wrap: anywhere;
-  line-height: 1.55;
 }
-.result-text :deep(p) {
-  margin: 0 0 0.5rem;
-}
-.muted {
-  color: #6b7280;
+.error-bar {
   margin: 0;
+  padding: 8px 12px;
+  color: var(--bad);
+  background: var(--bad-bg);
+  border: 1px solid var(--bad-line);
+  border-radius: var(--radius);
 }
-.error {
-  color: #a1260d;
+
+/* Inspector: same look as the live page's DiscussionInspector. */
+.inspector {
+  position: sticky;
+  top: var(--space-4);
+  max-height: calc(100vh - 2 * var(--space-4));
+  overflow: auto;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+.section {
+  padding: var(--space-3) 14px;
+  border-bottom: 1px solid var(--line);
+}
+.section:last-child {
+  border-bottom: none;
+}
+.section-title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.kv {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 5px var(--space-3);
   margin: 0;
+  font-size: var(--fs-sm);
+}
+.kv dt {
+  color: var(--muted);
+}
+.kv dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 1023px) {
+  .record {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .inspector {
+    position: static;
+    max-height: none;
+  }
 }
 </style>
