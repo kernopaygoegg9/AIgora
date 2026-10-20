@@ -10,7 +10,7 @@
 
 **Blocked by:** 01–16 全部
 
-**Status:** ready-for-human
+**Status:** resolved
 
 - [ ] 畫面上使用正式素材
 - [ ] 所有自動測試通過（真實 Adapter 的測試在已安裝的 CLI 上通過）
@@ -23,3 +23,4 @@
 - 2026-10-20 (orchestrator): User decided not to use Gemini in v1 (Google personal sign-in rejected; adapter isolation bugs found, see ticket 14). Acceptance now uses Claude + Codex (+ optional Ollama). Real-AI tests so far: claude 3/3 passed, codex 3/3 passed.
 
 - 2026-10-20 (orchestrator): Asset swap, non-real test suites, AGENTS.md, and code-review fixes merged into `aigora-v1`. Per user decision, real-AI canary/smoke runs, the full real-AI consensus run, and human acceptance are left to the user — checklist in `.scratch/aigora-v1/acceptance.md`.
+- 2026-10-20 (orchestrator): User completed manual acceptance (Claude + Codex real discussions, Ollama via config only with `gemma4:e4b`) and reported no problems. Resolved. Gemini deferred; ticket 14 stays open.
