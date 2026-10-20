@@ -5,8 +5,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-import type { ParticipantSnapshot, Stance, TurnPurpose } from '../../contracts/messages'
+import type { ParticipantSnapshot, TurnPurpose } from '../../contracts/messages'
 import type { RoundState, TurnState } from '../../stores/discussion'
+import { agreeLabel, judgeOutcomeLabel, stanceLabel } from '../labels'
 import { renderMarkdown } from './markdown'
 import ParticipantAvatar from './ParticipantAvatar.vue'
 
@@ -17,18 +18,10 @@ const props = defineProps<{
   moderatorId?: string | null
 }>()
 
-const OUTCOME_LABELS = { reached: '全員同意，取得共識', not_reached: '尚未取得共識', confirm: '需要反問確認' } as const
-const JEV_OUTCOME_LABELS = {
-  reached: '反問全員同意，取得共識',
-  not_reached: '尚未取得共識',
-  confirm: '達到門檻，反問每個參與者',
-} as const
-
 const isJev = computed(() => props.round.judge?.judge === 'jev')
 const outcomeLabel = computed(() => {
   const judge = props.round.judge
-  if (!judge) return ''
-  return (isJev.value ? JEV_OUTCOME_LABELS : OUTCOME_LABELS)[judge.outcome]
+  return judge ? judgeOutcomeLabel(judge.judge, judge.outcome) : ''
 })
 const PURPOSE_LABELS: Record<TurnPurpose, string> = {
   turn: '發言',
@@ -36,12 +29,6 @@ const PURPOSE_LABELS: Record<TurnPurpose, string> = {
   final_result: '最終共識結果',
   no_consensus_summary: '最終立場與分歧點',
   confirmation: '反問確認',
-}
-
-function stanceLabel(stance: Stance | null): string {
-  if (stance === 'AGREE') return '同意'
-  if (stance === 'DISAGREE') return '不同意'
-  return '未表態（視為不同意）'
 }
 
 function nameOf(id: string): string {
@@ -91,7 +78,7 @@ function callText(call: TurnState): string {
       Jev 判斷已取得共識的機率 <strong>{{ round.judge.detail.probability.toFixed(2) }}</strong>
       <template v-if="round.judge.detail.threshold != null">（門檻 {{ round.judge.detail.threshold }}）</template>
     </p>
-    <p v-else-if="isJev" class="failure" data-testid="jev-probability">Jev 這輪無法判斷，視為尚未取得共識</p>
+    <p v-else-if="isJev" class="failure" data-testid="jev-probability">Jev 這輪無法判斷，視為未取得共識</p>
   </section>
 
   <section v-if="round.confirmations?.length" class="confirmations" :class="{ 'all-agree': allAgree }" data-testid="confirmation-result">
@@ -110,7 +97,7 @@ function callText(call: TurnState): string {
         <div class="answer-head">
           <ParticipantAvatar :avatar="participantById(a.participant_id)?.avatar ?? 'default.png'" :size="18" />
           <span class="stance-name">{{ nameOf(a.participant_id) }}</span>
-          <span class="stance-value">{{ a.agree ? '同意' : '不同意' }}</span>
+          <span class="stance-value">{{ agreeLabel(a.agree) }}</span>
         </div>
         <p v-if="a.reason && !a.agree" class="reason">{{ a.reason }}</p>
       </li>

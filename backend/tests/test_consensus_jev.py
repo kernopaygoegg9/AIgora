@@ -138,6 +138,11 @@ def test_at_the_threshold_everyone_is_asked_and_unanimous_agreement_ends_with_th
     assert round2["judge"] == {
         "judge": "jev", "outcome": "reached", "detail": {"stances": None, "probability": 0.8, "threshold": 0.8},
     }
+    # The `confirm` verdict (Jev passed the threshold) is kept too, before the final one.
+    assert [(j["judge"], j["outcome"], j["detail"]["probability"]) for j in round2["judge_history"]] == [
+        ("jev", "confirm", 0.8), ("jev", "reached", 0.8),
+    ]
+    assert record["rounds"][0]["judge_history"] == []
     assert [(c["participant_id"], c["agree"]) for c in round2["confirmations"]] == [("fake-a", True), ("fake-b", True)]
     assert record["rounds"][0]["confirmations"] is None
     assert record["outcome"] == "consensus"
@@ -177,6 +182,32 @@ def test_a_disagreeing_answer_carries_its_reason_into_the_next_rounds_prompt(cli
     assert {c["participant_id"]: c["agree"] for c in record["rounds"][1]["confirmations"]} == {
         "fake-a": True, "fake-b": False, "echo": False,
     }
+
+
+def test_disagreeing_reasons_reach_only_the_next_round_not_later_ones(client, write_participants, fake_jev):
+    fake_jev(0.9, 0.1)  # round 2: confirmation (fake-b disagrees); round 3 and later: below the threshold
+    write_participants(
+        fake_participant("echo", "Echo", stream=False, echo_prompt=True)
+        + fake_participant("fake-b", "Fake B", stream=False,
+                           confirmations=["No: we still differ on the price cap.\nSTANCE: DISAGREE"])
+    )
+
+    messages = run_discussion(client, "Q?", consensus_b("echo", "fake-b", moderator_id="echo", max_rounds=4))
+
+    def instructions(round_: int, purpose: str) -> str:
+        # Echo replies with its prompt; this call's own instructions are the last section.
+        text = next(m["text"] for m in of_type(messages, "turn_completed")
+                    if m["participant_id"] == "echo" and m["purpose"] == purpose and m["round"] == round_)
+        return text.rsplit("## Instructions for this round", 1)[1]
+
+    assert [(j["round"], j["outcome"]) for j in of_type(messages, "judge_result")] == [
+        (2, "confirm"), (2, "not_reached"), (3, "not_reached"), (4, "not_reached"),
+    ]
+    assert "price cap" in instructions(2, "draft")
+    assert "price cap" in instructions(3, "turn")
+    # Round 3 had no confirmation: its draft and round 4 no longer carry round 2's reasons.
+    assert "price cap" not in instructions(3, "draft")
+    assert "price cap" not in instructions(4, "turn")
 
 
 def test_when_jev_fails_the_round_counts_as_not_reached_and_the_discussion_goes_on(client, write_participants, fake_jev):

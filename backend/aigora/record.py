@@ -45,7 +45,10 @@ class RecordRound(_Model):
     number: int
     turns: list[RecordTurn]
     draft: str | None = None
-    judge: RecordJudge | None = None
+    judge: RecordJudge | None = None  # the round's final verdict
+    # Every verdict of the round in order (judge B after a confirmation: `confirm`, then
+    # `reached` / `not_reached`); the last one is `judge`.
+    judge_history: list[RecordJudge] = []
     confirmations: list[ConfirmationAnswer] | None = None
 
 

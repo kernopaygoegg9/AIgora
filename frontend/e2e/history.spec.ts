@@ -106,7 +106,11 @@ const fullRecord: DiscussionRecord = {
         turn('c', '', { status: 'failed', text: null, error: 'crashed' }),
       ],
       draft: 'Draft two: pick what you like.',
-      judge: { judge: 'jev', outcome: 'confirm', detail: { probability: 0.91, threshold: 0.8 } },
+      judge: { judge: 'jev', outcome: 'not_reached', detail: { probability: 0.91, threshold: 0.8 } },
+      judge_history: [
+        { judge: 'jev', outcome: 'confirm', detail: { probability: 0.91, threshold: 0.8 } },
+        { judge: 'jev', outcome: 'not_reached', detail: { probability: 0.91, threshold: 0.8 } },
+      ],
       confirmations: [{ participant_id: 'b', agree: true, reason: 'Sounds right' }],
     },
     {
@@ -130,7 +134,7 @@ test('the read-only view shows every part of a record', async ({ page }) => {
 
   const view = page.getByTestId('record-view')
   await expect(view.getByTestId('record-question')).toHaveText('Which editor?')
-  await expect(view.getByTestId('record-outcome')).toHaveText('達成共識')
+  await expect(view.getByTestId('record-outcome')).toHaveText('取得共識')
   await expect(view.getByTestId('record-meta')).toContainText('共識討論')
   await expect(view.getByTestId('record-derived-from')).toHaveAttribute('href', '/discussions/20261020-090000-123456')
 
@@ -144,16 +148,19 @@ test('the read-only view shows every part of a record', async ({ page }) => {
   await expect(round(2).getByTestId('record-interjection')).toContainText('Please consider VS Code too')
   await expect(round(2).getByTestId('turn-card').filter({ hasText: 'Gamma' }).getByTestId('turn-status')).toHaveText('失敗')
   await expect(round(2).getByTestId('record-turn').filter({ hasText: 'Beta' }).getByTestId('record-stance')).toHaveText('同意')
-  await expect(round(2).getByTestId('record-judge')).toContainText('0.91')
-  await expect(round(2).getByTestId('record-judge')).toContainText('需反問確認')
+  // Judge B: the `confirm` verdict (Jev passed the threshold), then the final one.
+  await expect(round(2).getByTestId('record-judge')).toHaveCount(2)
+  await expect(round(2).getByTestId('record-judge').first()).toContainText('達到門檻，需要反問確認')
+  await expect(round(2).getByTestId('record-judge').first()).toContainText('0.91')
+  await expect(round(2).getByTestId('record-judge').last()).toContainText('未取得共識')
   await expect(round(2).getByTestId('record-confirmation')).toContainText('Beta')
   await expect(round(2).getByTestId('record-confirmation')).toContainText('Sounds right')
   await expect(round(2).getByTestId('record-removal')).toContainText('Gamma')
   await expect(round(2).getByTestId('record-removal')).toContainText('連續 2 輪發言失敗')
 
   await expect(round(3).getByTestId('record-moderator-change')).toContainText('Beta')
-  await expect(round(3).getByTestId('record-judge')).toContainText('已達成共識')
-  await expect(round(3).getByTestId('record-judge')).toContainText('無法解析')
+  await expect(round(3).getByTestId('record-judge')).toContainText('全員同意，取得共識')
+  await expect(round(3).getByTestId('record-judge')).toContainText('未表態（視為不同意）')
 
   await expect(view.getByTestId('record-result')).toContainText('Use whichever editor you like.')
   await expect(page.getByRole('textbox')).toHaveCount(0)

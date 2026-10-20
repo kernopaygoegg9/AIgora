@@ -16,11 +16,8 @@ from __future__ import annotations
 
 import asyncio
 import json
-import os
 import shutil
-import signal
 import subprocess
-import sys
 from collections.abc import AsyncIterator, Mapping, Sequence
 from typing import Any
 
@@ -35,6 +32,7 @@ from aigora.adapters.base import (
     FailureKind,
     TurnRequest,
 )
+from aigora.adapters.subprocesses import kill_tree, process_group_options
 from aigora.config import ParticipantConfig
 
 _STATUS_TIMEOUT_SECONDS = 15
@@ -141,32 +139,6 @@ def classify(message: str) -> FailureKind | None:
     return None
 
 
-async def _kill_tree(process: asyncio.subprocess.Process) -> None:
-    """Terminate the CLI and everything it started (npm shim -> node -> native binary)."""
-    if process.returncode is not None:
-        return
-    try:
-        if sys.platform == "win32":
-            killer = await asyncio.create_subprocess_exec(
-                "taskkill", "/F", "/T", "/PID", str(process.pid),
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-            )
-            await killer.wait()
-        else:
-            os.killpg(process.pid, signal.SIGKILL)
-    except (ProcessLookupError, OSError):
-        pass
-    if process.returncode is None:
-        try:
-            process.kill()
-        except ProcessLookupError:
-            pass
-    try:
-        await asyncio.wait_for(process.wait(), timeout=5)
-    except asyncio.TimeoutError:
-        pass
-
-
 class CodexAdapter(Adapter):
     id = "codex"
 
@@ -201,7 +173,7 @@ class CodexAdapter(Adapter):
         except asyncio.TimeoutError:
             return Availability(False, "codex login status did not answer in time")
         finally:
-            await _kill_tree(process)
+            await kill_tree(process)
         output = (stdout + stderr).decode("utf-8", errors="replace").strip()
         if process.returncode != 0 or "not logged in" in output.lower():
             return Availability(False, f"codex: {output or 'not logged in'} (run `codex login`)")
@@ -209,18 +181,13 @@ class CodexAdapter(Adapter):
 
     async def _spawn(self, executable: list[str], args: list[str], cwd: str | None,
                      stdin: bool) -> asyncio.subprocess.Process:
-        extra: dict[str, Any] = {}
-        if sys.platform == "win32":
-            extra["creationflags"] = subprocess.CREATE_NO_WINDOW
-        else:
-            extra["start_new_session"] = True  # own process group, so the whole tree can be killed
         return await asyncio.create_subprocess_exec(
             *executable, *args,
             cwd=cwd,
             stdin=subprocess.PIPE if stdin else subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            **extra,
+            **process_group_options(),  # so the whole tree (npm shim -> node -> binary) can be killed
         )
 
     async def run_turn(self, request: TurnRequest) -> AsyncIterator[AdapterEvent]:
@@ -260,7 +227,7 @@ class CodexAdapter(Adapter):
                 return
             yield self._failure(turn.error, stderr, returncode)
         finally:
-            await _kill_tree(process)
+            await kill_tree(process)
             if stderr_task is not None and not stderr_task.done():
                 stderr_task.cancel()
 

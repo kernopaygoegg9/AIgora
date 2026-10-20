@@ -67,12 +67,16 @@ watch(
   { immediate: true },
 )
 
+// A discussion needs at least 2 participants (the backend rejects fewer too).
+const MIN_PARTICIPANTS = 2
+const tooFewParticipants = computed(() => selectedIds.value.length < MIN_PARTICIPANTS)
+
 const canSubmit = computed(
   () =>
     !props.locked &&
     props.options !== null &&
     question.value.trim() !== '' &&
-    selectedIds.value.length > 0 &&
+    !tooFewParticipants.value &&
     (!uses.value.has('max_rounds') || maxRounds.value >= 1) &&
     (!uses.value.has('turn_timeout_seconds') || turnTimeout.value > 0),
 )
@@ -136,6 +140,9 @@ function submit() {
           <span v-if="!p.capabilities.web_access" class="badge">無上網</span>
           <span v-if="!p.available" class="badge badge-warn">不可用：{{ p.unavailable_reason ?? '原因不明' }}</span>
         </label>
+        <p v-if="tooFewParticipants && participants.length > 0" class="hint" data-testid="participants-hint">
+          請選擇至少 {{ MIN_PARTICIPANTS }} 個參與者
+        </p>
       </fieldset>
 
       <fieldset v-if="options && uses.has('judge')" class="group" data-testid="judge-options">
@@ -296,6 +303,12 @@ function submit() {
 .submit:disabled {
   background: #a9bde6;
   cursor: not-allowed;
+}
+.hint {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 0.85rem;
+  color: #a1260d;
 }
 .muted {
   color: #6b7280;

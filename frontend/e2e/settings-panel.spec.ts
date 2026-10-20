@@ -79,6 +79,23 @@ test('judge B is greyed out with a reason when .env has no TypeSafe key', async 
   await expect(p.getByLabel('發言順序').locator('option[value="sequential"]')).toBeDisabled()
 })
 
+test('starting needs at least 2 participants', async ({ page }) => {
+  await page.goto('/')
+  const p = panel(page)
+  await p.getByLabel('問題').fill('Alone?')
+  const submit = p.getByRole('button', { name: '送出' })
+  await expect(submit).toBeDisabled()
+  await expect(p.getByTestId('participants-hint')).toHaveText('請選擇至少 2 個參與者')
+
+  await p.getByRole('checkbox', { name: 'Fake A' }).check()
+  await expect(submit).toBeDisabled()
+  await expect(p.getByTestId('participants-hint')).toBeVisible()
+
+  await p.getByRole('checkbox', { name: 'Fake B' }).check()
+  await expect(submit).toBeEnabled()
+  await expect(p.getByTestId('participants-hint')).toHaveCount(0)
+})
+
 test('the chosen settings are sent with start and the panel locks while the discussion runs', async ({ page }) => {
   const sent: string[] = []
   page.on('websocket', (ws) => ws.on('framesent', (frame) => sent.push(String(frame.payload))))
@@ -87,6 +104,7 @@ test('the chosen settings are sent with start and the panel locks while the disc
 
   await p.getByLabel('問題').fill('Lock me?')
   await p.getByRole('checkbox', { name: 'Fake Slow' }).check()
+  await p.getByRole('checkbox', { name: 'Fake B' }).check()
   await p.getByLabel('逾時（秒）').fill('120')
   await p.getByRole('button', { name: '送出' }).click()
 
@@ -101,7 +119,7 @@ test('the chosen settings are sent with start and the panel locks while the disc
   const start = JSON.parse(sent.find((s) => s.includes('"start"'))!)
   expect(start.settings).toEqual({
     mode: 'ask',
-    participant_ids: ['fake-slow'],
+    participant_ids: ['fake-b', 'fake-slow'],
     speaking_order: 'parallel',
     turn_timeout_seconds: 120,
   })

@@ -37,7 +37,7 @@ function start() {
 <template>
   <div v-if="visible" class="start-consensus">
     <button type="button" data-testid="start-consensus" @click="start">開始共識討論</button>
-    <span class="hint">沿用這個問題與參與者，現有的回答當作第 1 輪</span>
+    <span class="hint">沿用這個問題與參與者，現有的發言當作第 1 輪</span>
   </div>
 </template>
 

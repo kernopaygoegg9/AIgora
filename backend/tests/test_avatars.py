@@ -12,7 +12,7 @@ AVATARS = Path(__file__).resolve().parents[2] / "assets" / "avatars"
 
 @pytest.fixture
 def client():
-    return TestClient(create_app())
+    return TestClient(create_app(frontend_dist=None))
 
 
 @pytest.mark.parametrize("name", ["claude.png", "codex.png", "gemini.png", "ollama.png", "fake.png", "default.png"])

@@ -140,6 +140,17 @@ def test_start_with_an_unknown_participant_is_rejected_with_an_error(client, wri
     assert not data_dir.exists() or not list(data_dir.iterdir())
 
 
+def test_start_with_fewer_than_two_participants_is_rejected_with_an_error(client, write_participants, data_dir):
+    write_participants(fake_participant("fake-a", "Fake A"))
+
+    for ids in (["fake-a"],):
+        messages = run_discussion(client, "Q?", {"mode": "ask", "participant_ids": ids})
+
+        assert [m["type"] for m in messages] == ["error"]
+        assert "至少 2 個參與者" in messages[0]["message"]
+    assert not data_dir.exists() or not list(data_dir.iterdir())
+
+
 def test_participant_list_shows_enabled_participants_with_capabilities_and_availability(
     client, write_participants
 ):

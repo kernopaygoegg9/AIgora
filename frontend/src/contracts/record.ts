@@ -34,7 +34,10 @@ export interface RecordRound {
   number: number
   turns: RecordTurn[]
   draft?: string | null
+  // the round's final verdict
   judge?: RecordJudge | null
+  // every verdict of the round in order (judge B: `confirm`, then the final one); older records lack it
+  judge_history?: RecordJudge[]
   confirmations?: ConfirmationAnswer[] | null
 }
 

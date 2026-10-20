@@ -187,6 +187,33 @@ async def test_cancelling_a_turn_kills_the_cli(fake_claude, tmp_path):
     assert not _alive(pid)
 
 
+async def test_cancelling_a_turn_kills_the_cli_and_its_children(fake_claude, tmp_path):
+    # The real `claude` on Windows is an npm shim -> node: the whole process tree must go.
+    heartbeat = tmp_path / "heartbeat.txt"
+    adapter, _ = fake_claude(turn={"lines": [block_start(), text_delta("thinking...")], "sleep_after_seconds": 60},
+                             heartbeat=str(heartbeat))
+
+    async def consume():
+        async for _ in adapter.run_turn(request(tmp_path)):
+            pass
+
+    task = asyncio.create_task(consume())
+    for _ in range(200):
+        if heartbeat.exists() and heartbeat.stat().st_size > 2:
+            break
+        await asyncio.sleep(0.05)
+    else:
+        pytest.fail("fake CLI grandchild never started")
+    task.cancel()  # what the engine does on stop / timeout
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+    await asyncio.sleep(0.3)
+    size = heartbeat.stat().st_size
+    await asyncio.sleep(0.5)
+    assert heartbeat.stat().st_size == size, "a CLI process is still running after cancellation"
+
+
 # --- availability -----------------------------------------------------------------------
 
 

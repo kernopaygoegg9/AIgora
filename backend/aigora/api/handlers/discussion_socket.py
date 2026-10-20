@@ -15,7 +15,7 @@ from pydantic import ValidationError
 
 from aigora.api import messages as m
 from aigora.config import ConfigError, load_participants, participants_file_path
-from aigora.discussion.derived import DerivedDiscussionEngine, SourceError, load_source
+from aigora.discussion.derived import SourceError, derived_engine, load_source
 from aigora.discussion.engine import DiscussionEngine
 from aigora.discussion.modes import get_mode
 from aigora.discussion.orders import get_speaking_order
@@ -65,7 +65,7 @@ def _build_engine(start: m.StartMessage, websocket: WebSocket) -> DiscussionEngi
         send=websocket.send_json,
     )
     if source is not None:
-        return DerivedDiscussionEngine(source=source, **common)
+        return derived_engine(source=source, **common)
     return DiscussionEngine(question=start.question, **common)
 
 

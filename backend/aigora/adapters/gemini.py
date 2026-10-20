@@ -49,9 +49,6 @@ import json
 import os
 import re
 import shutil
-import signal
-import subprocess
-import sys
 import tempfile
 from collections.abc import AsyncIterator, Mapping, Sequence
 from pathlib import Path
@@ -68,6 +65,7 @@ from aigora.adapters.base import (
     FailureKind,
     TurnRequest,
 )
+from aigora.adapters.subprocesses import kill_tree, process_group_options
 from aigora.config import ParticipantConfig
 
 INSTALL_HINT = "npm install -g @google/gemini-cli"
@@ -178,7 +176,7 @@ class GeminiAdapter(Adapter):
         try:
             out, err = await asyncio.wait_for(proc.communicate(), timeout=30)
         except TimeoutError:
-            await _kill_tree(proc)
+            await kill_tree(proc)
             return Availability(False, "`gemini --version` did not answer within 30 s")
         if proc.returncode != 0:
             detail = (err or out).decode("utf-8", "replace").strip()[-500:]
@@ -227,7 +225,7 @@ class GeminiAdapter(Adapter):
                     stderr=asyncio.subprocess.PIPE,
                     env=_child_env(settings_path),
                     limit=_LINE_LIMIT,
-                    **_new_process_group(),
+                    **process_group_options(),
                 )
             except OSError as exc:
                 yield Failed("not_available", f"Gemini CLI could not be started ({exc}); install it with `{INSTALL_HINT}`")
@@ -266,7 +264,7 @@ class GeminiAdapter(Adapter):
             yield _failure(code, result_status, errors, stderr)
         finally:
             if proc is not None and proc.returncode is None:
-                await _kill_tree(proc)
+                await kill_tree(proc)
             if stderr_task is not None and not stderr_task.done():
                 stderr_task.cancel()
             shutil.rmtree(config_dir, ignore_errors=True)
@@ -329,36 +327,6 @@ def _bypass_npm_shim(exe: Path) -> list[str] | None:
     if node_path is None:
         return None
     return [node_path, str(package / entry)]
-
-
-def _new_process_group() -> dict[str, Any]:
-    if sys.platform == "win32":
-        return {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP}
-    return {"start_new_session": True}
-
-
-async def _kill_tree(proc: asyncio.subprocess.Process) -> None:
-    if proc.returncode is None:
-        if sys.platform == "win32":
-            try:
-                killer = await asyncio.create_subprocess_exec(
-                    "taskkill", "/PID", str(proc.pid), "/T", "/F",
-                    stdin=asyncio.subprocess.DEVNULL, stdout=asyncio.subprocess.DEVNULL,
-                    stderr=asyncio.subprocess.DEVNULL,
-                )
-                await killer.wait()
-            except OSError:
-                pass
-        else:
-            try:
-                os.killpg(proc.pid, signal.SIGKILL)
-            except (ProcessLookupError, PermissionError):
-                pass
-        try:
-            proc.kill()
-        except ProcessLookupError:
-            pass
-    await proc.wait()
 
 
 async def _send_prompt(proc: asyncio.subprocess.Process, prompt: str) -> None:

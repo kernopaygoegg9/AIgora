@@ -35,7 +35,7 @@ def write_participants(tmp_path, monkeypatch) -> Callable[[str], Path]:
 
 @pytest.fixture
 def client(data_dir) -> TestClient:
-    return TestClient(create_app())
+    return TestClient(create_app(frontend_dist=None))
 
 
 def fake_participant(pid: str, name: str, **options) -> str:

@@ -249,7 +249,7 @@ AIgora 是一個本機執行的網頁應用程式（之後包成桌面 App）。
 | `settings` | 開始時鎖定的設定完整快照（同 `start` 的 settings） |
 | `participants` | 參與者快照（id、顯示名稱、Adapter、模型、能力），避免之後改設定檔影響舊紀錄 |
 | `derived_from` | 由哪場提問轉換而來（可為 null） |
-| `rounds` | 每輪：`number`；`turns`（每個：`participant_id`、`status` ok / failed / timeout、`text`、`stance`、`started_at`、`ended_at`、`error`）；`draft`；`judge`（方式、結果、細節）；`confirmations` |
+| `rounds` | 每輪：`number`；`turns`（每個：`participant_id`、`status` ok / failed / timeout、`text`、`stance`、`started_at`、`ended_at`、`error`）；`draft`；`judge`（方式、結果、細節；該輪最後的裁定）；`judge_history`（該輪每次裁定依序，方式 B 反問的那輪是 confirm 再加最後結果）；`confirmations` |
 | `interjections` | 每個：`text`、`at`、`applies_to_round` |
 | `removed_participants` | 每個：`participant_id`、`round`、`reason` |
 | `moderator_changes` | 每個：`round`、`participant_id` |

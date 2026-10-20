@@ -21,3 +21,7 @@ tests/test_history.py::test_unknown_discussion_is_404
 - 加一個「有 dist 時未知 /api 路徑仍是 404」的測試。
 
 **Workaround:** 跑後端測試前刪除 `frontend/dist`（git-ignored）。
+
+## Comments
+
+- 2026-10-20（review 修正）：已修正。`SpaStaticFiles` 改用原始請求路徑（`scope["path"]`）判斷，有 `frontend/dist` 時未知的 `/api/...`、`/ws/...` 仍回 404；`create_app(frontend_dist=...)` 接受 dist 路徑（測試傳 `None` 或暫存資料夾）。測試：`backend/tests/test_spa_fallback.py`。AGENTS.md 的「跑後端測試前刪除 `frontend/dist`」workaround 已移除。

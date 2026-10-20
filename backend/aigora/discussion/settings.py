@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from aigora.api.messages import DiscussionSettings, StartSettings
 from aigora.config import ParticipantsConfig
+from aigora.discussion.engine import MIN_PARTICIPANTS
 from aigora.discussion.judges import JUDGES
 from aigora.discussion.modes import MODES
 from aigora.discussion.orders import SPEAKING_ORDERS
@@ -28,6 +29,8 @@ def resolve_settings(requested: StartSettings, config: ParticipantsConfig) -> Di
     unknown = [pid for pid in ids if pid not in enabled]
     if unknown:
         raise SettingsError(f"未知或已停用的參與者：{', '.join(unknown)}")
+    if len(ids) < MIN_PARTICIPANTS:
+        raise SettingsError(f"討論需要至少 {MIN_PARTICIPANTS} 個參與者（目前選了 {len(ids)} 個）")
 
     speaking_order = requested.speaking_order or d.speaking_order
     if speaking_order not in SPEAKING_ORDERS:

@@ -6,7 +6,9 @@ Behaviour comes from the JSON file named by `FAKE_CLAUDE_SCENARIO`:
       "auth": {"stdout": "...", "stderr": "...", "exit_code": 0},   # `claude auth status ...`
       "turn": {"lines": [{...}, "raw text"], "stderr": "...", "exit_code": 0,
                "sleep_before_seconds": 0, "sleep_after_seconds": 0},
-      "record": "path/to/record.json"   # optional: argv / cwd / stdin / env are written here
+      "record": "path/to/record.json",  # optional: argv / cwd / stdin / env are written here
+      "heartbeat": "path"               # optional: before sleep_after, start a grandchild that
+                                        # appends to this file every 50 ms (like npm shim -> node)
     }
 
 `lines` entries are JSON-encoded unless they are strings (written verbatim).
@@ -14,8 +16,11 @@ Behaviour comes from the JSON file named by `FAKE_CLAUDE_SCENARIO`:
 
 import json
 import os
+import subprocess
 import sys
 import time
+
+HEARTBEAT = "import sys, time\nwhile True:\n    open(sys.argv[1], 'a').write('.')\n    time.sleep(0.05)\n"
 
 
 def main() -> int:
@@ -49,6 +54,8 @@ def main() -> int:
         sys.stdout.flush()
     sys.stderr.write(turn.get("stderr", ""))
     sys.stderr.flush()
+    if heartbeat := scenario.get("heartbeat"):
+        subprocess.Popen([sys.executable, "-c", HEARTBEAT, heartbeat])
     time.sleep(turn.get("sleep_after_seconds", 0))
     return turn.get("exit_code", 0)
 

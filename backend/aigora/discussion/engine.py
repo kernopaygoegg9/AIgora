@@ -8,8 +8,8 @@ draft / summary) and judge reports are run and emitted here (ticket 04);
 interjections and stop are ticket 06; failure handling is ticket 07: a
 participant whose turns fail in 2 rounds in a row is removed, fewer than 2
 active participants ends the discussion as `insufficient_participants`, and a
-moderator who is removed or fails a moderator call hands over to the next
-active participant in the list. Judge B's confirmations (ticket 08) are extra
+moderator whose turn or moderator call fails, or who is removed, hands over to
+the next active participant in the list. Judge B's confirmations (ticket 08) are extra
 calls like any other; their answers are reported by the mode
 (`confirmation_result`) and the disagreeing reasons reach the next round
 through `DiscussionView.pending_disagreements`.
@@ -50,7 +50,7 @@ from aigora.discussion.interfaces import (
 )
 from aigora.discussion.prompt_builder import build_prompt
 from aigora.discussion.store import DiscussionStore
-from aigora.domain import TurnPurpose
+from aigora.domain import FailureKind, TurnPurpose, TurnStatus
 from aigora.participant_info import snapshot_of
 from aigora.record import (
     DiscussionRecord,
@@ -78,6 +78,16 @@ MIN_PARTICIPANTS = 2
 # Extra calls that are the moderator's job: when the moderator fails one, the next
 # active participant takes over (the mode decides whether to retry the call).
 MODERATOR_PURPOSES: frozenset[str] = frozenset({"draft", "final_result", "no_consensus_summary"})
+
+
+def _status_of(kind: str) -> TurnStatus:
+    """A failed call's record status from its `turn_failed` kind."""
+    return "timeout" if kind == "timeout" else "failed"
+
+
+def _kind_of(status: TurnStatus) -> FailureKind:
+    """The `turn_failed` kind for a recorded non-ok turn (the inverse of `_status_of`)."""
+    return "timeout" if status == "timeout" else "unknown"
 
 
 def _turn_of(round_: RecordRound, participant_id: str) -> RecordTurn | None:
@@ -114,7 +124,12 @@ class DiscussionEngine:
         store: DiscussionStore,
         send: Send,
         discussion_id: str | None = None,
+        derived_from: str | None = None,
+        first_round: RecordRound | None = None,
     ):
+        """`first_round`: a prefilled round 1 (提問轉共識討論: the source ask's round 1). Its
+        turns of the discussion's participants are replayed as events; nobody is called.
+        `derived_from`: the id of the discussion this one continues."""
         self.mode = mode
         self.order = order
         self.store = store
@@ -127,12 +142,14 @@ class DiscussionEngine:
         self._stop_requested = False
         self._cancelled_calls: list[_CancelledCall] = []
         self._schedule_order: dict[int, list[str]] = {}  # round -> participant ids in scheduled order
+        self._first_round = first_round
         self.record = DiscussionRecord(
             id=discussion_id or new_discussion_id(),
             question=question,
             created_at=now_iso(),
             settings=settings,
             participants=[snapshot_of(p) for p in participants],
+            derived_from=derived_from,
         )
 
     @property
@@ -205,6 +222,9 @@ class DiscussionEngine:
         if not text:
             await self.report_error("插話內容不能是空白")
             return
+        if self._stop_requested:
+            await self.report_error("討論已停止，無法插話")
+            return
         if self.record.outcome is not None or self._finishing:
             await self.report_error("討論已結束，無法插話")
             return
@@ -230,6 +250,7 @@ class DiscussionEngine:
         while True:
             round_number += 1
             await self._run_round(round_number)
+            await self._hand_over_if_moderator_failed(round_number)
             await self._remove_failing(round_number)
             active = len(self.active_participant_ids())
             if active < MIN_PARTICIPANTS:
@@ -255,6 +276,9 @@ class DiscussionEngine:
             assert isinstance(decision, ContinueRound)
 
     async def _run_round(self, number: int) -> None:
+        if number == 1 and self._first_round is not None:
+            await self._replay_first_round(self._first_round)
+            return
         round_ = RecordRound(number=number, turns=[])
         self.record.rounds.append(round_)
         order = self._schedule_order.setdefault(number, [])
@@ -273,6 +297,21 @@ class DiscussionEngine:
             await asyncio.gather(*(turn(pid, view) for pid in batch))
             self._sort_turns(round_)
 
+    async def _replay_first_round(self, source: RecordRound) -> None:
+        """Round 1 from a prefilled round: shown through the ordinary events, turns kept as they were."""
+        active = set(self.active_participant_ids())
+        turns = [t.model_copy() for t in source.turns if t.participant_id in active]
+        self.record.rounds.append(RecordRound(number=1, turns=turns))
+        self._schedule_order[1] = [t.participant_id for t in turns]
+        await self._emit(m.RoundStarted, round=1)
+        for turn in turns:
+            ids = {"round": 1, "participant_id": turn.participant_id, "purpose": "turn"}
+            await self._emit(m.TurnStarted, **ids)
+            if turn.status == "ok":
+                await self._emit(m.TurnCompleted, **ids, text=turn.text or "", stance=turn.stance)
+            else:
+                await self._emit(m.TurnFailed, **ids, reason=turn.error or "發言失敗", kind=_kind_of(turn.status))
+
     async def _remove_failing(self, number: int) -> None:
         """Remove every active participant whose turns failed in this round and the one before."""
         if number < FAILED_ROUNDS_TO_REMOVE:
@@ -288,6 +327,13 @@ class DiscussionEngine:
             await self._emit(m.ParticipantRemoved, participant_id=pid, reason=reason, round=number)
             if pid == self.moderator_id():
                 await self._hand_over_moderator(number)
+
+    async def _hand_over_if_moderator_failed(self, number: int) -> None:
+        """The moderator's own turn in this round failed: the next active participant takes over."""
+        moderator = self.moderator_id()
+        turn = _turn_of(self.record.rounds[-1], moderator) if moderator is not None else None
+        if turn is not None and turn.status != "ok":
+            await self._hand_over_moderator(number)
 
     async def _hand_over_moderator(self, number: int) -> None:
         """The moderator failed or was removed: the next active participant in the list takes over."""
@@ -333,7 +379,8 @@ class DiscussionEngine:
 
         Confirmation answers come first: judge B's verdict after a confirmation is based
         on them. A later judge report of the same round replaces the earlier one in the
-        record (judge B: `confirm`, then `reached` / `not_reached`)."""
+        record's `judge`; every verdict stays in `judge_history` (judge B: `confirm`, then
+        `reached` / `not_reached`)."""
         round_ = self.record.rounds[-1]
         if decision.confirmation_report is not None:
             answers = list(decision.confirmation_report.answers)
@@ -342,6 +389,7 @@ class DiscussionEngine:
         if decision.judge_report is not None:
             r = decision.judge_report
             round_.judge = RecordJudge(judge=r.judge, outcome=r.outcome, detail=r.detail)
+            round_.judge_history.append(round_.judge)
             await self._emit(m.JudgeResult, round=number, judge=r.judge, outcome=r.outcome, detail=r.detail)
 
     async def _complete_round(self, number: int) -> None:
@@ -385,7 +433,7 @@ class DiscussionEngine:
             await self._emit(m.TurnFailed, **ids, reason=reason, kind=kind)
             return RecordTurn(
                 participant_id=participant_id,
-                status="timeout" if kind == "timeout" else "failed",
+                status=_status_of(kind),
                 text=text or None,
                 stance=None,
                 started_at=started_at,
@@ -482,11 +530,11 @@ class DiscussionEngine:
         )
 
     def _pending_disagreements(self) -> dict[str, str]:
-        """Disagreeing confirmation answers of the current round, else of the previous one."""
-        for round_ in self.record.rounds[::-1][:2]:
-            if round_.confirmations is not None:
-                return {a.participant_id: a.reason for a in round_.confirmations if not a.agree}
-        return {}
+        """Disagreeing confirmation answers of the previous round only (older ones are stale)."""
+        if len(self.record.rounds) < 2:
+            return {}
+        previous = self.record.rounds[-2]
+        return {a.participant_id: a.reason for a in previous.confirmations or () if not a.agree}
 
     # --- events --------------------------------------------------------------
 
