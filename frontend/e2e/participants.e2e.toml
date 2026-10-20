@@ -18,3 +18,21 @@ adapter = "fake"
 id = "fake-b"
 display_name = "Fake B"
 adapter = "fake"
+
+# Ticket 03: streams slowly so the E2E test can see text arriving.
+[[participant]]
+id = "fake-slow"
+display_name = "Fake Slow"
+adapter = "fake"
+[participant.options]
+replies = ["Streaming slowly, a few characters at a time, until the end."]
+chunk_chars = 4
+chunk_delay_seconds = 0.15
+
+# Ticket 03: no web access (shows the 無上網 mark).
+[[participant]]
+id = "fake-offline"
+display_name = "Fake Offline"
+adapter = "fake"
+[participant.options]
+web_access = false
