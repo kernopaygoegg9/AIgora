@@ -7,7 +7,16 @@ from pathlib import Path
 import httpx
 import pytest
 
-from aigora.adapters.base import Availability, Capabilities, Completed, Delta, Failed, TurnRequest, get_adapter
+from aigora.adapters.base import (
+    Availability,
+    Capabilities,
+    Completed,
+    Delta,
+    Failed,
+    ModelOption,
+    TurnRequest,
+    get_adapter,
+)
 from aigora.adapters.ollama import OllamaAdapter
 from aigora.config import ConfigError, ParticipantConfig, load_participants
 
@@ -238,3 +247,36 @@ async def test_closing_the_turn_early_closes_the_connection_to_ollama():
     assert await anext(turn) == Delta("Thinking")
     await turn.aclose()
     assert stream.closed
+
+
+
+async def test_model_list_is_the_installed_models_with_their_size_and_no_free_text():
+    def handler(req: httpx.Request) -> httpx.Response:
+        assert req.method == "GET" and req.url.path == "/api/tags"
+        return httpx.Response(200, json={"models": [
+            {"name": "qwen3:8b", "model": "qwen3:8b", "details": {"parameter_size": "8.2B", "family": "qwen3"}},
+            {"name": "custom:latest", "model": "custom:latest"},
+        ]})
+
+    choices = await adapter(handler).list_models(participant())
+
+    assert choices.models == (ModelOption("qwen3:8b", "qwen3:8b (8.2B)"), ModelOption("custom:latest", "custom:latest"))
+    assert choices.free_text is False
+    assert choices.error is None
+
+
+async def test_model_list_reports_why_when_ollama_is_not_running():
+    choices = await adapter(not_running).list_models(participant())
+
+    assert choices.models == ()
+    assert BASE in choices.error
+
+
+@pytest.mark.parametrize(
+    "response", [httpx.Response(500, text="boom"), httpx.Response(200, text="not json"), httpx.Response(200, json={})]
+)
+async def test_model_list_reports_bad_answers(response):
+    choices = await adapter(lambda req: response).list_models(participant())
+
+    assert choices.models == ()
+    assert choices.error

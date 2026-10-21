@@ -30,12 +30,15 @@ from aigora.adapters.base import (
     Delta,
     Failed,
     FailureKind,
+    ModelChoices,
+    ModelOption,
     TurnRequest,
 )
 from aigora.adapters.subprocesses import kill_tree, process_group_options
 from aigora.config import ParticipantConfig
 
 _STATUS_TIMEOUT_SECONDS = 15
+_MODELS_TIMEOUT_SECONDS = 10
 
 # Local features to turn off (ADR 0002). Never add `code_mode_host` here.
 DISABLED_FEATURES: tuple[str, ...] = (
@@ -139,6 +142,17 @@ def classify(message: str) -> FailureKind | None:
     return None
 
 
+def _catalog_models(raw: bytes) -> tuple[ModelOption, ...] | None:
+    """`{"models": [...]}` -> the `visibility == "list"` models by `priority`; None if unreadable."""
+    try:
+        entries = json.loads(raw.decode("utf-8", errors="replace"))["models"]
+        listed = [m for m in entries if m.get("visibility") == "list" and isinstance(m.get("slug"), str)]
+    except (ValueError, KeyError, TypeError, AttributeError):
+        return None
+    listed.sort(key=lambda m: m["priority"] if isinstance(m.get("priority"), (int, float)) else float("inf"))
+    return tuple(ModelOption(m["slug"], str(m.get("display_name") or m["slug"])) for m in listed)
+
+
 class CodexAdapter(Adapter):
     id = "codex"
 
@@ -178,6 +192,34 @@ class CodexAdapter(Adapter):
         if process.returncode != 0 or "not logged in" in output.lower():
             return Availability(False, f"codex: {output or 'not logged in'} (run `codex login`)")
         return Availability(True)
+
+    async def list_models(self, participant: ParticipantConfig) -> ModelChoices:
+        """`codex debug models`: the CLI's model catalog, no model call.
+
+        It reads `~/.codex/config.toml` (a broken one makes it fail) and, offline,
+        falls back to the catalog bundled with the CLI. The catalog may be out of
+        date, so any model name may also be typed in.
+        """
+        executable = self._executable()
+        if executable is None:
+            return ModelChoices(free_text=True, error="codex CLI not found on PATH")
+        try:
+            process = await self._spawn(executable, ["debug", "models"], cwd=None, stdin=False)
+        except OSError as exc:
+            return ModelChoices(free_text=True, error=f"could not start codex CLI: {exc}")
+        try:
+            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=_MODELS_TIMEOUT_SECONDS)
+        except asyncio.TimeoutError:
+            return ModelChoices(free_text=True, error=f"codex debug models did not answer in {_MODELS_TIMEOUT_SECONDS} s")
+        finally:
+            await kill_tree(process)
+        if process.returncode != 0:
+            detail = stderr.decode("utf-8", errors="replace").strip()[-300:] or f"exit code {process.returncode}"
+            return ModelChoices(free_text=True, error=f"codex debug models failed: {detail}")
+        models = _catalog_models(stdout)
+        if models is None:
+            return ModelChoices(free_text=True, error="codex debug models printed an unreadable model catalog")
+        return ModelChoices(models=models, free_text=True)
 
     async def _spawn(self, executable: list[str], args: list[str], cwd: str | None,
                      stdin: bool) -> asyncio.subprocess.Process:

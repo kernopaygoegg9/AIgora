@@ -12,7 +12,7 @@ test('a finished ask can be found in the history and opened read-only', async ({
   await page.getByLabel('問題').fill(question)
   await page.getByRole('checkbox', { name: 'Fake A' }).check()
   await page.getByRole('checkbox', { name: 'Fake B' }).check()
-  await page.getByRole('button', { name: '送出' }).click()
+  await page.getByRole('button', { name: '開始討論' }).click()
   await expect(page.getByTestId('discussion-status')).toHaveText('已結束')
 
   await page.getByRole('link', { name: '歷史' }).click()
@@ -32,9 +32,10 @@ test('a finished ask can be found in the history and opened read-only', async ({
   await expect(card('Fake A').getByTestId('turn-text')).toHaveText('Fake A: reply for round 1.')
   await expect(card('Fake B').getByTestId('turn-text')).toHaveText('Fake B: reply for round 1.')
 
-  // Read-only: nothing to continue the discussion with.
-  await expect(page.getByRole('textbox')).toHaveCount(0)
-  await expect(page.getByRole('button', { name: '送出' })).toHaveCount(0)
+  // Read-only: nothing to continue the discussion with (the sidebar's theme toggle is not
+  // part of the record, so look inside the record view).
+  await expect(view.getByRole('textbox')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '開始討論' })).toHaveCount(0)
 
   // Back to a live discussion straight from the record: the ask form works again.
   await page.getByRole('link', { name: '討論', exact: true }).click()
@@ -164,7 +165,23 @@ test('the read-only view shows every part of a record', async ({ page }) => {
 
   await expect(view.getByTestId('record-result')).toContainText('Use whichever editor you like.')
   await expect(page.getByRole('textbox')).toHaveCount(0)
-  await expect(page.getByRole('button')).toHaveCount(0)
+  await expect(view.getByRole('button')).toHaveCount(0)
+})
+
+test('the record names the speaking order as the backend does, or by its id', async ({ page }) => {
+  await page.route(`**/api/discussions/${fullRecord.id}`, (route) => route.fulfill({ json: fullRecord }))
+  await page.route('**/api/options', async (route) => {
+    const options = await (await route.fetch()).json()
+    options.speaking_orders = [{ id: 'parallel', name: '大家一起說', implemented: true }]
+    await route.fulfill({ json: options })
+  })
+  await page.goto(`/discussions/${fullRecord.id}`)
+  await expect(page.getByTestId('record-meta')).toContainText('大家一起說')
+
+  await page.unroute('**/api/options')
+  await page.route('**/api/options', (route) => route.fulfill({ status: 500 }))
+  await page.reload()
+  await expect(page.getByTestId('record-meta')).toContainText('parallel')
 })
 
 test('an unknown discussion shows an error', async ({ page }) => {

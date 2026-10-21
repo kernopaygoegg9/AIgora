@@ -11,7 +11,7 @@
 Ollama has no tools, so isolation (ADR 0002) needs nothing extra and
 `web_access` is false. Each turn is one streamed `POST /api/generate` with
 the full prompt (stateless, no `context`). Availability = `GET /api/tags`
-lists the model. Failure kinds: not running / model missing / no model ->
+lists the model; the model picker lists every model in it. Failure kinds: not running / model missing / no model ->
 not_available; httpx timeout -> timeout; HTTP error, `error` line in the
 stream, bad stream, dropped connection -> crashed. Cancelling the turn closes
 the HTTP connection, which stops Ollama's generation.
@@ -33,6 +33,8 @@ from aigora.adapters.base import (
     Completed,
     Delta,
     Failed,
+    ModelChoices,
+    ModelOption,
     TurnRequest,
 )
 from aigora.config import ParticipantConfig
@@ -99,6 +101,26 @@ class OllamaAdapter(Adapter):
         if not names & _name_variants(model):
             return Availability(False, f"Ollama model `{model}` is not installed (run `ollama pull {model}`)")
         return Availability(True)
+
+    async def list_models(self, participant: ParticipantConfig) -> ModelChoices:
+        """Installed models (`GET /api/tags`). No free text: a model that is not pulled always fails."""
+        base = self._base_url(participant)
+        try:
+            async with self._client(participant, httpx.Timeout(5.0)) as client:
+                response = await client.get("/api/tags")
+        except httpx.TransportError:
+            return ModelChoices(error=f"Ollama is not running at {base}")
+        if response.status_code != 200:
+            return ModelChoices(error=f"Ollama at {base} answered HTTP {response.status_code}")
+        try:
+            models = []
+            for entry in response.json()["models"]:
+                name = entry["name"]
+                size = (entry.get("details") or {}).get("parameter_size")
+                models.append(ModelOption(name, f"{name} ({size})" if size else name))
+        except (ValueError, KeyError, TypeError, AttributeError):
+            return ModelChoices(error=f"Ollama at {base} sent an unexpected model list")
+        return ModelChoices(models=tuple(models))
 
     async def run_turn(self, request: TurnRequest) -> AsyncIterator[AdapterEvent]:
         participant = request.participant

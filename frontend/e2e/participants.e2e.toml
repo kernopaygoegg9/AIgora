@@ -9,15 +9,20 @@ max_rounds = 15
 turn_timeout_seconds = 300
 jev_threshold = 0.8
 
+# Ticket 09: `models` fills the model picker (ticket 11).
 [[participant]]
 id = "fake-a"
 display_name = "Fake A"
 adapter = "fake"
+[participant.options]
+models = ["fake-small", "fake-large"]
 
 [[participant]]
 id = "fake-b"
 display_name = "Fake B"
 adapter = "fake"
+[participant.options]
+models = ["fake-small", "fake-large"]
 
 # Ticket 03: streams slowly so the E2E test can see text arriving.
 [[participant]]
@@ -75,3 +80,11 @@ adapter = "fake"
 stream = false
 fail_rounds = [1, 2]
 fail_reason = "fake: simulated crash"
+
+# Code review fix: disabled, so the browser never sees it, but the backend still rejects an
+# extra participant id equal to it. Its id is what an extra copied from Fake A used to get.
+[[participant]]
+id = "fake-a-2"
+display_name = "Fake A Retired"
+adapter = "fake"
+enabled = false

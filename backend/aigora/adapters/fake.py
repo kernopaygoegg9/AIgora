@@ -33,6 +33,7 @@ Options (all optional):
 | `unavailable_reason` | "fake: configured unavailable" | reason shown when unavailable |
 | `web_access` | true | the `web_access` capability |
 | `cancel_log` | none | file path; a cancelled call (stop / timeout) appends the participant id as one line |
+| `models` | [] | model ids offered in the model picker (no free text) |
 
 Generated texts name the participant; generated normal turns end with
 `STANCE: AGREE` from round 2 on and generated confirmations agree, so a
@@ -55,6 +56,8 @@ from aigora.adapters.base import (
     Completed,
     Delta,
     Failed,
+    ModelChoices,
+    ModelOption,
     TurnRequest,
 )
 from aigora.config import ParticipantConfig
@@ -78,6 +81,7 @@ _DEFAULTS: dict[str, Any] = {
     "unavailable_reason": "fake: configured unavailable",
     "web_access": True,
     "cancel_log": None,
+    "models": [],
 }
 
 
@@ -104,6 +108,8 @@ class FakeAdapter(Adapter):
         for key in ("replies", "drafts", "confirmations"):
             if key in o:
                 _check(_is_str_list(o[key]) and len(o[key]) > 0, f"`{key}` must be a non-empty list of strings")
+        if "models" in o:
+            _check(_is_str_list(o["models"]), "`models` must be a list of strings")
         for key in ("final", "summary", "fail_reason", "unavailable_reason", "cancel_log"):
             if key in o:
                 _check(isinstance(o[key], str), f"`{key}` must be a string")
@@ -139,6 +145,10 @@ class FakeAdapter(Adapter):
         if o["available"]:
             return Availability(True)
         return Availability(False, o["unavailable_reason"])
+
+    async def list_models(self, participant: ParticipantConfig) -> ModelChoices:
+        o = self._options(participant)
+        return ModelChoices(models=tuple(ModelOption(m, m) for m in o["models"]))
 
     async def run_turn(self, request: TurnRequest) -> AsyncIterator[AdapterEvent]:
         o = self._options(request.participant)

@@ -100,7 +100,7 @@ def test_finished_ask_is_saved_as_a_discussion_record(client, write_participants
         "derived_from", "rounds", "interjections", "removed_participants", "moderator_changes",
         "outcome", "result",
     }
-    assert record["schema_version"] == 1
+    assert record["schema_version"] == 2
     assert record["id"] == discussion_id
     assert record["question"] == "Tabs or spaces?"
     assert record["created_at"] <= record["finished_at"]
@@ -165,8 +165,9 @@ def test_participant_list_shows_enabled_participants_with_capabilities_and_avail
     assert response.status_code == 200
     assert response.json() == [
         {"id": "fake-a", "display_name": "Fake A", "adapter": "fake", "model": None, "avatar": "fake.png",
-         "capabilities": {"web_access": False, "streaming": True}, "available": True, "unavailable_reason": None},
+         "capabilities": {"web_access": False, "streaming": True}, "available": True, "unavailable_reason": None,
+         "models": [], "free_text_model": False, "models_error": None},
         {"id": "fake-b", "display_name": "Fake B", "adapter": "fake", "model": None, "avatar": "fake.png",
          "capabilities": {"web_access": True, "streaming": True}, "available": False,
-         "unavailable_reason": "not logged in"},
+         "unavailable_reason": "not logged in", "models": [], "free_text_model": False, "models_error": None},
     ]

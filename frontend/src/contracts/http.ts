@@ -8,6 +8,11 @@
 // GET /api/avatars/{file}    -> image
 import type { Capabilities, JudgeId, ModeId, Outcome, SpeakingOrderId } from './messages'
 
+export interface ModelOption {
+  id: string
+  label: string
+}
+
 export interface ParticipantInfo {
   id: string
   display_name: string
@@ -17,6 +22,9 @@ export interface ParticipantInfo {
   capabilities: Capabilities
   available: boolean
   unavailable_reason?: string | null
+  models: ModelOption[]
+  free_text_model: boolean
+  models_error?: string | null
 }
 
 export interface ModeOption {

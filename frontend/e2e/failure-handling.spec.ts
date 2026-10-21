@@ -15,7 +15,7 @@ test('a failing participant is marked failed, then removed, and the moderator ha
   await page.getByRole('checkbox', { name: 'Fake B' }).check()
   await page.getByRole('checkbox', { name: 'Fake Flaky' }).check()
   await page.getByLabel('主持人', { exact: true }).selectOption('fake-flaky')
-  await page.getByRole('button', { name: '送出' }).click()
+  await page.getByRole('button', { name: '開始討論' }).click()
 
   // Round 1: the failed turn shows its status and reason; the others answer normally.
   const flaky1 = round(page, 1).locator('[data-testid="turn-card"][data-participant-id="fake-flaky"]')
@@ -33,6 +33,12 @@ test('a failing participant is marked failed, then removed, and the moderator ha
   await expect(removed).toContainText('連續 2 輪')
   await expect(round(page, 2).getByTestId('moderator-changed')).toHaveCount(0)
 
+  // The inspector (ui-redesign 05): Fake Flaky is marked removed, Fake A is now the moderator.
+  const seat = (id: string) => page.locator(`[data-testid="inspector-participant"][data-participant-id="${id}"]`)
+  await expect(seat('fake-flaky')).toContainText('已移出')
+  await expect(seat('fake-a').getByTestId('inspector-moderator')).toBeVisible()
+  await expect(seat('fake-flaky').getByTestId('inspector-moderator')).toHaveCount(0)
+
   // The remaining two still reach consensus.
   await expect(page.getByTestId('discussion-result')).toContainText('共識結果')
   await expect(page.getByTestId('discussion-status')).toHaveText('已結束')
@@ -45,7 +51,7 @@ test('with fewer than two participants left the discussion ends and says why', a
   await page.getByLabel('問題').fill('Tabs or spaces?')
   await page.getByRole('checkbox', { name: 'Fake A' }).check()
   await page.getByRole('checkbox', { name: 'Fake Flaky' }).check()
-  await page.getByRole('button', { name: '送出' }).click()
+  await page.getByRole('button', { name: '開始討論' }).click()
 
   await expect(round(page, 2).getByTestId('participant-removed')).toContainText('Fake Flaky')
   const result = page.getByTestId('discussion-result')

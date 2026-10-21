@@ -11,7 +11,7 @@ test('a consensus discussion shows the draft, everyone\'s stance and the consens
   await page.getByLabel('問題').fill('Tabs or spaces?')
   await page.getByRole('checkbox', { name: 'Fake A' }).check()
   await page.getByRole('checkbox', { name: 'Fake B' }).check()
-  await page.getByRole('button', { name: '送出' }).click()
+  await page.getByRole('button', { name: '開始討論' }).click()
 
   const round = (n: number) => page.locator(`[data-testid="round"][data-round="${n}"]`)
 
@@ -26,6 +26,12 @@ test('a consensus discussion shows the draft, everyone\'s stance and the consens
   await expect(judge).toContainText('取得共識')
   await expect(judge.getByTestId('stance').filter({ hasText: 'Fake A' })).toContainText('同意')
   await expect(judge.getByTestId('stance').filter({ hasText: 'Fake B' })).toContainText('同意')
+  // The reply's raw STANCE line is shown once, as the card's stance footer, not in the text too.
+  const card = round(2).getByTestId('turn-card').filter({ hasText: 'Fake A' })
+  await expect(card.getByTestId('turn-text')).toHaveText('Fake A: reply for round 2.')
+  await expect(card).toContainText('STANCE: AGREE · 同意')
+  // The inspector's stance tracker (ui-redesign 05) has a row for round 2.
+  await expect(page.getByTestId('stance-tracker')).toContainText('第 2 輪')
 
   // The consensus result is shown on its own.
   const result = page.getByTestId('discussion-result')

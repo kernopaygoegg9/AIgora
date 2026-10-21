@@ -1,5 +1,9 @@
 # AIgora participants. Copy to participants.toml (git-ignored) and edit.
 # Edit this file by hand; v1 has no UI for it.
+# The settings page can switch a participant's model (and add extra participants
+# copied from one of these) for a single discussion; `model` here is the default.
+# Model lists: claude = fable / opus / sonnet / haiku (or type a full name),
+# codex = `codex debug models` (or type a name), ollama = installed models.
 
 [defaults]
 mode = "ask"                # ask | consensus

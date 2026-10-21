@@ -76,7 +76,7 @@ def test_one_discussion_returns_the_full_record(client, write_participants):
 
     assert response.status_code == 200
     record = response.json()
-    assert record["schema_version"] == 1
+    assert record["schema_version"] == 2
     assert record["id"] == discussion_id
     assert record["question"] == "Tabs or spaces?"
     assert record["settings"]["participant_ids"] == ["fake-a", "fake-b"]

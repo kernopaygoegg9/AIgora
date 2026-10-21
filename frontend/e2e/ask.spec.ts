@@ -9,7 +9,7 @@ test('asking a question streams every participant side by side and finishes', as
   await page.getByRole('checkbox', { name: 'Fake A' }).check()
   await page.getByRole('checkbox', { name: 'Fake B' }).check()
   await page.getByRole('checkbox', { name: 'Fake Slow' }).check()
-  await page.getByRole('button', { name: '送出' }).click()
+  await page.getByRole('button', { name: '開始討論' }).click()
 
   const card = (name: string) => page.getByTestId('turn-card').filter({ hasText: name })
 
@@ -24,6 +24,9 @@ test('asking a question streams every participant side by side and finishes', as
   await expect(slow.getByTestId('turn-text')).toContainText('the end.')
   await expect(slow.getByTestId('turn-status')).toHaveText('完成')
   await expect(page.getByTestId('discussion-status')).toHaveText('已結束')
+  // An ask has no stances, so the inspector has no stance tracker (ui-redesign 05).
+  await expect(page.getByTestId('inspector-participant')).not.toHaveCount(0)
+  await expect(page.getByTestId('stance-tracker')).toHaveCount(0)
 
   // Side by side: the cards share a row.
   const boxes = await Promise.all(['Fake A', 'Fake B', 'Fake Slow'].map((n) => card(n).boundingBox()))

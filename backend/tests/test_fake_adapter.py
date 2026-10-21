@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from aigora.adapters.base import Completed, Delta, Failed, TurnRequest, get_adapter
+from aigora.adapters.base import Completed, Delta, Failed, ModelOption, TurnRequest, get_adapter
 from aigora.config import ParticipantConfig
 
 
@@ -155,3 +155,20 @@ async def test_cancelling_a_turn_stops_it_promptly():
 def test_invalid_options_are_rejected(options):
     with pytest.raises(ValueError):
         get_adapter("fake").validate_options(options)
+
+
+
+async def test_model_list_comes_from_the_models_option():
+    adapter = get_adapter("fake")
+
+    assert (await adapter.list_models(participant(models=["small", "large"]))).models == (
+        ModelOption("small", "small"), ModelOption("large", "large"))
+    without = await adapter.list_models(participant())
+    assert without.models == ()
+    assert without.free_text is False
+
+
+@pytest.mark.parametrize("models", ["small", [1, 2]])
+def test_models_option_must_be_a_list_of_strings(models):
+    with pytest.raises(ValueError, match="models"):
+        get_adapter("fake").validate_options({"models": models})

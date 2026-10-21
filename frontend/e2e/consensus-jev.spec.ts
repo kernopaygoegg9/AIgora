@@ -95,7 +95,7 @@ test('judge B shows Jev\'s probability, the confirmation answers with reasons, a
   await page.getByLabel('問題').fill('Tabs or spaces?')
   await page.getByRole('checkbox', { name: 'Fake A' }).check()
   await page.getByRole('checkbox', { name: 'Fake B' }).check()
-  await page.getByRole('button', { name: '送出' }).click()
+  await page.getByRole('button', { name: '開始討論' }).click()
 
   const round = (n: number) => page.locator(`[data-testid="round"][data-round="${n}"]`)
 

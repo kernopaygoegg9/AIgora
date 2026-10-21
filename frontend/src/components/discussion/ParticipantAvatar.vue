@@ -28,6 +28,6 @@ const missing = ref(false)
 }
 .avatar-missing {
   display: inline-block;
-  background: #d8dde3;
+  background: var(--line);
 }
 </style>

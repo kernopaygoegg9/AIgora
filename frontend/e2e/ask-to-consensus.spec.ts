@@ -8,7 +8,7 @@ test('an ask can be continued as a consensus discussion that reuses its answers 
   await page.getByLabel('問題').fill('Which editor?')
   await page.getByRole('checkbox', { name: 'Fake A' }).check()
   await page.getByRole('checkbox', { name: 'Fake B' }).check()
-  await page.getByRole('button', { name: '送出' }).click()
+  await page.getByRole('button', { name: '開始討論' }).click()
   await expect(page.getByTestId('discussion-status')).toHaveText('已結束')
 
   const button = page.getByRole('button', { name: '開始共識討論' })

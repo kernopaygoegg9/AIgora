@@ -1,5 +1,6 @@
-<!-- One round: the participants' turns side by side, removals / moderator handoffs, then (consensus) the judge result and draft. -->
+<!-- One round: the participants' turns side by side, removals / moderator handoffs, then (consensus) draft | verdict. -->
 <script setup lang="ts">
+import '../../styles/discussion.css'
 import type { ParticipantSnapshot } from '../../contracts/messages'
 import type { ModeratorChange, RemovedParticipant, RoundState } from '../../stores/discussion'
 import RoundConsensus from './RoundConsensus.vue'
@@ -18,9 +19,12 @@ defineProps<{
 </script>
 
 <template>
-  <section class="round" data-testid="round" :data-round="round.number">
-    <h2 v-if="showNumber" class="round-title">第 {{ round.number }} 輪</h2>
-    <div class="turns" :style="{ '--columns': Math.max(round.turns.length, 1) }">
+  <section class="round d-round" data-testid="round" :data-round="round.number">
+    <header v-if="showNumber" class="d-round-head">
+      <h2 class="d-round-title">第 {{ round.number }} 輪</h2>
+      <span v-if="round.status === 'running'" class="pill pill-accent">進行中</span>
+    </header>
+    <div class="d-cols" :style="{ '--columns': Math.max(round.turns.length, 1) }">
       <TurnCard
         v-for="turn in round.turns"
         :key="turn.participantId"
@@ -32,22 +36,3 @@ defineProps<{
     <RoundConsensus :round="round" :participant-by-id="participantById" :moderator-id="moderatorId" />
   </section>
 </template>
-
-<style scoped>
-.round {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-.round-title {
-  font-size: 1rem;
-  margin: 0;
-}
-.turns {
-  display: grid;
-  grid-template-columns: repeat(var(--columns), minmax(16rem, 1fr));
-  gap: 0.75rem;
-  align-items: start;
-  overflow-x: auto;
-}
-</style>

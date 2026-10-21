@@ -1,9 +1,12 @@
-<!-- One round of a saved record (read-only): what happened before it (interjections,
-     moderator changes), the turns side by side, then draft, verdict, confirmations, removals. -->
+<!-- One round of a saved record (read-only), in the live page's look (ui-redesign 07): what
+     happened before it (interjections, moderator changes), the turns side by side, removals,
+     then draft | verdicts and confirmations. -->
 <script setup lang="ts">
 import { computed } from 'vue'
 
-import type { ParticipantSnapshot } from '../../contracts/messages'
+import '../../styles/discussion.css'
+
+import type { ParticipantSnapshot, Stance } from '../../contracts/messages'
 import type {
   RecordInterjection,
   RecordModeratorChange,
@@ -12,9 +15,12 @@ import type {
   RecordTurn,
 } from '../../contracts/record'
 import type { TurnState } from '../../stores/discussion'
+import ConfirmationList from '../discussion/ConfirmationList.vue'
+import JevProbability from '../discussion/JevProbability.vue'
 import { renderMarkdown } from '../discussion/markdown'
+import StanceList from '../discussion/StanceList.vue'
 import TurnCard from '../discussion/TurnCard.vue'
-import { JUDGE_LABELS, agreeLabel, formatTime, judgeOutcomeLabel, stanceLabel } from './labels'
+import { JUDGE_LABELS, formatTime, judgeOutcomeLabel, stanceLabel } from './labels'
 
 const props = defineProps<{
   round: RecordRound
@@ -42,6 +48,9 @@ function toTurnState(t: RecordTurn): TurnState {
 
 const turns = computed(() => props.round.turns.map((t) => ({ record: t, state: toTurnState(t) })))
 const draftHtml = computed(() => (props.round.draft ? renderMarkdown(props.round.draft) : ''))
+const stanceRows = (stances: Record<string, Stance | null>) =>
+  Object.entries(stances).map(([id, stance]) => ({ id, stance }))
+
 // Every verdict of the round (judge B: `confirm`, then the final one); older records only have `judge`.
 const verdicts = computed(() => {
   const history = props.round.judge_history ?? []
@@ -51,141 +60,106 @@ const verdicts = computed(() => {
 </script>
 
 <template>
-  <section class="record-round" data-testid="record-round" :data-round="round.number">
-    <h2 v-if="showNumber" class="round-title">第 {{ round.number }} 輪</h2>
+  <section class="record-round d-round" data-testid="record-round" :data-round="round.number">
+    <header v-if="showNumber" class="d-round-head">
+      <h2 class="d-round-title">第 {{ round.number }} 輪</h2>
+      <span v-if="interjections.length" class="pill">含插話</span>
+    </header>
 
-    <p v-for="(i, k) in interjections" :key="`i${k}`" class="event interjection" data-testid="record-interjection">
-      <span class="event-label">使用者插話</span>
+    <p v-for="(i, k) in interjections" :key="`i${k}`" class="d-notice is-interjection" data-testid="record-interjection">
+      <span class="d-notice-label">使用者插話</span>
       <time :datetime="i.at">{{ formatTime(i.at) }}</time>
       <span class="event-text">{{ i.text }}</span>
     </p>
-    <p v-for="(c, k) in moderatorChanges" :key="`m${k}`" class="event" data-testid="record-moderator-change">
-      <span class="event-label">主持人接手</span>
-      <span>{{ name(c.participant_id) }} 成為主持人</span>
+    <p v-for="(c, k) in moderatorChanges" :key="`m${k}`" class="d-notice" data-testid="record-moderator-change">
+      <span class="d-notice-label">主持人接手</span>
+      <span>改由 {{ name(c.participant_id) }} 擔任主持人</span>
     </p>
 
-    <div class="turns" :style="{ '--columns': Math.max(turns.length, 1) }">
+    <div class="d-cols" :style="{ '--columns': Math.max(turns.length, 1) }">
       <div v-for="t in turns" :key="t.record.participant_id" class="record-turn" data-testid="record-turn">
-        <TurnCard :turn="t.state" :participant="participantById(t.record.participant_id)" />
-        <span v-if="t.record.stance" class="stance" :class="t.record.stance" data-testid="record-stance">{{
-          stanceLabel(t.record.stance)
-        }}</span>
+        <TurnCard :turn="t.state" :participant="participantById(t.record.participant_id)">
+          <template #stance>
+            <p v-if="t.record.stance" class="d-stance-line" :class="`is-${t.record.stance}`">
+              STANCE: {{ t.record.stance }} · <span data-testid="record-stance">{{ stanceLabel(t.record.stance) }}</span>
+            </p>
+          </template>
+        </TurnCard>
       </div>
     </div>
 
-    <div v-if="round.draft" class="block draft" data-testid="record-draft">
-      <h3 class="block-title">共識草案</h3>
-      <!-- eslint-disable-next-line vue/no-v-html -- sanitised in renderMarkdown -->
-      <div class="block-text" v-html="draftHtml" />
-    </div>
-
-    <div v-for="(judge, k) in verdicts" :key="`j${k}`" class="block" data-testid="record-judge">
-      <h3 class="block-title">
-        共識裁定（{{ JUDGE_LABELS[judge.judge] ?? judge.judge }}）：{{ judgeOutcomeLabel(judge.judge, judge.outcome) }}
-      </h3>
-      <ul v-if="judge.detail.stances" class="plain-list">
-        <li v-for="(stance, pid) in judge.detail.stances" :key="pid">{{ name(String(pid)) }}：{{ stanceLabel(stance) }}</li>
-      </ul>
-      <p v-if="judge.detail.probability != null" class="block-text">
-        Jev 機率 {{ judge.detail.probability }}<template v-if="judge.detail.threshold != null">
-          （門檻 {{ judge.detail.threshold }}）</template
-        >
-      </p>
-    </div>
-
-    <div v-if="round.confirmations?.length" class="block" data-testid="record-confirmation">
-      <h3 class="block-title">反問確認</h3>
-      <ul class="plain-list">
-        <li v-for="c in round.confirmations" :key="c.participant_id">
-          {{ name(c.participant_id) }}：{{ agreeLabel(c.agree) }}<template v-if="c.reason">（{{ c.reason }}）</template>
-        </li>
-      </ul>
-    </div>
-
-    <p v-for="(r, k) in removals" :key="`r${k}`" class="event removal" data-testid="record-removal">
-      <span class="event-label">移出討論</span>
+    <p v-for="(r, k) in removals" :key="`r${k}`" class="d-notice is-bad" data-testid="record-removal">
+      <span class="d-notice-label">移出討論</span>
       <span>{{ name(r.participant_id) }}：{{ r.reason }}</span>
     </p>
+
+    <div v-if="round.draft || verdicts.length || round.confirmations?.length" class="d-between">
+      <div class="d-between-cell">
+        <article v-if="round.draft" class="d-block is-draft" data-testid="record-draft">
+          <header class="d-block-head">
+            <span class="d-block-title">共識草案</span>
+            <span>第 {{ round.number }} 輪後</span>
+          </header>
+          <!-- eslint-disable-next-line vue/no-v-html -- sanitised in renderMarkdown -->
+          <div class="d-md" v-html="draftHtml" />
+        </article>
+      </div>
+
+      <div class="d-between-cell">
+        <section
+          v-for="(judge, k) in verdicts"
+          :key="`j${k}`"
+          class="d-block"
+          :class="{ 'is-ok': judge.outcome === 'reached' }"
+          data-testid="record-judge"
+        >
+          <header class="d-block-head">
+            <span class="d-block-title">{{ JUDGE_LABELS[judge.judge] ?? judge.judge }}</span>
+            <span class="d-push pill" :class="judge.outcome === 'reached' ? 'pill-ok' : 'pill-warn'">{{
+              judgeOutcomeLabel(judge.judge, judge.outcome)
+            }}</span>
+          </header>
+          <StanceList
+            v-if="judge.detail.stances"
+            :stances="stanceRows(judge.detail.stances)"
+            :participant-by-id="participantById"
+          />
+          <JevProbability
+            v-if="judge.detail.probability != null"
+            :probability="judge.detail.probability"
+            :threshold="judge.detail.threshold ?? null"
+          />
+        </section>
+
+        <section v-if="round.confirmations?.length" class="d-block" data-testid="record-confirmation">
+          <header class="d-block-head">
+            <span class="d-block-title">反問確認</span>
+          </header>
+          <ConfirmationList :answers="round.confirmations" :participant-by-id="participantById" agree-reasons />
+        </section>
+      </div>
+    </div>
   </section>
 </template>
 
 <style scoped>
-.record-round {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-.round-title {
-  font-size: 1rem;
-  margin: 0;
-}
-.turns {
-  display: grid;
-  grid-template-columns: repeat(var(--columns), minmax(16rem, 1fr));
-  gap: 0.75rem;
-  align-items: start;
-  overflow-x: auto;
-}
 .record-turn {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
   min-width: 0;
 }
-.stance {
-  align-self: flex-start;
-  font-size: 0.8rem;
-  padding: 0 0.5rem;
-  border-radius: 999px;
-  background: #e8ebef;
+.record-turn > :deep(.d-turn) {
+  flex: 1;
 }
-.stance.AGREE {
-  background: #dcf2e3;
-  color: #1a6b37;
+.d-notice.is-interjection {
+  border-style: solid;
+  border-left: 2px solid var(--accent);
 }
-.stance.DISAGREE {
-  background: #fbe4e1;
-  color: #a1260d;
-}
-.block {
-  padding: 0.75rem;
-  background: #fff;
-  border: 1px dashed #b7c0cc;
-  border-radius: 8px;
-}
-.block-title {
-  font-size: 0.95rem;
-  margin: 0 0 0.25rem;
-}
-.block-text {
-  margin: 0;
-  overflow-wrap: anywhere;
-  line-height: 1.55;
-}
-.block-text :deep(p) {
-  margin: 0 0 0.5rem;
-}
-.plain-list {
-  margin: 0;
-  padding-left: 1.25rem;
-}
-.event {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin: 0;
-  font-size: 0.9rem;
-}
-.event-label {
-  font-weight: 600;
-}
-.event time {
-  color: #6b7280;
+.d-notice time {
+  font-size: var(--fs-xs);
 }
 .event-text {
+  color: var(--text);
   white-space: pre-wrap;
-}
-.removal {
-  color: #a1260d;
+  overflow-wrap: anywhere;
 }
 </style>

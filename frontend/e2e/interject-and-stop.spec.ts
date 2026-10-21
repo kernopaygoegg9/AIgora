@@ -13,7 +13,7 @@ test('an interjection applies from the next round, and stop ends the discussion'
   await page.getByLabel('問題').fill('Tabs or spaces?')
   await page.getByRole('checkbox', { name: 'Fake A' }).check()
   await page.getByRole('checkbox', { name: 'Fake Echo' }).check()
-  await page.getByRole('button', { name: '送出' }).click()
+  await page.getByRole('button', { name: '開始討論' }).click()
 
   const echo = (n: number) => round(page, n).getByTestId('turn-card').filter({ hasText: 'Fake Echo' })
   await expect(echo(1).getByTestId('turn-status')).toHaveText('回覆中')
@@ -47,7 +47,7 @@ test('stop cancels a turn that would otherwise never finish', async ({ page }) =
   await page.getByLabel('問題').fill('Will you ever answer?')
   await page.getByRole('checkbox', { name: 'Fake A' }).check()
   await page.getByRole('checkbox', { name: 'Fake Sleepy' }).check()
-  await page.getByRole('button', { name: '送出' }).click()
+  await page.getByRole('button', { name: '開始討論' }).click()
 
   const card = (name: string) => page.getByTestId('turn-card').filter({ hasText: name })
   await expect(card('Fake A').getByTestId('turn-status')).toHaveText('完成')

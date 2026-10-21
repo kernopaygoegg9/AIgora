@@ -1,0 +1,317 @@
+/* Shared look of a discussion (ui-redesign 04): rounds, turn cards, drafts, verdicts,
+   notices and the result block. Used by the live page and the read-only record (07),
+   so both look the same. Global classes, prefixed `d-`. */
+
+/* --- markdown text ------------------------------------------------------------ */
+.d-md {
+  color: var(--text-2);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.d-md > :first-child {
+  margin-top: 0;
+}
+.d-md > :last-child {
+  margin-bottom: 0;
+}
+.d-md p {
+  margin: 0 0 0.5rem;
+}
+/* Headings inside a reply stay small: the card is not a document. */
+.d-md h1,
+.d-md h2,
+.d-md h3,
+.d-md h4,
+.d-md h5,
+.d-md h6 {
+  margin: 0.75rem 0 0.35rem;
+  font-size: var(--fs-base);
+  font-weight: 600;
+  color: var(--text);
+}
+.d-md h1,
+.d-md h2 {
+  font-size: var(--fs-md);
+}
+.d-md ul,
+.d-md ol {
+  margin: 0 0 0.5rem;
+  padding-left: 1.4rem;
+}
+.d-md pre {
+  overflow-x: auto;
+  padding: var(--space-2);
+  background: var(--panel-2);
+  border-radius: var(--radius-sm);
+}
+.d-md code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+/* Streamed text: a blinking caret after the last character. */
+.d-caret > :last-child::after {
+  content: '▍';
+  margin-left: 1px;
+  color: var(--accent);
+  animation: d-blink 1s steps(2, start) infinite;
+}
+@keyframes d-blink {
+  to {
+    visibility: hidden;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .d-caret > :last-child::after {
+    animation: none;
+  }
+}
+
+/* --- round ----------------------------------------------------------------------- */
+.d-round {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.d-round-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+.d-round-title {
+  margin: 0;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text);
+}
+.d-round-head::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+/* Equal-width turn cards; only this row scrolls sideways when there are many. */
+.d-cols {
+  display: grid;
+  grid-template-columns: repeat(var(--columns, 1), minmax(220px, 1fr));
+  gap: 10px;
+  align-items: start;
+  overflow-x: auto;
+}
+
+/* --- turn card ------------------------------------------------------------------- */
+.d-turn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: 10px 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+.d-turn.is-running {
+  border-color: var(--accent-line);
+  box-shadow: 0 0 0 1px var(--accent-line) inset;
+}
+.d-turn.is-failed {
+  border-color: var(--bad-line);
+  background: var(--bad-bg);
+}
+.d-turn-head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.d-turn-head > :last-child {
+  flex: none;
+  margin-left: auto;
+}
+.d-failure {
+  margin: 0;
+  color: var(--bad);
+  font-size: var(--fs-sm);
+  overflow-wrap: anywhere;
+}
+.d-stance-line {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+.d-stance-line.is-AGREE {
+  color: var(--ok);
+}
+.d-stance-line.is-DISAGREE {
+  color: var(--bad);
+}
+
+/* --- notices under a round -------------------------------------------------------- */
+.d-notice {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  margin: 0;
+  padding: 6px 10px;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  background: var(--panel);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+}
+.d-notice-label {
+  flex: none;
+  font-weight: 600;
+  color: var(--text);
+}
+.d-notice.is-bad {
+  color: var(--bad);
+  background: var(--bad-bg);
+  border-color: var(--bad-line);
+}
+.d-notice.is-bad .d-notice-label {
+  color: var(--bad);
+}
+
+/* --- draft | verdict ---------------------------------------------------------------- */
+.d-between {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 280px);
+  gap: 10px;
+  align-items: start;
+}
+.d-between-cell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+@media (max-width: 900px) {
+  .d-between {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.d-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: 10px 12px;
+  font-size: var(--fs-sm);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+.d-block.is-draft {
+  background: var(--accent-bg);
+  border-color: var(--accent-line);
+}
+.d-block.is-failed {
+  border-color: var(--bad-line);
+}
+.d-block.is-ok {
+  border-color: var(--ok-line);
+}
+.d-block .d-md {
+  font-size: var(--fs-base);
+}
+.d-block-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px var(--space-2);
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+.d-block-title {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text);
+}
+.d-block-head .d-push {
+  margin-left: auto;
+}
+.d-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.d-list-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.d-list-row > .pill:last-child {
+  margin-left: auto;
+}
+.d-reason {
+  margin: 2px 0 0 26px;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Jev probability: a bar with the threshold tick. */
+.d-bar {
+  position: relative;
+  height: 6px;
+  margin: 4px 0 2px;
+  background: var(--panel-2);
+  border-radius: 3px;
+}
+.d-bar-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--warn);
+  border-radius: 3px;
+}
+.d-bar-fill.is-over {
+  background: var(--ok);
+}
+.d-bar-tick {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--text);
+}
+
+/* --- result block (top of the stage) ----------------------------------------------- */
+.d-result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 14px 16px;
+  background: var(--ok-bg);
+  border: 1px solid var(--ok-line);
+  border-radius: var(--radius-lg);
+}
+.d-result.is-warn {
+  background: var(--warn-bg);
+  border-color: var(--warn-line);
+}
+.d-result.is-bad {
+  background: var(--bad-bg);
+  border-color: var(--bad-line);
+}
+.d-result-title {
+  margin: 0;
+  font-size: var(--fs-md);
+  font-weight: 600;
+}
+.d-result-reason {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+.d-result .d-md {
+  color: var(--text);
+}
