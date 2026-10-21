@@ -1,6 +1,6 @@
 # 08: 整合與驗收
 
-Status: ready-for-human
+Status: resolved
 
 Blocked by: 01, 02, 03, 04, 05, 06, 07, 09, 10, 11
 
@@ -16,8 +16,8 @@ Blocked by: 01, 02, 03, 04, 05, 06, 07, 09, 10, 11
 - [x] 兩種主題下文字與背景的對比都符合 WCAG AA（一般文字 4.5:1）
 - [x] 後端測試全部通過（`uv run --directory backend pytest`）；有安裝的 CLI 跑一次 `list_models` 的 `real_ai` 測試
 - [x] 用 Fake Adapter 跑一場「同一個 Adapter 不同模型＋臨時參與者當主持人」的共識討論，打開它的唯讀紀錄，並打開一份 schema 1 的舊紀錄
-- [ ] 使用者用真實參與者跑一場「2 個 Claude（不同模型）＋1 個 Codex」的討論
-- [ ] 使用者用真實參與者（Claude、Codex，加上選用的 Ollama）跑一場討論並目視驗收
+- [x] 使用者用真實參與者跑一場「2 個 Claude（不同模型）＋1 個 Codex」的討論
+- [x] 使用者用真實參與者（Claude、Codex，加上選用的 Ollama）跑一場討論並目視驗收
 
 ## Comments
 
@@ -53,3 +53,7 @@ Blocked by: 01, 02, 03, 04, 05, 06, 07, 09, 10, 11
 - 1024px 時一輪有 3 張發言卡片就需要橫向捲動（第 3 張只露出邊緣），捲軸也不明顯。這符合 spec「只有那一輪可以橫向捲動」，但 3 張就要捲動可能不是想要的結果（04）。
 - 760px 時插話框的 placeholder 第二行被切掉（「（Ctrl+Enter 送出）」）（04）。
 - 整頁截圖裡側欄只有一個視窗高，這是 sticky 側欄在整頁截圖中的正常現象，實際捲動時沒有問題。
+- 2026-10-21：使用者以真實參與者（Claude、Codex、Ollama）跑過討論並目視驗收，結果通過。
+  - 這個 worktree 的 `participants.toml` 原本停用 Ollama，而且模型是沒有安裝的 `llama3.2`。已經改成啟用，使用 `gemma4:e4b`。這個檔案被 git-ignore，不會 commit。
+  - 驗收前已經合併 code review 的修正（`ec0a3ad`）。驗證結果：typecheck 與 build 通過，後端 pytest 293 passed，E2E 41 passed。
+  - 原型 `.scratch/ui-redesign/prototype/` 已刪除，仍然可以在 git 歷史中找到。
