@@ -57,7 +57,8 @@ export default defineConfig({
   workers: 1,
   forbidOnly: !!process.env.CI,
   retries: 0,
-  reporter: 'list',
+  // CI also writes playwright-report/, uploaded as an artifact when E2E fails.
+  reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: {
     baseURL: `http://127.0.0.1:${frontendPort}`,
     trace: 'retain-on-failure',
