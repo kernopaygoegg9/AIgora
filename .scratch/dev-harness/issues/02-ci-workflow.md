@@ -11,9 +11,13 @@
 
 **Blocked by:** 01
 
-**Status:** claimed
+**Status:** ready-for-human
 
-- [ ] 用 `act` 或對 workflow 檔做靜態檢查（如 `actionlint`，若本機沒有就以 YAML 語法檢查加人工核對步驟）確認 workflow 可解析
-- [ ] workflow 只在 `pull_request` 與 `push` 到 `master` 觸發
-- [ ] 不需要任何 secret
+- [x] 用 `act` 或對 workflow 檔做靜態檢查（如 `actionlint`，若本機沒有就以 YAML 語法檢查加人工核對步驟）確認 workflow 可解析
+- [x] workflow 只在 `pull_request` 與 `push` 到 `master` 觸發
+- [x] 不需要任何 secret
 - [ ] **使用者驗收**：使用者推上分支並開 PR 後，PR 顯示 check 通過；在分支上故意放一個 lint 違規時 check 失敗（之後移除）
+
+## Comments
+
+- 2026-10-22 merged; workflow parses (YAML + manual review), triggers and no-secrets verified; full `check` green locally. Remaining: user pushes `dev-harness`, opens a PR, sees the check pass, and sees it fail on a deliberate lint violation.
