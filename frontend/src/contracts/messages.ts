@@ -15,16 +15,12 @@ export type JudgeId = 'stance_vote' | 'jev'
 export type SpeakingOrderId = 'parallel' | 'sequential'
 export type Stance = 'AGREE' | 'DISAGREE'
 export type FailureKind = 'not_available' | 'auth' | 'quota' | 'timeout' | 'crashed' | 'unknown'
-export type TurnPurpose = 'turn' | 'draft' | 'final_result' | 'no_consensus_summary' | 'confirmation'
+export type TurnPurpose =
+  'turn' | 'draft' | 'final_result' | 'no_consensus_summary' | 'confirmation'
 export type TurnStatus = 'ok' | 'failed' | 'timeout'
 export type JudgeOutcome = 'not_reached' | 'confirm' | 'reached'
 export type Outcome =
-  | 'completed'
-  | 'consensus'
-  | 'no_consensus'
-  | 'stopped'
-  | 'insufficient_participants'
-  | 'error'
+  'completed' | 'consensus' | 'no_consensus' | 'stopped' | 'insufficient_participants' | 'error'
 
 // --- shared shapes --------------------------------------------------------------
 

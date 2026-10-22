@@ -15,7 +15,9 @@ def client():
     return TestClient(create_app(frontend_dist=None))
 
 
-@pytest.mark.parametrize("name", ["claude.png", "codex.png", "gemini.png", "ollama.png", "fake.png", "default.png"])
+@pytest.mark.parametrize(
+    "name", ["claude.png", "codex.png", "gemini.png", "ollama.png", "fake.png", "default.png"]
+)
 def test_known_avatar_is_served_as_png(client, name):
     response = client.get(f"/api/avatars/{name}")
     assert response.status_code == 200

@@ -34,7 +34,11 @@ async def kill_tree(proc: asyncio.subprocess.Process) -> None:
         try:
             if sys.platform == "win32":
                 killer = await asyncio.create_subprocess_exec(
-                    "taskkill", "/F", "/T", "/PID", str(proc.pid),
+                    "taskkill",
+                    "/F",
+                    "/T",
+                    "/PID",
+                    str(proc.pid),
                     stdin=asyncio.subprocess.DEVNULL,
                     stdout=asyncio.subprocess.DEVNULL,
                     stderr=asyncio.subprocess.DEVNULL,

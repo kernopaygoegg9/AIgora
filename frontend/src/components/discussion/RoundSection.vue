@@ -32,7 +32,15 @@ defineProps<{
         :participant="participantById(turn.participantId)"
       />
     </div>
-    <RoundNotices :removed="removed ?? []" :moderator-changes="moderatorChanges ?? []" :participant-by-id="participantById" />
-    <RoundConsensus :round="round" :participant-by-id="participantById" :moderator-id="moderatorId" />
+    <RoundNotices
+      :removed="removed ?? []"
+      :moderator-changes="moderatorChanges ?? []"
+      :participant-by-id="participantById"
+    />
+    <RoundConsensus
+      :round="round"
+      :participant-by-id="participantById"
+      :moderator-id="moderatorId"
+    />
   </section>
 </template>

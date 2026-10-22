@@ -55,7 +55,10 @@ def test_parse_start_with_partial_settings():
 
 
 def test_parse_interject_and_stop():
-    assert m.parse_client_message({"type": "interject", "text": "also consider X"}).text == "also consider X"
+    assert (
+        m.parse_client_message({"type": "interject", "text": "also consider X"}).text
+        == "also consider X"
+    )
     assert isinstance(m.parse_client_message({"type": "stop"}), m.StopMessage)
 
 
@@ -65,10 +68,22 @@ def test_parse_interject_and_stop():
         {"type": "nope"},
         {"question": "no type"},
         {"type": "start", "question": "", "settings": {"mode": "ask", "participant_ids": ["a"]}},
-        {"type": "start", "question": "q", "settings": {"mode": "debate", "participant_ids": ["a"]}},
+        {
+            "type": "start",
+            "question": "q",
+            "settings": {"mode": "debate", "participant_ids": ["a"]},
+        },
         {"type": "start", "question": "q", "settings": {"mode": "ask", "participant_ids": []}},
-        {"type": "start", "question": "q", "settings": {"mode": "ask", "participant_ids": ["a"], "max_rounds": 0}},
-        {"type": "start", "question": "q", "settings": {"mode": "ask", "participant_ids": ["a"], "jev_threshold": 2}},
+        {
+            "type": "start",
+            "question": "q",
+            "settings": {"mode": "ask", "participant_ids": ["a"], "max_rounds": 0},
+        },
+        {
+            "type": "start",
+            "question": "q",
+            "settings": {"mode": "ask", "participant_ids": ["a"], "jev_threshold": 2},
+        },
         {"type": "interject", "text": ""},
         {"type": "stop", "extra": 1},
         "not an object",
@@ -80,8 +95,14 @@ def test_invalid_client_messages_are_rejected(data):
 
 
 def test_server_message_serialises_to_the_wire_format():
-    msg = m.TurnCompleted(discussion_id="d1", seq=7, round=2, participant_id="a", text="ok\nSTANCE: AGREE",
-                          stance="AGREE")
+    msg = m.TurnCompleted(
+        discussion_id="d1",
+        seq=7,
+        round=2,
+        participant_id="a",
+        text="ok\nSTANCE: AGREE",
+        stance="AGREE",
+    )
     assert m.to_wire(msg) == {
         "type": "turn_completed",
         "discussion_id": "d1",
@@ -96,7 +117,11 @@ def test_server_message_serialises_to_the_wire_format():
 
 def test_server_messages_round_trip():
     msg = m.JudgeResult(
-        discussion_id="d1", seq=3, round=2, judge="stance_vote", outcome="not_reached",
+        discussion_id="d1",
+        seq=3,
+        round=2,
+        judge="stance_vote",
+        outcome="not_reached",
         detail=m.JudgeDetail(stances={"a": "AGREE", "b": None}),
     )
     assert m.parse_server_message(m.to_wire(msg)) == msg

@@ -63,13 +63,17 @@ MODEL_ALIASES: tuple[ModelOption, ...] = (
 
 ISOLATION_ARGS: tuple[str, ...] = (
     "-p",
-    "--output-format", "stream-json",
+    "--output-format",
+    "stream-json",
     "--verbose",
     "--include-partial-messages",
-    "--tools", WEB_TOOLS,
-    "--allowedTools", WEB_TOOLS,
+    "--tools",
+    WEB_TOOLS,
+    "--allowedTools",
+    WEB_TOOLS,
     "--strict-mcp-config",
-    "--setting-sources", "",
+    "--setting-sources",
+    "",
     "--disable-slash-commands",
     "--no-session-persistence",
 )
@@ -78,12 +82,25 @@ AUTH_CHECK_TIMEOUT_SECONDS = 20.0
 _STDERR_LIMIT = 4000
 
 _AUTH_MARKERS = (
-    "not logged in", "please run /login", "/login", "invalid api key", "authentication",
-    "oauth token", "unauthorized", "401",
+    "not logged in",
+    "please run /login",
+    "/login",
+    "invalid api key",
+    "authentication",
+    "oauth token",
+    "unauthorized",
+    "401",
 )
 _QUOTA_MARKERS = (
-    "usage limit", "rate limit", "rate_limit", "limit reached", "quota", "credit balance",
-    "billing", "429", "out of extra usage",
+    "usage limit",
+    "rate limit",
+    "rate_limit",
+    "limit reached",
+    "quota",
+    "credit balance",
+    "billing",
+    "429",
+    "out of extra usage",
 )
 # `error` field on assistant messages (newer CLI versions).
 _ERROR_FIELD_KINDS: dict[str, FailureKind] = {
@@ -128,7 +145,9 @@ class ClaudeAdapter(Adapter):
 
     def validate_options(self, options: Mapping[str, Any]) -> None:
         if options:
-            raise ValueError(f"the claude adapter has no options (got: {', '.join(sorted(options))})")
+            raise ValueError(
+                f"the claude adapter has no options (got: {', '.join(sorted(options))})"
+            )
 
     def capabilities(self, participant: ParticipantConfig) -> Capabilities:
         return Capabilities(web_access=True, streaming=True)
@@ -139,7 +158,10 @@ class ClaudeAdapter(Adapter):
             return Availability(False, "Claude Code CLI (`claude`) is not installed or not on PATH")
         try:
             proc = await asyncio.create_subprocess_exec(
-                *command, "auth", "status", "--json",
+                *command,
+                "auth",
+                "status",
+                "--json",
                 stdin=asyncio.subprocess.DEVNULL,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
@@ -149,7 +171,9 @@ class ClaudeAdapter(Adapter):
         except OSError as exc:
             return Availability(False, f"cannot start Claude Code CLI: {exc}")
         try:
-            out, err = await asyncio.wait_for(proc.communicate(), timeout=AUTH_CHECK_TIMEOUT_SECONDS)
+            out, err = await asyncio.wait_for(
+                proc.communicate(), timeout=AUTH_CHECK_TIMEOUT_SECONDS
+            )
         except asyncio.TimeoutError:
             await kill_tree(proc)
             return Availability(False, "`claude auth status` did not answer in time")
@@ -179,11 +203,14 @@ class ClaudeAdapter(Adapter):
     async def run_turn(self, request: TurnRequest) -> AsyncIterator[AdapterEvent]:
         command = self._resolve_command()
         if command is None:
-            yield Failed("not_available", "Claude Code CLI (`claude`) is not installed or not on PATH")
+            yield Failed(
+                "not_available", "Claude Code CLI (`claude`) is not installed or not on PATH"
+            )
             return
         try:
             proc = await asyncio.create_subprocess_exec(
-                *command, *self.build_args(request.participant),
+                *command,
+                *self.build_args(request.participant),
                 cwd=str(request.workspace),
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
@@ -255,14 +282,21 @@ class ClaudeAdapter(Adapter):
         await proc.wait()
         stderr = (await stderr_task).decode("utf-8", "replace").strip()[-_STDERR_LIMIT:]
 
-        if final is not None and not final.get("is_error") and final.get("subtype", "success") == "success":
+        if (
+            final is not None
+            and not final.get("is_error")
+            and final.get("subtype", "success") == "success"
+        ):
             text = "".join(streamed) if streamed else str(final.get("result") or "")
             yield Completed(text)
             return
 
         if final is not None:
-            reason = str(final.get("result") or "") or "; ".join(map(str, final.get("errors") or [])) \
+            reason = (
+                str(final.get("result") or "")
+                or "; ".join(map(str, final.get("errors") or []))
                 or f"Claude Code CLI reported an error ({final.get('subtype')})"
+            )
             kind_ = error_kind or _classify(reason) or _classify(stderr) or "unknown"
             yield Failed(kind_, f"claude: {reason}")
             return
@@ -274,4 +308,3 @@ class ClaudeAdapter(Adapter):
 
 def create_adapter() -> Adapter:
     return ClaudeAdapter()
-

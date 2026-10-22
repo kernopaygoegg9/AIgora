@@ -16,11 +16,13 @@ FAKE_CLI = Path(__file__).with_name("fake_codex_cli.py")
 
 
 def participant(model: str | None = None, **options) -> ParticipantConfig:
-    return ParticipantConfig(id="codex", display_name="Codex", adapter="codex", model=model, options=options)
+    return ParticipantConfig(
+        id="codex", display_name="Codex", adapter="codex", model=model, options=options
+    )
 
 
 @pytest.fixture
-def fake_cli(tmp_path, monkeypatch):
+def fake_cli(tmp_path, monkeypatch, cli_processes):
     """Returns `script(**scenario) -> CodexAdapter` running the fake CLI with that scenario."""
 
     def script(**scenario) -> CodexAdapter:
@@ -33,7 +35,9 @@ def fake_cli(tmp_path, monkeypatch):
 
 
 def request(workspace: Path, prompt: str = "Q?", p: ParticipantConfig | None = None) -> TurnRequest:
-    return TurnRequest(participant=p or participant(), prompt=prompt, workspace=workspace, timeout_seconds=30)
+    return TurnRequest(
+        participant=p or participant(), prompt=prompt, workspace=workspace, timeout_seconds=30
+    )
 
 
 async def run(adapter: CodexAdapter, req: TurnRequest) -> list:
@@ -51,14 +55,19 @@ def test_codex_participants_can_search_the_web_and_stream():
 
 
 async def test_reply_streams_as_deltas_then_completes_with_the_full_text(fake_cli, tmp_path):
-    adapter = fake_cli(events=[
-        {"type": "thread.started", "thread_id": "t1"},
-        {"type": "turn.started"},
-        {"type": "item.completed", "item": {"id": "r0", "type": "reasoning", "text": "thinking..."}},
-        message("m1", "Hello", kind="item.updated"),
-        message("m1", "Hello world"),
-        {"type": "turn.completed", "usage": {"input_tokens": 1, "output_tokens": 2}},
-    ])
+    adapter = fake_cli(
+        events=[
+            {"type": "thread.started", "thread_id": "t1"},
+            {"type": "turn.started"},
+            {
+                "type": "item.completed",
+                "item": {"id": "r0", "type": "reasoning", "text": "thinking..."},
+            },
+            message("m1", "Hello", kind="item.updated"),
+            message("m1", "Hello world"),
+            {"type": "turn.completed", "usage": {"input_tokens": 1, "output_tokens": 2}},
+        ]
+    )
     events = await run(adapter, request(tmp_path))
     assert events == [Delta("Hello"), Delta(" world"), Completed("Hello world")]
 
@@ -68,7 +77,7 @@ async def test_runs_isolated_in_the_workspace_with_the_prompt_on_stdin(fake_cli,
     workspace = tmp_path / "ws"
     workspace.mkdir()
     adapter = fake_cli(record=str(record), events=[message("m1", "ok")])
-    prompt = "討論內容 with \"quotes\" & <symbols>\nline two"
+    prompt = '討論內容 with "quotes" & <symbols>\nline two'
 
     events = await run(adapter, request(workspace, prompt=prompt, p=participant(model="gpt-5.5")))
 
@@ -86,9 +95,21 @@ async def test_runs_isolated_in_the_workspace_with_the_prompt_on_stdin(fake_cli,
     assert 'web_search="live"' in argv
     disabled = {argv[i + 1] for i, a in enumerate(argv) if a == "--disable"}
     assert disabled == {
-        "shell_tool", "unified_exec", "view_image", "browser_use", "browser_use_external", "computer_use",
-        "apps", "plugins", "multi_agent", "multi_agent_v2", "image_generation", "hooks", "in_app_browser",
-        "skill_search", "workspace_dependencies",
+        "shell_tool",
+        "unified_exec",
+        "view_image",
+        "browser_use",
+        "browser_use_external",
+        "computer_use",
+        "apps",
+        "plugins",
+        "multi_agent",
+        "multi_agent_v2",
+        "image_generation",
+        "hooks",
+        "in_app_browser",
+        "skill_search",
+        "workspace_dependencies",
     }
     assert "code_mode_host" not in argv  # disabling it breaks web search (ADR 0002)
 
@@ -100,13 +121,15 @@ async def test_default_model_passes_no_model_flag(fake_cli, tmp_path):
 
 
 async def test_several_agent_messages_are_joined_and_streamed_consistently(fake_cli, tmp_path):
-    adapter = fake_cli(events=[
-        message("m1", "Let me search."),
-        {"type": "item.completed", "item": {"id": "w1", "type": "web_search", "query": "x"}},
-        "not json at all",
-        message("m2", "Answer.\nSTANCE: AGREE"),
-        {"type": "turn.completed"},
-    ])
+    adapter = fake_cli(
+        events=[
+            message("m1", "Let me search."),
+            {"type": "item.completed", "item": {"id": "w1", "type": "web_search", "query": "x"}},
+            "not json at all",
+            message("m2", "Answer.\nSTANCE: AGREE"),
+            {"type": "turn.completed"},
+        ]
+    )
     events = await run(adapter, request(tmp_path))
     final = events[-1]
     assert final == Completed("Let me search.\n\nAnswer.\nSTANCE: AGREE")
@@ -132,7 +155,9 @@ async def test_unavailable_when_the_cli_is_not_installed(monkeypatch, tmp_path):
     assert result.available is False
     assert "not found" in result.reason
     events = await run(adapter, request(tmp_path))
-    assert len(events) == 1 and events[0].kind == "not_available" and "not found" in events[0].reason
+    assert (
+        len(events) == 1 and events[0].kind == "not_available" and "not found" in events[0].reason
+    )
 
 
 async def test_unavailable_when_the_cli_cannot_start(tmp_path):
@@ -145,14 +170,46 @@ async def test_unavailable_when_the_cli_cannot_start(tmp_path):
 @pytest.mark.parametrize(
     ("scenario", "kind"),
     [
-        ({"events": [{"type": "error", "message": "unexpected status 401 Unauthorized"}], "exit": 1}, "auth"),
+        (
+            {
+                "events": [{"type": "error", "message": "unexpected status 401 Unauthorized"}],
+                "exit": 1,
+            },
+            "auth",
+        ),
         ({"stderr": "Error: Not logged in. Run `codex login`.", "exit": 1}, "auth"),
-        ({"events": [{"type": "turn.failed", "error": {"message": "You've hit your usage limit. Try again later."}}],
-          "exit": 1}, "quota"),
-        ({"events": [{"type": "error", "message": "exceeded retry limit, last status: 429 Too Many Requests"}],
-          "exit": 1}, "quota"),
-        ({"events": [message("m1", "Half an ans", kind="item.updated")], "stderr": "panicked at core/src/x.rs",
-          "exit": 101}, "crashed"),
+        (
+            {
+                "events": [
+                    {
+                        "type": "turn.failed",
+                        "error": {"message": "You've hit your usage limit. Try again later."},
+                    }
+                ],
+                "exit": 1,
+            },
+            "quota",
+        ),
+        (
+            {
+                "events": [
+                    {
+                        "type": "error",
+                        "message": "exceeded retry limit, last status: 429 Too Many Requests",
+                    }
+                ],
+                "exit": 1,
+            },
+            "quota",
+        ),
+        (
+            {
+                "events": [message("m1", "Half an ans", kind="item.updated")],
+                "stderr": "panicked at core/src/x.rs",
+                "exit": 101,
+            },
+            "crashed",
+        ),
         ({"exit": 3}, "crashed"),
     ],
 )
@@ -187,8 +244,9 @@ async def assert_heartbeat_stopped(heartbeat: Path) -> None:
 
 async def test_closing_a_turn_kills_the_cli_and_its_children(fake_cli, tmp_path):
     heartbeat = tmp_path / "heartbeat.txt"
-    adapter = fake_cli(events=[message("m1", "Thinking", kind="item.updated")], hang=True,
-                       heartbeat=str(heartbeat))
+    adapter = fake_cli(
+        events=[message("m1", "Thinking", kind="item.updated")], hang=True, heartbeat=str(heartbeat)
+    )
     turn = adapter.run_turn(request(tmp_path))
     assert await anext(turn) == Delta("Thinking")
     await wait_for_heartbeat(heartbeat)
@@ -228,15 +286,24 @@ def test_registry_returns_the_codex_adapter():
     assert isinstance(get_adapter("codex"), CodexAdapter)
 
 
-
 def catalog_entry(slug: str, priority: int, visibility: str = "list") -> dict:
-    return {"slug": slug, "display_name": slug.upper(), "visibility": visibility, "priority": priority,
-            "supported_in_api": True}
+    return {
+        "slug": slug,
+        "display_name": slug.upper(),
+        "visibility": visibility,
+        "priority": priority,
+        "supported_in_api": True,
+    }
 
 
 async def test_model_list_is_the_listed_catalog_models_by_priority_and_allows_free_text(fake_cli):
-    catalog = {"models": [catalog_entry("gpt-b", 5), catalog_entry("gpt-hidden", 1, visibility="hide"),
-                          catalog_entry("gpt-a", 2)]}
+    catalog = {
+        "models": [
+            catalog_entry("gpt-b", 5),
+            catalog_entry("gpt-hidden", 1, visibility="hide"),
+            catalog_entry("gpt-a", 2),
+        ]
+    }
     adapter = fake_cli(debug_models={"stdout": json.dumps(catalog)})
 
     choices = await adapter.list_models(participant())
@@ -264,7 +331,9 @@ async def test_model_list_reports_why_when_the_cli_is_missing(monkeypatch):
         ({"stderr": "config.toml: key with no value", "exit": 1}, "config.toml: key with no value"),
     ],
 )
-async def test_model_list_reports_unreadable_output_and_cli_errors(fake_cli, debug_models, expected):
+async def test_model_list_reports_unreadable_output_and_cli_errors(
+    fake_cli, debug_models, expected
+):
     choices = await fake_cli(debug_models=debug_models).list_models(participant())
 
     assert choices.models == ()

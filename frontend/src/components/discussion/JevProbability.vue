@@ -16,7 +16,11 @@ const pct = (v: number) => `${Math.min(Math.max(v, 0), 1) * 100}%`
       <template v-if="threshold != null">（門檻 {{ threshold }}）</template>
     </p>
     <div class="d-bar" aria-hidden="true">
-      <i class="d-bar-fill" :class="{ 'is-over': threshold != null && probability >= threshold }" :style="{ width: pct(probability) }" />
+      <i
+        class="d-bar-fill"
+        :class="{ 'is-over': threshold != null && probability >= threshold }"
+        :style="{ width: pct(probability) }"
+      />
       <i v-if="threshold != null" class="d-bar-tick" :style="{ left: pct(threshold) }" />
     </div>
   </div>

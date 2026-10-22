@@ -23,8 +23,14 @@ const model = computed(() => props.participant?.model ?? '預設模型')
   <span class="participant-label">
     <ParticipantAvatar :avatar="participant?.avatar ?? 'default.png'" :size="size ?? 22" />
     <span class="name">{{ name }}</span>
-    <span v-if="!hideWeb && participant && !participant.capabilities.web_access" class="pill pill-warn">無上網</span>
-    <span class="pill model" data-testid="participant-model" :title="`模型：${model}`">{{ model }}</span>
+    <span
+      v-if="!hideWeb && participant && !participant.capabilities.web_access"
+      class="pill pill-warn"
+      >無上網</span
+    >
+    <span class="pill model" data-testid="participant-model" :title="`模型：${model}`">{{
+      model
+    }}</span>
   </span>
 </template>
 

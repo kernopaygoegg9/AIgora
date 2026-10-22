@@ -49,7 +49,9 @@ class JevClient(Protocol):
 
 
 class TypeSafeJevClient:
-    def __init__(self, api_key: str, *, timeout: float = DEFAULT_TIMEOUT_SECONDS, **sdk_options: Any):
+    def __init__(
+        self, api_key: str, *, timeout: float = DEFAULT_TIMEOUT_SECONDS, **sdk_options: Any
+    ):
         # `sdk_options` are passed to `AsyncTypeSafeClient` (tests: transport, retry, compression).
         self._api_key = api_key
         self._timeout = timeout
@@ -60,7 +62,9 @@ class TypeSafeJevClient:
             async with AsyncTypeSafeClient(
                 api_key=self._api_key, timeout=self._timeout, **self._sdk_options
             ) as client:
-                response = await client.system_one(state=dict(transcript), questions={_QUESTION: CONSENSUS_NOUL})
+                response = await client.system_one(
+                    state=dict(transcript), questions={_QUESTION: CONSENSUS_NOUL}
+                )
         except TypeSafeError as exc:
             raise JevError(_safe_message(exc, self._api_key)) from None
         answer = response.nouls.get(_QUESTION)

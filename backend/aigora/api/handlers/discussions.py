@@ -13,7 +13,11 @@ async def list_discussions() -> list[DiscussionSummary]:
     """Every saved discussion, newest first; in-progress ones have `outcome` null."""
     return [
         DiscussionSummary(
-            id=r.id, question=r.question, mode=r.settings.mode, created_at=r.created_at, outcome=r.outcome
+            id=r.id,
+            question=r.question,
+            mode=r.settings.mode,
+            created_at=r.created_at,
+            outcome=r.outcome,
         )
         for r in DiscussionStore().list()
     ]

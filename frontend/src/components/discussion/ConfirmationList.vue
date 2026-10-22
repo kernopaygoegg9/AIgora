@@ -27,8 +27,15 @@ defineProps<{
       :data-testid="itemTestid"
     >
       <div class="d-list-row">
-        <ParticipantLabel :participant="participantById(a.participant_id)" :id="a.participant_id" :size="18" hide-web />
-        <span class="pill" :class="a.agree ? 'pill-ok' : 'pill-bad'">{{ agreeLabel(a.agree) }}</span>
+        <ParticipantLabel
+          :id="a.participant_id"
+          :participant="participantById(a.participant_id)"
+          :size="18"
+          hide-web
+        />
+        <span class="pill" :class="a.agree ? 'pill-ok' : 'pill-bad'">{{
+          agreeLabel(a.agree)
+        }}</span>
       </div>
       <p v-if="a.reason && (agreeReasons || !a.agree)" class="d-reason">{{ a.reason }}</p>
     </li>

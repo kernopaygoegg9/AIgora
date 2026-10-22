@@ -6,8 +6,22 @@ import { expect, test, type Page } from '@playwright/test'
 // is covered by backend/tests/test_consensus_jev.py with a fake Jev client.
 
 const participants = [
-  { id: 'fake-a', display_name: 'Fake A', adapter: 'fake', model: null, avatar: 'default.png', capabilities: { web_access: true, streaming: false } },
-  { id: 'fake-b', display_name: 'Fake B', adapter: 'fake', model: null, avatar: 'default.png', capabilities: { web_access: true, streaming: false } },
+  {
+    id: 'fake-a',
+    display_name: 'Fake A',
+    adapter: 'fake',
+    model: null,
+    avatar: 'default.png',
+    capabilities: { web_access: true, streaming: false },
+  },
+  {
+    id: 'fake-b',
+    display_name: 'Fake B',
+    adapter: 'fake',
+    model: null,
+    avatar: 'default.png',
+    capabilities: { web_access: true, streaming: false },
+  },
 ]
 const settings = {
   mode: 'consensus',
@@ -25,8 +39,22 @@ type Body = Record<string, unknown> & { type: string }
 const turns = (round: number, texts: [string, string]): Body[] => [
   { type: 'turn_started', round, participant_id: 'fake-a', purpose: 'turn' },
   { type: 'turn_started', round, participant_id: 'fake-b', purpose: 'turn' },
-  { type: 'turn_completed', round, participant_id: 'fake-a', purpose: 'turn', text: texts[0], stance: round > 1 ? 'AGREE' : null },
-  { type: 'turn_completed', round, participant_id: 'fake-b', purpose: 'turn', text: texts[1], stance: round > 1 ? 'AGREE' : null },
+  {
+    type: 'turn_completed',
+    round,
+    participant_id: 'fake-a',
+    purpose: 'turn',
+    text: texts[0],
+    stance: round > 1 ? 'AGREE' : null,
+  },
+  {
+    type: 'turn_completed',
+    round,
+    participant_id: 'fake-b',
+    purpose: 'turn',
+    text: texts[1],
+    stance: round > 1 ? 'AGREE' : null,
+  },
 ]
 const draft = (round: number, text: string): Body[] => [
   { type: 'turn_started', round, participant_id: 'fake-a', purpose: 'draft' },
@@ -36,19 +64,45 @@ const draft = (round: number, text: string): Body[] => [
 const confirmations = (round: number): Body[] => [
   { type: 'turn_started', round, participant_id: 'fake-a', purpose: 'confirmation' },
   { type: 'turn_started', round, participant_id: 'fake-b', purpose: 'confirmation' },
-  { type: 'turn_completed', round, participant_id: 'fake-a', purpose: 'confirmation', text: 'Yes\nSTANCE: AGREE', stance: 'AGREE' },
-  { type: 'turn_completed', round, participant_id: 'fake-b', purpose: 'confirmation', text: 'x', stance: null },
+  {
+    type: 'turn_completed',
+    round,
+    participant_id: 'fake-a',
+    purpose: 'confirmation',
+    text: 'Yes\nSTANCE: AGREE',
+    stance: 'AGREE',
+  },
+  {
+    type: 'turn_completed',
+    round,
+    participant_id: 'fake-b',
+    purpose: 'confirmation',
+    text: 'x',
+    stance: null,
+  },
 ]
 
 const script: Body[] = [
-  { type: 'discussion_started', question: 'Tabs or spaces?', derived_from: null, settings, participants },
+  {
+    type: 'discussion_started',
+    question: 'Tabs or spaces?',
+    derived_from: null,
+    settings,
+    participants,
+  },
   { type: 'round_started', round: 1 },
   ...turns(1, ['Spaces.', 'Tabs.']),
   ...draft(1, 'Draft one: spaces.'),
   { type: 'round_completed', round: 1 },
   { type: 'round_started', round: 2 },
   ...turns(2, ['OK\nSTANCE: AGREE', 'OK\nSTANCE: AGREE']),
-  { type: 'judge_result', round: 2, judge: 'jev', outcome: 'confirm', detail: { stances: null, probability: 0.91, threshold: 0.8 } },
+  {
+    type: 'judge_result',
+    round: 2,
+    judge: 'jev',
+    outcome: 'confirm',
+    detail: { stances: null, probability: 0.91, threshold: 0.8 },
+  },
   ...confirmations(2),
   {
     type: 'confirmation_result',
@@ -58,12 +112,24 @@ const script: Body[] = [
       { participant_id: 'fake-b', agree: false, reason: 'We still differ on indentation width.' },
     ],
   },
-  { type: 'judge_result', round: 2, judge: 'jev', outcome: 'not_reached', detail: { stances: null, probability: 0.91, threshold: 0.8 } },
+  {
+    type: 'judge_result',
+    round: 2,
+    judge: 'jev',
+    outcome: 'not_reached',
+    detail: { stances: null, probability: 0.91, threshold: 0.8 },
+  },
   ...draft(2, 'Draft two: spaces, width 4.'),
   { type: 'round_completed', round: 2 },
   { type: 'round_started', round: 3 },
   ...turns(3, ['Fine\nSTANCE: AGREE', 'Fine\nSTANCE: AGREE']),
-  { type: 'judge_result', round: 3, judge: 'jev', outcome: 'confirm', detail: { stances: null, probability: 0.97, threshold: 0.8 } },
+  {
+    type: 'judge_result',
+    round: 3,
+    judge: 'jev',
+    outcome: 'confirm',
+    detail: { stances: null, probability: 0.97, threshold: 0.8 },
+  },
   {
     type: 'confirmation_result',
     round: 3,
@@ -72,23 +138,45 @@ const script: Body[] = [
       { participant_id: 'fake-b', agree: true, reason: 'Yes' },
     ],
   },
-  { type: 'judge_result', round: 3, judge: 'jev', outcome: 'reached', detail: { stances: null, probability: 0.97, threshold: 0.8 } },
+  {
+    type: 'judge_result',
+    round: 3,
+    judge: 'jev',
+    outcome: 'reached',
+    detail: { stances: null, probability: 0.97, threshold: 0.8 },
+  },
   { type: 'turn_started', round: 3, participant_id: 'fake-a', purpose: 'final_result' },
-  { type: 'turn_completed', round: 3, participant_id: 'fake-a', purpose: 'final_result', text: 'Use spaces, 4 wide.', stance: null },
+  {
+    type: 'turn_completed',
+    round: 3,
+    participant_id: 'fake-a',
+    purpose: 'final_result',
+    text: 'Use spaces, 4 wide.',
+    stance: null,
+  },
   { type: 'round_completed', round: 3 },
-  { type: 'discussion_finished', outcome: 'consensus', result: { kind: 'consensus', text: 'Use spaces, 4 wide.', answers: null }, reason: null },
+  {
+    type: 'discussion_finished',
+    outcome: 'consensus',
+    result: { kind: 'consensus', text: 'Use spaces, 4 wide.', answers: null },
+    reason: null,
+  },
 ]
 
 async function scriptedSocket(page: Page) {
   await page.routeWebSocket('**/ws/discussion', (ws) => {
     ws.onMessage((raw) => {
       if (JSON.parse(String(raw)).type !== 'start') return
-      script.forEach((body, i) => ws.send(JSON.stringify({ ...body, discussion_id: 'd-jev', seq: i + 1 })))
+      script.forEach((body, i) =>
+        ws.send(JSON.stringify({ ...body, discussion_id: 'd-jev', seq: i + 1 })),
+      )
     })
   })
 }
 
-test('judge B shows Jev\'s probability, the confirmation answers with reasons, and the final result', async ({ page }) => {
+test("judge B shows Jev's probability, the confirmation answers with reasons, and the final result", async ({
+  page,
+}) => {
   await scriptedSocket(page)
   await page.goto('/')
   await page.getByRole('radio', { name: '共識討論' }).check()
@@ -107,7 +195,9 @@ test('judge B shows Jev\'s probability, the confirmation answers with reasons, a
   await expect(judge2.getByTestId('jev-probability')).toContainText('門檻 0.8')
   const answers2 = round(2).getByTestId('confirmation-result')
   await expect(answers2).toContainText('有參與者不同意')
-  await expect(answers2.getByTestId('confirmation-answer').filter({ hasText: 'Fake A' })).toContainText('同意')
+  await expect(
+    answers2.getByTestId('confirmation-answer').filter({ hasText: 'Fake A' }),
+  ).toContainText('同意')
   const disagree = answers2.getByTestId('confirmation-answer').filter({ hasText: 'Fake B' })
   await expect(disagree).toContainText('不同意')
   await expect(disagree).toContainText('We still differ on indentation width.')

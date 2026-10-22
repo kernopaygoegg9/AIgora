@@ -11,6 +11,8 @@ Run as `python fake_gemini_cli.py <args...>`. Behaviour comes from env vars:
 - FAKE_GEMINI_EXIT: exit code (default 0).
 - FAKE_GEMINI_SLEEP: seconds to sleep after writing stdout (cancellation tests).
 - FAKE_GEMINI_PIDFILE: path; the process writes its pid there first.
+- AIGORA_TEST_PID_DIR: folder; the process records its pid there (conftest
+  `cli_processes` ends it at teardown).
 """
 
 import json
@@ -18,6 +20,8 @@ import os
 import sys
 import time
 from pathlib import Path
+
+from fake_cli_support import record_pid
 
 
 def _read(path: str | None) -> str | None:
@@ -28,6 +32,7 @@ def _read(path: str | None) -> str | None:
 
 
 def main() -> int:
+    record_pid(os.getpid())
     env = os.environ
     if env.get("FAKE_GEMINI_PIDFILE"):
         Path(env["FAKE_GEMINI_PIDFILE"]).write_text(str(os.getpid()), encoding="utf-8")

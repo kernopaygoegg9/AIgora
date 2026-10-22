@@ -25,13 +25,25 @@ FAKE_CLI = Path(__file__).with_name("fake_claude_cli.py")
 
 
 def text_delta(text: str) -> dict:
-    return {"type": "stream_event", "event": {"type": "content_block_delta", "index": 0,
-                                              "delta": {"type": "text_delta", "text": text}}}
+    return {
+        "type": "stream_event",
+        "event": {
+            "type": "content_block_delta",
+            "index": 0,
+            "delta": {"type": "text_delta", "text": text},
+        },
+    }
 
 
 def block_start(index: int = 0) -> dict:
-    return {"type": "stream_event", "event": {"type": "content_block_start", "index": index,
-                                              "content_block": {"type": "text", "text": ""}}}
+    return {
+        "type": "stream_event",
+        "event": {
+            "type": "content_block_start",
+            "index": index,
+            "content_block": {"type": "text", "text": ""},
+        },
+    }
 
 
 def result(text: str, is_error: bool = False, subtype: str = "success") -> dict:
@@ -42,7 +54,7 @@ INIT = {"type": "system", "subtype": "init", "tools": ["WebSearch", "WebFetch"],
 
 
 @pytest.fixture
-def fake_claude(tmp_path, monkeypatch):
+def fake_claude(tmp_path, monkeypatch, cli_processes):
     """Returns `setup(**scenario) -> (adapter, record_path)`."""
 
     def setup(**scenario):
@@ -57,11 +69,15 @@ def fake_claude(tmp_path, monkeypatch):
 
 
 def participant(model: str | None = None, **options) -> ParticipantConfig:
-    return ParticipantConfig(id="claude", display_name="Claude", adapter="claude", model=model, options=options)
+    return ParticipantConfig(
+        id="claude", display_name="Claude", adapter="claude", model=model, options=options
+    )
 
 
 def request(workspace: Path, prompt: str = "Q?", model: str | None = None) -> TurnRequest:
-    return TurnRequest(participant=participant(model), prompt=prompt, workspace=workspace, timeout_seconds=30)
+    return TurnRequest(
+        participant=participant(model), prompt=prompt, workspace=workspace, timeout_seconds=30
+    )
 
 
 async def collect(adapter, req) -> list:
@@ -69,16 +85,28 @@ async def collect(adapter, req) -> list:
 
 
 async def test_streams_text_deltas_then_completes_with_the_full_text(fake_claude, tmp_path):
-    adapter, _ = fake_claude(turn={"lines": [
-        INIT, block_start(), text_delta("Hello"), text_delta(" world"),
-        {"type": "assistant", "message": {"content": [{"type": "text", "text": "Hello world"}]}},
-        result("Hello world"),
-    ]})
+    adapter, _ = fake_claude(
+        turn={
+            "lines": [
+                INIT,
+                block_start(),
+                text_delta("Hello"),
+                text_delta(" world"),
+                {
+                    "type": "assistant",
+                    "message": {"content": [{"type": "text", "text": "Hello world"}]},
+                },
+                result("Hello world"),
+            ]
+        }
+    )
     events = await collect(adapter, request(tmp_path))
     assert events == [Delta("Hello"), Delta(" world"), Completed("Hello world")]
 
 
-async def test_runs_isolated_in_the_workspace_with_the_prompt_on_stdin(fake_claude, tmp_path, monkeypatch):
+async def test_runs_isolated_in_the_workspace_with_the_prompt_on_stdin(
+    fake_claude, tmp_path, monkeypatch
+):
     monkeypatch.setenv("CLAUDECODE", "1")
     adapter, record = fake_claude(turn={"lines": [result("ok")]})
     workspace = tmp_path / "ws"
@@ -114,16 +142,31 @@ async def test_omits_model_when_the_participant_has_none(fake_claude, tmp_path):
 
 
 async def test_text_after_a_web_search_is_kept_as_a_separate_paragraph(fake_claude, tmp_path):
-    adapter, _ = fake_claude(turn={"lines": [
-        block_start(0), text_delta("Let me search."),
-        {"type": "stream_event", "event": {"type": "content_block_start", "index": 1,
-                                           "content_block": {"type": "server_tool_use", "name": "web_search"}}},
-        block_start(0), text_delta("Answer: https://example.com"),
-        "not json at all",
-        result("Answer: https://example.com"),
-    ]})
+    adapter, _ = fake_claude(
+        turn={
+            "lines": [
+                block_start(0),
+                text_delta("Let me search."),
+                {
+                    "type": "stream_event",
+                    "event": {
+                        "type": "content_block_start",
+                        "index": 1,
+                        "content_block": {"type": "server_tool_use", "name": "web_search"},
+                    },
+                },
+                block_start(0),
+                text_delta("Answer: https://example.com"),
+                "not json at all",
+                result("Answer: https://example.com"),
+            ]
+        }
+    )
     events = await collect(adapter, request(tmp_path))
-    assert [e.text for e in events if isinstance(e, Delta)] == ["Let me search.", "\n\nAnswer: https://example.com"]
+    assert [e.text for e in events if isinstance(e, Delta)] == [
+        "Let me search.",
+        "\n\nAnswer: https://example.com",
+    ]
     assert events[-1] == Completed("Let me search.\n\nAnswer: https://example.com")
 
 
@@ -135,18 +178,69 @@ async def test_without_partial_messages_completes_with_the_result_text(fake_clau
 # --- failures ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("turn, kind", [
-    ({"lines": [result("Not logged in · Please run /login", is_error=True)], "exit_code": 1}, "auth"),
-    ({"lines": [result("Invalid API key · Please run /login", is_error=True)], "exit_code": 1}, "auth"),
-    ({"lines": [{"type": "assistant", "error": "authentication_failed", "message": {"content": []}},
-                result("Failed to authenticate", is_error=True)], "exit_code": 1}, "auth"),
-    ({"lines": [result("Claude AI usage limit reached|1760000000", is_error=True)], "exit_code": 1}, "quota"),
-    ({"lines": [{"type": "assistant", "error": "rate_limit", "message": {"content": []}},
-                result("You've hit your limit · resets 5pm", is_error=True)], "exit_code": 1}, "quota"),
-    ({"lines": [result("", is_error=True, subtype="error_during_execution")], "exit_code": 1}, "unknown"),
-    ({"lines": [block_start(), text_delta("half")], "stderr": "Segmentation fault", "exit_code": 139}, "crashed"),
-    ({"lines": [], "exit_code": 0}, "crashed"),
-])
+@pytest.mark.parametrize(
+    "turn, kind",
+    [
+        (
+            {"lines": [result("Not logged in · Please run /login", is_error=True)], "exit_code": 1},
+            "auth",
+        ),
+        (
+            {
+                "lines": [result("Invalid API key · Please run /login", is_error=True)],
+                "exit_code": 1,
+            },
+            "auth",
+        ),
+        (
+            {
+                "lines": [
+                    {
+                        "type": "assistant",
+                        "error": "authentication_failed",
+                        "message": {"content": []},
+                    },
+                    result("Failed to authenticate", is_error=True),
+                ],
+                "exit_code": 1,
+            },
+            "auth",
+        ),
+        (
+            {
+                "lines": [result("Claude AI usage limit reached|1760000000", is_error=True)],
+                "exit_code": 1,
+            },
+            "quota",
+        ),
+        (
+            {
+                "lines": [
+                    {"type": "assistant", "error": "rate_limit", "message": {"content": []}},
+                    result("You've hit your limit · resets 5pm", is_error=True),
+                ],
+                "exit_code": 1,
+            },
+            "quota",
+        ),
+        (
+            {
+                "lines": [result("", is_error=True, subtype="error_during_execution")],
+                "exit_code": 1,
+            },
+            "unknown",
+        ),
+        (
+            {
+                "lines": [block_start(), text_delta("half")],
+                "stderr": "Segmentation fault",
+                "exit_code": 139,
+            },
+            "crashed",
+        ),
+        ({"lines": [], "exit_code": 0}, "crashed"),
+    ],
+)
 async def test_failures_are_classified(fake_claude, tmp_path, turn, kind):
     adapter, _ = fake_claude(turn=turn)
     events = await collect(adapter, request(tmp_path))
@@ -165,7 +259,10 @@ async def test_missing_cli_fails_as_not_available(tmp_path):
 def _alive(pid: int) -> bool:
     if sys.platform == "win32":
         import subprocess
-        out = subprocess.run(["tasklist", "/FI", f"PID eq {pid}", "/NH"], capture_output=True, text=True).stdout
+
+        out = subprocess.run(
+            ["tasklist", "/FI", f"PID eq {pid}", "/NH"], capture_output=True, text=True
+        ).stdout
         return str(pid) in out
     try:
         os.kill(pid, 0)
@@ -175,8 +272,9 @@ def _alive(pid: int) -> bool:
 
 
 async def test_cancelling_a_turn_kills_the_cli(fake_claude, tmp_path):
-    adapter, record = fake_claude(turn={"lines": [block_start(), text_delta("thinking...")],
-                                        "sleep_after_seconds": 60})
+    adapter, record = fake_claude(
+        turn={"lines": [block_start(), text_delta("thinking...")], "sleep_after_seconds": 60}
+    )
     gen = adapter.run_turn(request(tmp_path))
     first = await asyncio.wait_for(gen.__anext__(), timeout=15)
     assert first == Delta("thinking...")
@@ -199,8 +297,10 @@ async def test_cancelling_a_turn_kills_the_cli(fake_claude, tmp_path):
 async def test_cancelling_a_turn_kills_the_cli_and_its_children(fake_claude, tmp_path):
     # The real `claude` on Windows is an npm shim -> node: the whole process tree must go.
     heartbeat = tmp_path / "heartbeat.txt"
-    adapter, _ = fake_claude(turn={"lines": [block_start(), text_delta("thinking...")], "sleep_after_seconds": 60},
-                             heartbeat=str(heartbeat))
+    adapter, _ = fake_claude(
+        turn={"lines": [block_start(), text_delta("thinking...")], "sleep_after_seconds": 60},
+        heartbeat=str(heartbeat),
+    )
 
     async def consume():
         async for _ in adapter.run_turn(request(tmp_path)):
@@ -227,7 +327,9 @@ async def test_cancelling_a_turn_kills_the_cli_and_its_children(fake_claude, tmp
 
 
 async def test_logged_in_cli_is_available(fake_claude):
-    adapter, record = fake_claude(auth={"stdout": json.dumps({"loggedIn": True, "authMethod": "claude.ai"})})
+    adapter, record = fake_claude(
+        auth={"stdout": json.dumps({"loggedIn": True, "authMethod": "claude.ai"})}
+    )
     assert await adapter.check_availability(participant()) == Availability(True)
     assert json.loads(record.read_text(encoding="utf-8"))["argv"][:2] == ["auth", "status"]
 
@@ -269,7 +371,6 @@ def test_rejects_unknown_options():
     with pytest.raises(ValueError):
         ClaudeAdapter().validate_options({"tools": "Bash"})
     ClaudeAdapter().validate_options({})
-
 
 
 async def test_model_list_is_the_fixed_aliases_and_any_full_name_may_be_typed():

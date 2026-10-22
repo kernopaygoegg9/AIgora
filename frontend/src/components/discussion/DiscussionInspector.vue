@@ -8,7 +8,11 @@ import { computed } from 'vue'
 import '../../styles/inspector.css'
 import type { OptionsResponse } from '../../contracts/http'
 import type { DiscussionSettings, ParticipantSnapshot } from '../../contracts/messages'
-import { useDiscussionStore, type Interjection, type TurnStateStatus } from '../../stores/discussion'
+import {
+  useDiscussionStore,
+  type Interjection,
+  type TurnStateStatus,
+} from '../../stores/discussion'
 import { JUDGE_LABELS, MODE_LABELS } from '../labels'
 import InspectorParticipants from './InspectorParticipants.vue'
 import StanceTracker, { type StanceCell } from './StanceTracker.vue'
@@ -46,12 +50,14 @@ const stanceRounds = computed(() =>
 const rows = computed(() => {
   const s = props.settings
   if (!s) return []
-  const order = props.options?.speaking_orders.find((o) => o.id === s.speaking_order)?.name ?? s.speaking_order
+  const order =
+    props.options?.speaking_orders.find((o) => o.id === s.speaking_order)?.name ?? s.speaking_order
   const out: [string, string][] = [['討論模式', MODE_LABELS[s.mode] ?? s.mode]]
   if (consensus.value) {
     out.push(['共識裁定方式', JUDGE_LABELS[s.judge] ?? s.judge])
     if (s.judge === 'jev') out.push(['Jev 門檻', String(s.jev_threshold)])
-    if (s.moderator_id) out.push(['主持人', props.participantById(s.moderator_id)?.display_name ?? s.moderator_id])
+    if (s.moderator_id)
+      out.push(['主持人', props.participantById(s.moderator_id)?.display_name ?? s.moderator_id])
   }
   out.push(['發言順序', order])
   if (consensus.value) out.push(['輪數上限', String(s.max_rounds)])
@@ -80,7 +86,12 @@ const rows = computed(() => {
     <section v-if="consensus" class="inspector-section">
       <h3 class="inspector-title">插話佇列</h3>
       <ul v-if="interjections.length" class="queue">
-        <li v-for="(item, i) in interjections" :key="i" class="interjection" data-testid="interjection">
+        <li
+          v-for="(item, i) in interjections"
+          :key="i"
+          class="interjection"
+          data-testid="interjection"
+        >
           <small class="applies">第 {{ item.appliesToRound }} 輪起生效</small>
           <span class="text">{{ item.text }}</span>
         </li>

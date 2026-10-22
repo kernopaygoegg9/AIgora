@@ -1,14 +1,16 @@
-"""Shared fixtures for API tests: a participants file of Fake Adapter participants and a
-throwaway discussion record folder, wired in through the backend's environment variables."""
+"""Shared fixtures: a participants file of Fake Adapter participants and a throwaway
+discussion record folder (wired in through the backend's environment variables), and the
+`cli_processes` fixture that ends every process the fake CLIs started (process_reaper.py)."""
 
 from __future__ import annotations
 
 import json
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+from process_reaper import reap_cli_processes
 
 from aigora.app import create_app
 
@@ -31,6 +33,13 @@ def write_participants(tmp_path, monkeypatch) -> Callable[[str], Path]:
         return path
 
     return write
+
+
+@pytest.fixture
+def cli_processes(tmp_path) -> Iterator[Path]:
+    """Ends the fake CLIs' processes (and their children) at teardown, even if the test failed."""
+    with reap_cli_processes(tmp_path / "cli-pids") as pid_dir:
+        yield pid_dir
 
 
 @pytest.fixture

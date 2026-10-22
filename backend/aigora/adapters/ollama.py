@@ -68,7 +68,9 @@ class OllamaAdapter(Adapter):
         return participant.options.get("base_url", DEFAULT_BASE_URL).rstrip("/")
 
     def _client(self, participant: ParticipantConfig, timeout: httpx.Timeout) -> httpx.AsyncClient:
-        return httpx.AsyncClient(base_url=self._base_url(participant), transport=self._transport, timeout=timeout)
+        return httpx.AsyncClient(
+            base_url=self._base_url(participant), transport=self._transport, timeout=timeout
+        )
 
     def validate_options(self, options: Mapping[str, Any]) -> None:
         unknown = sorted(set(options) - {"base_url"})
@@ -77,7 +79,9 @@ class OllamaAdapter(Adapter):
         if "base_url" in options:
             url = options["base_url"]
             if not isinstance(url, str) or not url.startswith(("http://", "https://")):
-                raise ValueError("`base_url` must be an http:// or https:// URL, e.g. http://127.0.0.1:11434")
+                raise ValueError(
+                    "`base_url` must be an http:// or https:// URL, e.g. http://127.0.0.1:11434"
+                )
 
     def capabilities(self, participant: ParticipantConfig) -> Capabilities:
         return Capabilities(web_access=False, streaming=True)
@@ -86,7 +90,9 @@ class OllamaAdapter(Adapter):
         base = self._base_url(participant)
         model = participant.model
         if not model:
-            return Availability(False, "ollama: no model configured; set `model` in participants.toml")
+            return Availability(
+                False, "ollama: no model configured; set `model` in participants.toml"
+            )
         try:
             async with self._client(participant, httpx.Timeout(5.0)) as client:
                 response = await client.get("/api/tags")
@@ -99,7 +105,9 @@ class OllamaAdapter(Adapter):
         except (ValueError, AttributeError):
             return Availability(False, f"Ollama at {base} sent an unexpected model list")
         if not names & _name_variants(model):
-            return Availability(False, f"Ollama model `{model}` is not installed (run `ollama pull {model}`)")
+            return Availability(
+                False, f"Ollama model `{model}` is not installed (run `ollama pull {model}`)"
+            )
         return Availability(True)
 
     async def list_models(self, participant: ParticipantConfig) -> ModelChoices:
@@ -126,7 +134,9 @@ class OllamaAdapter(Adapter):
         participant = request.participant
         base = self._base_url(participant)
         if not participant.model:
-            yield Failed("not_available", "ollama: no model configured; set `model` in participants.toml")
+            yield Failed(
+                "not_available", "ollama: no model configured; set `model` in participants.toml"
+            )
             return
         body = {"model": participant.model, "prompt": request.prompt, "stream": True}
         timeout = httpx.Timeout(request.timeout_seconds, connect=5.0)
@@ -147,10 +157,14 @@ class OllamaAdapter(Adapter):
                         try:
                             chunk = json.loads(line)
                         except ValueError:
-                            yield Failed("crashed", f"Ollama sent an unreadable stream line: {line[:200]!r}")
+                            yield Failed(
+                                "crashed", f"Ollama sent an unreadable stream line: {line[:200]!r}"
+                            )
                             return
                         if not isinstance(chunk, dict):
-                            yield Failed("crashed", f"Ollama sent an unexpected stream line: {line[:200]!r}")
+                            yield Failed(
+                                "crashed", f"Ollama sent an unexpected stream line: {line[:200]!r}"
+                            )
                             return
                         if chunk.get("error"):
                             yield Failed("crashed", f"Ollama error: {chunk['error']}")

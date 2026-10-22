@@ -35,7 +35,12 @@ from dataclasses import dataclass, field
 from typing import ClassVar
 
 from aigora.adapters.base import Availability
-from aigora.api.messages import ConfirmationAnswer, DiscussionResult, DiscussionSettings, JudgeDetail
+from aigora.api.messages import (
+    ConfirmationAnswer,
+    DiscussionResult,
+    DiscussionSettings,
+    JudgeDetail,
+)
 from aigora.domain import (
     JudgeId,
     JudgeOutcome,

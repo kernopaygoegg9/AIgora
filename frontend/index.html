@@ -11,7 +11,8 @@
       // theme. Must match THEME_STORAGE_KEY in src/composables/useTheme.ts.
       try {
         var theme = localStorage.getItem('aigora.theme')
-        if (theme === 'light' || theme === 'dark') document.documentElement.setAttribute('data-theme', theme)
+        if (theme === 'light' || theme === 'dark')
+          document.documentElement.setAttribute('data-theme', theme)
       } catch (e) {}
     </script>
   </head>

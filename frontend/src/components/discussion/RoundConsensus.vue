@@ -49,17 +49,23 @@ const extraCalls = computed(() =>
 )
 
 const draftFromRecord = computed(() =>
-  props.round.draft && !props.round.extraCalls.some((c) => c.purpose === 'draft') ? props.round.draft : null,
+  props.round.draft && !props.round.extraCalls.some((c) => c.purpose === 'draft')
+    ? props.round.draft
+    : null,
 )
 
 const probability = computed(() => props.round.judge?.detail.probability ?? null)
 const threshold = computed(() => props.round.judge?.detail.threshold ?? null)
 
 const hasLeft = computed(() => extraCalls.value.length > 0 || draftFromRecord.value !== null)
-const hasRight = computed(() => props.round.judge !== null || (props.round.confirmations?.length ?? 0) > 0)
+const hasRight = computed(
+  () => props.round.judge !== null || (props.round.confirmations?.length ?? 0) > 0,
+)
 
 function callText(call: TurnState): string {
-  return call.purpose === 'draft' && call.status === 'ok' && props.round.draft ? props.round.draft : call.text
+  return call.purpose === 'draft' && call.status === 'ok' && props.round.draft
+    ? props.round.draft
+    : call.text
 }
 </script>
 
@@ -74,26 +80,54 @@ function callText(call: TurnState): string {
         :class="[
           `status-${call.status}`,
           `purpose-${call.purpose}`,
-          { 'is-draft': call.purpose === 'draft', 'is-failed': call.status === 'failed' || call.status === 'timeout' },
+          {
+            'is-draft': call.purpose === 'draft',
+            'is-failed': call.status === 'failed' || call.status === 'timeout',
+          },
         ]"
-        :data-testid="call.purpose === 'draft' && call.status === 'ok' ? 'consensus-draft' : 'extra-call'"
+        :data-testid="
+          call.purpose === 'draft' && call.status === 'ok' ? 'consensus-draft' : 'extra-call'
+        "
       >
         <header class="d-block-head">
           <span class="d-block-title">{{ PURPOSE_LABELS[call.purpose] }}</span>
-          <span>第 {{ round.number }} 輪後 · {{ call.purpose === 'confirmation' ? '' : '主持人' }}</span>
-          <ParticipantLabel :participant="participantById(call.participantId)" :id="call.participantId" :size="16" hide-web />
+          <span
+            >第 {{ round.number }} 輪後 ·
+            {{ call.purpose === 'confirmation' ? '' : '主持人' }}</span
+          >
+          <ParticipantLabel
+            :id="call.participantId"
+            :participant="participantById(call.participantId)"
+            :size="16"
+            hide-web
+          />
           <span v-if="call.status === 'running'" class="d-push pill pill-accent">撰寫中…</span>
         </header>
         <p v-if="call.failure" class="d-failure">失敗：{{ call.failure.reason }}</p>
-        <!-- eslint-disable-next-line vue/no-v-html -- sanitised in renderMarkdown -->
-        <div class="d-md" :class="{ 'd-caret': call.status === 'running' }" v-html="renderMarkdown(callText(call))" />
+        <!-- eslint-disable vue/no-v-html -- sanitised in renderMarkdown -->
+        <div
+          class="d-md"
+          :class="{ 'd-caret': call.status === 'running' }"
+          v-html="renderMarkdown(callText(call))"
+        />
+        <!-- eslint-enable vue/no-v-html -->
       </article>
 
-      <article v-if="draftFromRecord" class="extra-call purpose-draft d-block is-draft" data-testid="consensus-draft">
+      <article
+        v-if="draftFromRecord"
+        class="extra-call purpose-draft d-block is-draft"
+        data-testid="consensus-draft"
+      >
         <header class="d-block-head">
           <span class="d-block-title">共識草案</span>
           <span>第 {{ round.number }} 輪後<template v-if="moderatorId"> · 主持人</template></span>
-          <ParticipantLabel v-if="moderatorId" :participant="participantById(moderatorId)" :id="moderatorId" :size="16" hide-web />
+          <ParticipantLabel
+            v-if="moderatorId"
+            :id="moderatorId"
+            :participant="participantById(moderatorId)"
+            :size="16"
+            hide-web
+          />
         </header>
         <!-- eslint-disable-next-line vue/no-v-html -- sanitised in renderMarkdown -->
         <div class="d-md" v-html="renderMarkdown(draftFromRecord)" />
@@ -109,10 +143,21 @@ function callText(call: TurnState): string {
         data-testid="judge-result"
       >
         <header class="d-block-head">
-          <span class="d-block-title">第 {{ round.number }} 輪{{ isJev ? ' Jev 判斷' : '表態' }}</span>
-          <span class="d-push pill" :class="round.judge.outcome === 'reached' ? 'pill-ok' : 'pill-warn'">{{ outcomeLabel }}</span>
+          <span class="d-block-title"
+            >第 {{ round.number }} 輪{{ isJev ? ' Jev 判斷' : '表態' }}</span
+          >
+          <span
+            class="d-push pill"
+            :class="round.judge.outcome === 'reached' ? 'pill-ok' : 'pill-warn'"
+            >{{ outcomeLabel }}</span
+          >
         </header>
-        <StanceList v-if="stances.length" :stances="stances" :participant-by-id="participantById" item-testid="stance" />
+        <StanceList
+          v-if="stances.length"
+          :stances="stances"
+          :participant-by-id="participantById"
+          item-testid="stance"
+        />
         <JevProbability
           v-if="probability != null"
           class="jev-probability"
@@ -120,7 +165,9 @@ function callText(call: TurnState): string {
           :probability="probability"
           :threshold="threshold"
         />
-        <p v-else-if="isJev" class="d-failure" data-testid="jev-probability">Jev 這輪無法判斷，視為未取得共識</p>
+        <p v-else-if="isJev" class="d-failure" data-testid="jev-probability">
+          Jev 這輪無法判斷，視為未取得共識
+        </p>
       </section>
 
       <section
@@ -131,9 +178,15 @@ function callText(call: TurnState): string {
       >
         <header class="d-block-head">
           <span class="d-block-title">反問確認</span>
-          <span class="d-push pill" :class="allAgree ? 'pill-ok' : 'pill-warn'">{{ allAgree ? '全員同意已取得共識' : '有參與者不同意' }}</span>
+          <span class="d-push pill" :class="allAgree ? 'pill-ok' : 'pill-warn'">{{
+            allAgree ? '全員同意已取得共識' : '有參與者不同意'
+          }}</span>
         </header>
-        <ConfirmationList :answers="round.confirmations" :participant-by-id="participantById" item-testid="confirmation-answer" />
+        <ConfirmationList
+          :answers="round.confirmations"
+          :participant-by-id="participantById"
+          item-testid="confirmation-answer"
+        />
       </section>
     </div>
   </div>

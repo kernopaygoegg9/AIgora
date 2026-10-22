@@ -51,8 +51,10 @@ const name = (id: string) => participantById(id)?.display_name ?? id
 
 const consensus = computed(() => record.value?.settings.mode === 'consensus')
 const roundNumbers = computed(() => new Set(record.value?.rounds.map((r) => r.number) ?? []))
-const inRound = <T extends { round: number }>(items: T[], n: number) => items.filter((x) => x.round === n)
-const interjectionsFor = (n: number) => record.value?.interjections.filter((i) => i.applies_to_round === n) ?? []
+const inRound = <T extends { round: number }>(items: T[], n: number) =>
+  items.filter((x) => x.round === n)
+const interjectionsFor = (n: number) =>
+  record.value?.interjections.filter((i) => i.applies_to_round === n) ?? []
 
 // Events that point at a round that never ran (e.g. an interjection queued just before the end).
 const leftovers = computed(() => {
@@ -67,7 +69,9 @@ const leftovers = computed(() => {
 })
 const hasLeftovers = computed(
   () =>
-    leftovers.value.interjections.length + leftovers.value.removals.length + leftovers.value.moderatorChanges.length >
+    leftovers.value.interjections.length +
+      leftovers.value.removals.length +
+      leftovers.value.moderatorChanges.length >
     0,
 )
 
@@ -90,17 +94,21 @@ const resultHtml = computed(() => {
   return result && result.kind !== 'answers' && result.text ? renderMarkdown(result.text) : ''
 })
 
-
 // --- inspector ---------------------------------------------------------------------------
-const removedIds = computed(() => record.value?.removed_participants.map((r) => r.participant_id) ?? [])
+const removedIds = computed(
+  () => record.value?.removed_participants.map((r) => r.participant_id) ?? [],
+)
 const moderatorId = computed(() => {
   const r = record.value
   if (!r || !consensus.value) return null
-  return r.moderator_changes[r.moderator_changes.length - 1]?.participant_id ?? r.settings.moderator_id
+  return (
+    r.moderator_changes[r.moderator_changes.length - 1]?.participant_id ?? r.settings.moderator_id
+  )
 })
 const statuses = computed(() => {
   const out: Record<string, TurnStateStatus | undefined> = {}
-  for (const round of record.value?.rounds ?? []) for (const t of round.turns) out[t.participant_id] = t.status
+  for (const round of record.value?.rounds ?? [])
+    for (const t of round.turns) out[t.participant_id] = t.status
   return out
 })
 const stanceRounds = computed(() =>
@@ -126,9 +134,16 @@ const orderName = computed(() => {
     <div v-else class="record">
       <div class="stage">
         <header class="topbar">
-          <h1 class="question" data-testid="record-question" :title="record.question">{{ record.question }}</h1>
+          <h1 class="question" data-testid="record-question" :title="record.question">
+            {{ record.question }}
+          </h1>
           <span class="pill read-only">唯讀紀錄</span>
-          <span class="pill" :class="outcomePillClass(record.outcome)" data-testid="record-outcome">{{ outcomeLabel(record.outcome) }}</span>
+          <span
+            class="pill"
+            :class="outcomePillClass(record.outcome)"
+            data-testid="record-outcome"
+            >{{ outcomeLabel(record.outcome) }}</span
+          >
         </header>
         <p class="sub">
           <RouterLink class="back" :to="{ name: 'history' }">← 回到歷史</RouterLink>
@@ -150,12 +165,15 @@ const orderName = computed(() => {
           :data-testid="resultHtml ? 'record-result' : undefined"
         >
           <h2 class="d-result-title">
-            <span v-if="record.result?.kind === 'consensus'" aria-hidden="true">✓ </span>{{ resultTitle }}
+            <span v-if="record.result?.kind === 'consensus'" aria-hidden="true">✓ </span
+            >{{ resultTitle }}
           </h2>
           <!-- eslint-disable-next-line vue/no-v-html -- sanitised in renderMarkdown -->
           <div v-if="resultHtml" class="d-md" v-html="resultHtml" />
         </section>
-        <p v-if="record.outcome === 'stopped'" class="d-result is-bad stopped">討論已停止：進行中的發言已取消，當時的內容已存檔。</p>
+        <p v-if="record.outcome === 'stopped'" class="d-result is-bad stopped">
+          討論已停止：進行中的發言已取消，當時的內容已存檔。
+        </p>
 
         <RecordRound
           v-for="round in record.rounds"
@@ -169,15 +187,30 @@ const orderName = computed(() => {
         />
 
         <section v-if="hasLeftovers" class="leftovers">
-          <p v-for="(i, k) in leftovers.interjections" :key="`i${k}`" class="d-notice" data-testid="record-interjection">
+          <p
+            v-for="(i, k) in leftovers.interjections"
+            :key="`i${k}`"
+            class="d-notice"
+            data-testid="record-interjection"
+          >
             <span class="d-notice-label">使用者插話（未生效）</span>
             <span class="event-text">{{ i.text }}</span>
           </p>
-          <p v-for="(c, k) in leftovers.moderatorChanges" :key="`m${k}`" class="d-notice" data-testid="record-moderator-change">
+          <p
+            v-for="(c, k) in leftovers.moderatorChanges"
+            :key="`m${k}`"
+            class="d-notice"
+            data-testid="record-moderator-change"
+          >
             <span class="d-notice-label">主持人接手</span>
             <span>改由 {{ name(c.participant_id) }} 擔任主持人</span>
           </p>
-          <p v-for="(r, k) in leftovers.removals" :key="`r${k}`" class="d-notice is-bad" data-testid="record-removal">
+          <p
+            v-for="(r, k) in leftovers.removals"
+            :key="`r${k}`"
+            class="d-notice is-bad"
+            data-testid="record-removal"
+          >
             <span class="d-notice-label">移出討論</span>
             <span>{{ name(r.participant_id) }}：{{ r.reason }}</span>
           </p>
@@ -226,10 +259,14 @@ const orderName = computed(() => {
             <dt>逾時</dt>
             <dd>{{ record.settings.turn_timeout_seconds }} 秒</dd>
             <dt>開始</dt>
-            <dd><time :datetime="record.created_at">{{ formatTime(record.created_at) }}</time></dd>
+            <dd>
+              <time :datetime="record.created_at">{{ formatTime(record.created_at) }}</time>
+            </dd>
             <template v-if="record.finished_at">
               <dt>結束</dt>
-              <dd><time :datetime="record.finished_at">{{ formatTime(record.finished_at) }}</time></dd>
+              <dd>
+                <time :datetime="record.finished_at">{{ formatTime(record.finished_at) }}</time>
+              </dd>
             </template>
           </dl>
         </section>

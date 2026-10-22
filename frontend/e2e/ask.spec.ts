@@ -29,7 +29,9 @@ test('asking a question streams every participant side by side and finishes', as
   await expect(page.getByTestId('stance-tracker')).toHaveCount(0)
 
   // Side by side: the cards share a row.
-  const boxes = await Promise.all(['Fake A', 'Fake B', 'Fake Slow'].map((n) => card(n).boundingBox()))
+  const boxes = await Promise.all(
+    ['Fake A', 'Fake B', 'Fake Slow'].map((n) => card(n).boundingBox()),
+  )
   const tops = boxes.map((b) => Math.round(b!.y))
   expect(new Set(tops).size).toBe(1)
   const lefts = boxes.map((b) => b!.x)
@@ -39,7 +41,7 @@ test('asking a question streams every participant side by side and finishes', as
 
 test('participants without web access are marked', async ({ page }) => {
   await page.goto('/')
-  await expect(page.getByTestId('participant-option').filter({ hasText: 'Fake Offline' })).toContainText(
-    '無上網',
-  )
+  await expect(
+    page.getByTestId('participant-option').filter({ hasText: 'Fake Offline' }),
+  ).toContainText('無上網')
 })

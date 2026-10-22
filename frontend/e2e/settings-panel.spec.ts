@@ -22,7 +22,9 @@ test('defaults match [defaults] of the participants file', async ({ page }) => {
   await expect(p.getByLabel('主持人', { exact: true })).toHaveValue('fake-a')
 })
 
-test('ask shows only the fields it uses; consensus adds moderator, judge and max rounds', async ({ page }) => {
+test('ask shows only the fields it uses; consensus adds moderator, judge and max rounds', async ({
+  page,
+}) => {
   await page.goto('/')
   const p = panel(page)
   await expect(p.getByRole('radio', { name: '提問' })).toBeChecked()
@@ -57,14 +59,20 @@ test('the moderator can only be one of the chosen participants', async ({ page }
   await expect(p.getByLabel('主持人', { exact: true })).toHaveValue('fake-a')
 })
 
-test('unavailable participants show the reason and cannot be picked; no web access is marked', async ({ page }) => {
+test('unavailable participants show the reason and cannot be picked; no web access is marked', async ({
+  page,
+}) => {
   await page.goto('/')
   const p = panel(page)
   const down = p.getByTestId('participant-option').filter({ hasText: 'Fake Down' })
   await expect(down).toContainText('fake: CLI not installed')
   await expect(p.getByRole('checkbox', { name: 'Fake Down' })).toBeDisabled()
-  await expect(p.getByTestId('participant-option').filter({ hasText: 'Fake Offline' })).toContainText('無上網')
-  await expect(p.getByTestId('participant-option').filter({ hasText: 'Fake A' })).not.toContainText('無上網')
+  await expect(
+    p.getByTestId('participant-option').filter({ hasText: 'Fake Offline' }),
+  ).toContainText('無上網')
+  await expect(p.getByTestId('participant-option').filter({ hasText: 'Fake A' })).not.toContainText(
+    '無上網',
+  )
 })
 
 test('judge B is greyed out with a reason when .env has no TypeSafe key', async ({ page }) => {
@@ -73,7 +81,9 @@ test('judge B is greyed out with a reason when .env has no TypeSafe key', async 
   await p.getByRole('radio', { name: '共識討論' }).check()
   const jev = p.getByRole('radio', { name: /Jev 判斷 \+ 反問確認/ })
   await expect(jev).toBeDisabled()
-  await expect(p.getByTestId('judge-option').filter({ hasText: 'Jev' })).toContainText('TYPESAFE_API_KEY')
+  await expect(p.getByTestId('judge-option').filter({ hasText: 'Jev' })).toContainText(
+    'TYPESAFE_API_KEY',
+  )
   await expect(p.getByRole('radio', { name: /主持人 \+ 全員表態/ })).toBeEnabled()
   // The not-yet-built sequential order cannot be picked either.
   await expect(p.getByLabel('發言順序').locator('option[value="sequential"]')).toBeDisabled()
@@ -96,7 +106,9 @@ test('starting needs at least 2 participants', async ({ page }) => {
   await expect(p.getByTestId('participants-hint')).toHaveCount(0)
 })
 
-test('the chosen settings are sent with start and the panel locks while the discussion runs', async ({ page }) => {
+test('the chosen settings are sent with start and the panel locks while the discussion runs', async ({
+  page,
+}) => {
   const sent: string[] = []
   page.on('websocket', (ws) => ws.on('framesent', (frame) => sent.push(String(frame.payload))))
   await page.goto('/')
@@ -111,7 +123,9 @@ test('the chosen settings are sent with start and the panel locks while the disc
   await expect(page.getByTestId('discussion-status')).toHaveText('討論中')
   // ui-redesign 04: the locked settings show in the inspector; the form is hidden (still
   // mounted and disabled, so the inputs survive).
-  await expect(page.getByTestId('discussion-inspector').getByTestId('settings-locked')).toBeVisible()
+  await expect(
+    page.getByTestId('discussion-inspector').getByTestId('settings-locked'),
+  ).toBeVisible()
   await expect(p).toBeHidden()
   await expect(p.getByLabel('問題')).toBeDisabled()
   await expect(p.getByRole('radio', { name: '共識討論', includeHidden: true })).toBeDisabled()

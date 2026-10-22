@@ -12,18 +12,20 @@ Behaviour comes from the JSON file named by `FAKE_CLAUDE_SCENARIO`:
     }
 
 `lines` entries are JSON-encoded unless they are strings (written verbatim).
+With env `AIGORA_TEST_PID_DIR` set, its own pid and the grandchild's are recorded there
+(conftest `cli_processes` ends them at teardown; fake_cli_support.py).
 """
 
 import json
 import os
-import subprocess
 import sys
 import time
 
-HEARTBEAT = "import sys, time\nwhile True:\n    open(sys.argv[1], 'a').write('.')\n    time.sleep(0.05)\n"
+from fake_cli_support import record_pid, start_heartbeat
 
 
 def main() -> int:
+    record_pid(os.getpid())
     scenario = json.loads(open(os.environ["FAKE_CLAUDE_SCENARIO"], encoding="utf-8").read())
     args = sys.argv[1:]
     is_auth = args[:2] == ["auth", "status"]
@@ -31,14 +33,19 @@ def main() -> int:
 
     if record := scenario.get("record"):
         with open(record, "w", encoding="utf-8") as f:
-            json.dump({
-                "argv": args,
-                "cwd": os.getcwd(),
-                "stdin": stdin,
-                "env_CLAUDECODE": os.environ.get("CLAUDECODE"),
-                "env_ENABLE_CLAUDEAI_MCP_SERVERS": os.environ.get("ENABLE_CLAUDEAI_MCP_SERVERS"),
-                "pid": os.getpid(),
-            }, f)
+            json.dump(
+                {
+                    "argv": args,
+                    "cwd": os.getcwd(),
+                    "stdin": stdin,
+                    "env_CLAUDECODE": os.environ.get("CLAUDECODE"),
+                    "env_ENABLE_CLAUDEAI_MCP_SERVERS": os.environ.get(
+                        "ENABLE_CLAUDEAI_MCP_SERVERS"
+                    ),
+                    "pid": os.getpid(),
+                },
+                f,
+            )
 
     if is_auth:
         auth = scenario.get("auth", {})
@@ -55,7 +62,7 @@ def main() -> int:
     sys.stderr.write(turn.get("stderr", ""))
     sys.stderr.flush()
     if heartbeat := scenario.get("heartbeat"):
-        subprocess.Popen([sys.executable, "-c", HEARTBEAT, heartbeat])
+        start_heartbeat(heartbeat)
     time.sleep(turn.get("sleep_after_seconds", 0))
     return turn.get("exit_code", 0)
 

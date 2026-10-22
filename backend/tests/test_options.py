@@ -83,7 +83,9 @@ def test_an_empty_key_counts_as_missing(client, write_participants, no_key_env):
     assert "TYPESAFE_API_KEY" in _jev_reason(client)
 
 
-def test_a_key_in_the_process_environment_also_counts(client, write_participants, no_key_env, monkeypatch):
+def test_a_key_in_the_process_environment_also_counts(
+    client, write_participants, no_key_env, monkeypatch
+):
     write_participants(PARTICIPANTS)
     monkeypatch.setenv("TYPESAFE_API_KEY", "sk-from-environment")
     assert _jev_reason(client) is None

@@ -10,10 +10,10 @@ from collections.abc import Mapping
 from typing import Any
 
 import pytest
+from conftest import fake_participant, run_discussion
 
 from aigora.discussion import judges
 from aigora.jev_client import JevError
-from conftest import fake_participant, run_discussion
 
 KEY = "sk-test-secret-jev"
 
@@ -27,11 +27,17 @@ def of_type(messages: list[dict], type_: str) -> list[dict]:
 
 
 def calls(messages: list[dict], purpose: str) -> list[tuple[int, str]]:
-    return [(m["round"], m["participant_id"]) for m in of_type(messages, "turn_started") if m["purpose"] == purpose]
+    return [
+        (m["round"], m["participant_id"])
+        for m in of_type(messages, "turn_started")
+        if m["purpose"] == purpose
+    ]
 
 
 def saved_record(data_dir, messages: list[dict]) -> dict:
-    return json.loads((data_dir / f"{messages[0]['discussion_id']}.json").read_text(encoding="utf-8"))
+    return json.loads(
+        (data_dir / f"{messages[0]['discussion_id']}.json").read_text(encoding="utf-8")
+    )
 
 
 class FakeJev:
@@ -79,16 +85,24 @@ def fake_jev(env_file, monkeypatch):
     return install
 
 
-def test_below_the_threshold_the_discussion_continues_with_the_next_round(client, write_participants, fake_jev):
+def test_below_the_threshold_the_discussion_continues_with_the_next_round(
+    client, write_participants, fake_jev
+):
     jev = fake_jev(0.3)
     write_participants(
-        fake_participant("fake-a", "Fake A", stream=False) + fake_participant("fake-b", "Fake B", stream=False)
+        fake_participant("fake-a", "Fake A", stream=False)
+        + fake_participant("fake-b", "Fake B", stream=False)
     )
 
-    messages = run_discussion(client, "Q?", consensus_b("fake-a", "fake-b", max_rounds=3, jev_threshold=0.8))
+    messages = run_discussion(
+        client, "Q?", consensus_b("fake-a", "fake-b", max_rounds=3, jev_threshold=0.8)
+    )
 
     results = of_type(messages, "judge_result")
-    assert [(j["round"], j["judge"], j["outcome"]) for j in results] == [(2, "jev", "not_reached"), (3, "jev", "not_reached")]
+    assert [(j["round"], j["judge"], j["outcome"]) for j in results] == [
+        (2, "jev", "not_reached"),
+        (3, "jev", "not_reached"),
+    ]
     assert results[0]["detail"]["probability"] == 0.3
     assert results[0]["detail"]["threshold"] == 0.8
     assert of_type(messages, "confirmation_result") == []
@@ -123,7 +137,10 @@ def test_at_the_threshold_everyone_is_asked_and_unanimous_agreement_ends_with_th
     assert sorted(calls(messages, "confirmation")) == [(2, "fake-a"), (2, "fake-b")]
     confirmations = of_type(messages, "confirmation_result")
     assert len(confirmations) == 1 and confirmations[0]["round"] == 2
-    assert {a["participant_id"]: a["agree"] for a in confirmations[0]["answers"]} == {"fake-a": True, "fake-b": True}
+    assert {a["participant_id"]: a["agree"] for a in confirmations[0]["answers"]} == {
+        "fake-a": True,
+        "fake-b": True,
+    }
     assert calls(messages, "final_result") == [(2, "fake-a")]
     types = [m["type"] for m in messages]
     assert types.index("confirmation_result") < types.index("discussion_finished")
@@ -131,38 +148,62 @@ def test_at_the_threshold_everyone_is_asked_and_unanimous_agreement_ends_with_th
     finished = messages[-1]
     assert finished["type"] == "discussion_finished"
     assert finished["outcome"] == "consensus"
-    assert finished["result"] == {"kind": "consensus", "text": "The final consensus text.", "answers": None}
+    assert finished["result"] == {
+        "kind": "consensus",
+        "text": "The final consensus text.",
+        "answers": None,
+    }
 
     record = saved_record(data_dir, messages)
     round2 = record["rounds"][1]
     assert round2["judge"] == {
-        "judge": "jev", "outcome": "reached", "detail": {"stances": None, "probability": 0.8, "threshold": 0.8},
+        "judge": "jev",
+        "outcome": "reached",
+        "detail": {"stances": None, "probability": 0.8, "threshold": 0.8},
     }
     # The `confirm` verdict (Jev passed the threshold) is kept too, before the final one.
-    assert [(j["judge"], j["outcome"], j["detail"]["probability"]) for j in round2["judge_history"]] == [
-        ("jev", "confirm", 0.8), ("jev", "reached", 0.8),
+    assert [
+        (j["judge"], j["outcome"], j["detail"]["probability"]) for j in round2["judge_history"]
+    ] == [
+        ("jev", "confirm", 0.8),
+        ("jev", "reached", 0.8),
     ]
     assert record["rounds"][0]["judge_history"] == []
-    assert [(c["participant_id"], c["agree"]) for c in round2["confirmations"]] == [("fake-a", True), ("fake-b", True)]
+    assert [(c["participant_id"], c["agree"]) for c in round2["confirmations"]] == [
+        ("fake-a", True),
+        ("fake-b", True),
+    ]
     assert record["rounds"][0]["confirmations"] is None
     assert record["outcome"] == "consensus"
     assert record["result"]["text"] == "The final consensus text."
 
 
-def test_a_disagreeing_answer_carries_its_reason_into_the_next_rounds_prompt(client, write_participants, fake_jev, data_dir):
+def test_a_disagreeing_answer_carries_its_reason_into_the_next_rounds_prompt(
+    client, write_participants, fake_jev, data_dir
+):
     fake_jev(0.9, 0.1)
     write_participants(
         fake_participant("fake-a", "Fake A", stream=False)
-        + fake_participant("fake-b", "Fake B", stream=False,
-                           confirmations=["No: we still differ on the price cap.\nSTANCE: DISAGREE"])
+        + fake_participant(
+            "fake-b",
+            "Fake B",
+            stream=False,
+            confirmations=["No: we still differ on the price cap.\nSTANCE: DISAGREE"],
+        )
         + fake_participant("echo", "Echo", stream=False, echo_prompt=True)
     )
 
     messages = run_discussion(client, "Q?", consensus_b("fake-a", "fake-b", "echo", max_rounds=3))
 
     results = of_type(messages, "judge_result")
-    assert [(j["round"], j["outcome"]) for j in results] == [(2, "confirm"), (2, "not_reached"), (3, "not_reached")]
-    answers = {a["participant_id"]: a for a in of_type(messages, "confirmation_result")[0]["answers"]}
+    assert [(j["round"], j["outcome"]) for j in results] == [
+        (2, "confirm"),
+        (2, "not_reached"),
+        (3, "not_reached"),
+    ]
+    answers = {
+        a["participant_id"]: a for a in of_type(messages, "confirmation_result")[0]["answers"]
+    }
     assert answers["fake-a"]["agree"] is True
     assert answers["fake-b"]["agree"] is False
     assert "price cap" in answers["fake-b"]["reason"]
@@ -172,36 +213,57 @@ def test_a_disagreeing_answer_carries_its_reason_into_the_next_rounds_prompt(cli
     assert calls(messages, "final_result") == []
     # Not reached: the moderator writes the next draft and round 3 runs.
     assert (2, "fake-a") in calls(messages, "draft")
-    prompt3 = next(m["text"] for m in of_type(messages, "turn_completed")
-                   if m["participant_id"] == "echo" and m["purpose"] == "turn" and m["round"] == 3)
+    prompt3 = next(
+        m["text"]
+        for m in of_type(messages, "turn_completed")
+        if m["participant_id"] == "echo" and m["purpose"] == "turn" and m["round"] == 3
+    )
     assert "we still differ on the price cap" in prompt3
     assert messages[-1]["outcome"] == "no_consensus"
 
     record = saved_record(data_dir, messages)
     assert record["rounds"][1]["judge"]["outcome"] == "not_reached"
     assert {c["participant_id"]: c["agree"] for c in record["rounds"][1]["confirmations"]} == {
-        "fake-a": True, "fake-b": False, "echo": False,
+        "fake-a": True,
+        "fake-b": False,
+        "echo": False,
     }
 
 
-def test_disagreeing_reasons_reach_only_the_next_round_not_later_ones(client, write_participants, fake_jev):
-    fake_jev(0.9, 0.1)  # round 2: confirmation (fake-b disagrees); round 3 and later: below the threshold
+def test_disagreeing_reasons_reach_only_the_next_round_not_later_ones(
+    client, write_participants, fake_jev
+):
+    fake_jev(
+        0.9, 0.1
+    )  # round 2: confirmation (fake-b disagrees); round 3 and later: below the threshold
     write_participants(
         fake_participant("echo", "Echo", stream=False, echo_prompt=True)
-        + fake_participant("fake-b", "Fake B", stream=False,
-                           confirmations=["No: we still differ on the price cap.\nSTANCE: DISAGREE"])
+        + fake_participant(
+            "fake-b",
+            "Fake B",
+            stream=False,
+            confirmations=["No: we still differ on the price cap.\nSTANCE: DISAGREE"],
+        )
     )
 
-    messages = run_discussion(client, "Q?", consensus_b("echo", "fake-b", moderator_id="echo", max_rounds=4))
+    messages = run_discussion(
+        client, "Q?", consensus_b("echo", "fake-b", moderator_id="echo", max_rounds=4)
+    )
 
     def instructions(round_: int, purpose: str) -> str:
         # Echo replies with its prompt; this call's own instructions are the last section.
-        text = next(m["text"] for m in of_type(messages, "turn_completed")
-                    if m["participant_id"] == "echo" and m["purpose"] == purpose and m["round"] == round_)
+        text = next(
+            m["text"]
+            for m in of_type(messages, "turn_completed")
+            if m["participant_id"] == "echo" and m["purpose"] == purpose and m["round"] == round_
+        )
         return text.rsplit("## Instructions for this round", 1)[1]
 
     assert [(j["round"], j["outcome"]) for j in of_type(messages, "judge_result")] == [
-        (2, "confirm"), (2, "not_reached"), (3, "not_reached"), (4, "not_reached"),
+        (2, "confirm"),
+        (2, "not_reached"),
+        (3, "not_reached"),
+        (4, "not_reached"),
     ]
     assert "price cap" in instructions(2, "draft")
     assert "price cap" in instructions(3, "turn")
@@ -210,10 +272,13 @@ def test_disagreeing_reasons_reach_only_the_next_round_not_later_ones(client, wr
     assert "price cap" not in instructions(4, "turn")
 
 
-def test_when_jev_fails_the_round_counts_as_not_reached_and_the_discussion_goes_on(client, write_participants, fake_jev):
+def test_when_jev_fails_the_round_counts_as_not_reached_and_the_discussion_goes_on(
+    client, write_participants, fake_jev
+):
     fake_jev(None)
     write_participants(
-        fake_participant("fake-a", "Fake A", stream=False) + fake_participant("fake-b", "Fake B", stream=False)
+        fake_participant("fake-a", "Fake A", stream=False)
+        + fake_participant("fake-b", "Fake B", stream=False)
     )
 
     messages = run_discussion(client, "Q?", consensus_b("fake-a", "fake-b", max_rounds=2))
@@ -234,26 +299,39 @@ def test_judge_b_cannot_start_without_a_typesafe_key(client, write_participants,
     assert "TYPESAFE_API_KEY" in messages[0]["message"]
 
 
-def test_with_a_key_the_options_list_judge_b_as_available_without_sending_the_key(client, write_participants, env_file):
+def test_with_a_key_the_options_list_judge_b_as_available_without_sending_the_key(
+    client, write_participants, env_file
+):
     write_participants(fake_participant("fake-a", "Fake A") + fake_participant("fake-b", "Fake B"))
 
     response = client.get("/api/options")
 
     jev = {j["id"]: j for j in response.json()["judges"]}["jev"]
-    assert jev == {"id": "jev", "name": "Jev 判斷 + 反問確認", "available": True, "unavailable_reason": None}
+    assert jev == {
+        "id": "jev",
+        "name": "Jev 判斷 + 反問確認",
+        "available": True,
+        "unavailable_reason": None,
+    }
     assert KEY not in response.text
 
 
-def test_a_moderator_failing_the_final_result_hands_over_and_the_next_one_writes_it(client, write_participants, fake_jev):
+def test_a_moderator_failing_the_final_result_hands_over_and_the_next_one_writes_it(
+    client, write_participants, fake_jev
+):
     fake_jev(0.95)
     write_participants(
-        fake_participant("fake-a", "Fake A", stream=False, fail_rounds=[2], fail_purposes=["final_result"])
+        fake_participant(
+            "fake-a", "Fake A", stream=False, fail_rounds=[2], fail_purposes=["final_result"]
+        )
         + fake_participant("fake-b", "Fake B", stream=False, final="B's final result.")
     )
 
     messages = run_discussion(client, "Q?", consensus_b("fake-a", "fake-b"))
 
     assert calls(messages, "final_result") == [(2, "fake-a"), (2, "fake-b")]
-    assert [(c["round"], c["participant_id"]) for c in of_type(messages, "moderator_changed")] == [(2, "fake-b")]
+    assert [(c["round"], c["participant_id"]) for c in of_type(messages, "moderator_changed")] == [
+        (2, "fake-b")
+    ]
     assert messages[-1]["outcome"] == "consensus"
     assert messages[-1]["result"]["text"] == "B's final result."

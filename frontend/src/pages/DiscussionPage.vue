@@ -40,25 +40,37 @@ function stop() {
 
 // The router reuses this instance between `/` and `/discussions/:id`, so load whenever
 // the live view is shown, not only on mount.
-watch(() => props.id, async (id) => {
-  // Coming back to the live view after a discussion finished (it is in the history now):
-  // start from the settings again. A running discussion keeps showing while this page
-  // still holds its socket; one left behind (the page was left, closing the socket and
-  // cancelling it; it is in the history) can never update again, so start over too.
-  if (!id && (store.status === 'finished' || (store.status === 'running' && !socket))) store.reset()
-  if (id || participants.value.length) return
-  try {
-    ;[participants.value, options.value] = await Promise.all([fetchParticipants(), fetchOptions()])
-  } catch (err) {
-    loadError.value = err instanceof Error ? err.message : String(err)
-  }
-}, { immediate: true })
+watch(
+  () => props.id,
+  async (id) => {
+    // Coming back to the live view after a discussion finished (it is in the history now):
+    // start from the settings again. A running discussion keeps showing while this page
+    // still holds its socket; one left behind (the page was left, closing the socket and
+    // cancelling it; it is in the history) can never update again, so start over too.
+    if (!id && (store.status === 'finished' || (store.status === 'running' && !socket)))
+      store.reset()
+    if (id || participants.value.length) return
+    try {
+      ;[participants.value, options.value] = await Promise.all([
+        fetchParticipants(),
+        fetchOptions(),
+      ])
+    } catch (err) {
+      loadError.value = err instanceof Error ? err.message : String(err)
+    }
+  },
+  { immediate: true },
+)
 
 onBeforeUnmount(() => socket?.close())
 
 // `fromDiscussionId`: 提問轉共識討論 (ticket 10); the backend takes the question and
 // participants from that ask.
-function startDiscussion(question: string, settings: StartSettings, fromDiscussionId: string | null = null) {
+function startDiscussion(
+  question: string,
+  settings: StartSettings,
+  fromDiscussionId: string | null = null,
+) {
   socket?.close()
   store.reset()
   connectionLost.value = false
@@ -82,7 +94,14 @@ function startDiscussion(question: string, settings: StartSettings, fromDiscussi
     <div v-show="store.status === 'idle'" class="setup">
       <h1 class="page-title">新討論</h1>
       <p v-if="loadError" class="error-bar">{{ loadError }}</p>
-      <p v-for="(message, i) in store.status === 'idle' ? store.errors : []" :key="i" class="error-bar" data-testid="discussion-error">{{ message }}</p>
+      <p
+        v-for="(message, i) in store.status === 'idle' ? store.errors : []"
+        :key="i"
+        class="error-bar"
+        data-testid="discussion-error"
+      >
+        {{ message }}
+      </p>
       <SettingsPanel
         :participants="participants"
         :options="options"
@@ -94,13 +113,21 @@ function startDiscussion(question: string, settings: StartSettings, fromDiscussi
     <div v-if="store.status !== 'idle'" class="discussion">
       <div class="stage">
         <header class="topbar">
-          <h1 class="question" data-testid="discussion-question" :title="store.question">{{ store.question }}</h1>
+          <h1 class="question" data-testid="discussion-question" :title="store.question">
+            {{ store.question }}
+          </h1>
           <span class="pill" :class="{ 'pill-accent': store.status === 'running' }">
             <span v-if="store.status === 'running'" aria-hidden="true">●</span>
             <span data-testid="discussion-status">{{ statusLabel }}</span>
-            <span v-if="store.status === 'running' && currentRound && store.settings?.mode !== 'ask'"> · 第 {{ currentRound }} 輪</span>
+            <span
+              v-if="store.status === 'running' && currentRound && store.settings?.mode !== 'ask'"
+            >
+              · 第 {{ currentRound }} 輪</span
+            >
           </span>
-          <span v-if="store.outcome" class="pill" :class="outcomePillClass(store.outcome)">{{ outcomeLabel(store.outcome) }}</span>
+          <span v-if="store.outcome" class="pill" :class="outcomePillClass(store.outcome)">{{
+            outcomeLabel(store.outcome)
+          }}</span>
           <button
             v-if="store.status === 'running' && !store.readOnly"
             type="button"
@@ -119,10 +146,21 @@ function startDiscussion(question: string, settings: StartSettings, fromDiscussi
           />
         </header>
 
-        <p v-for="(message, i) in store.errors" :key="i" class="error-bar" data-testid="discussion-error">{{ message }}</p>
+        <p
+          v-for="(message, i) in store.errors"
+          :key="i"
+          class="error-bar"
+          data-testid="discussion-error"
+        >
+          {{ message }}
+        </p>
         <p v-if="connectionLost" class="error-bar">與後端的連線中斷</p>
 
-        <DiscussionOutcome :outcome="store.outcome" :result="store.result" :reason="store.finishReason" />
+        <DiscussionOutcome
+          :outcome="store.outcome"
+          :result="store.result"
+          :reason="store.finishReason"
+        />
         <RoundSection
           v-for="round in store.rounds"
           :key="round.number"

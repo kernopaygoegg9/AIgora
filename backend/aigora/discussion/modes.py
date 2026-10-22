@@ -92,7 +92,9 @@ class ConsensusMode(DiscussionMode):
                 "it and to the other participants: say what you accept and what should change."
             ]
         else:
-            parts = ["There is no consensus draft for this round. Continue the discussion and respond to the others."]
+            parts = [
+                "There is no consensus draft for this round. Continue the discussion and respond to the others."
+            ]
         parts.append(STANCE_FORMAT)
         if view.pending_disagreements:
             parts.append(self._disagreements_note(view, view.pending_disagreements))
@@ -121,18 +123,27 @@ class ConsensusMode(DiscussionMode):
                 return Finish(
                     outcome="consensus",
                     result=DiscussionResult(kind="consensus", text=draft),
-                    judge_report=JudgeReport(judge=judge.id, outcome="reached", detail=evaluation.detail),
+                    judge_report=JudgeReport(
+                        judge=judge.id, outcome="reached", detail=evaluation.detail
+                    ),
                 )
             if isinstance(evaluation, NeedsConfirmation):
                 return ExtraCalls(
-                    calls=[ExtraCall(pid, "confirmation", evaluation.question) for pid in view.active_participant_ids],
-                    judge_report=JudgeReport(judge=judge.id, outcome="confirm", detail=evaluation.detail),
+                    calls=[
+                        ExtraCall(pid, "confirmation", evaluation.question)
+                        for pid in view.active_participant_ids
+                    ],
+                    judge_report=JudgeReport(
+                        judge=judge.id, outcome="confirm", detail=evaluation.detail
+                    ),
                 )
             assert isinstance(evaluation, NotReached)
             report = JudgeReport(judge=judge.id, outcome="not_reached", detail=evaluation.detail)
         return ExtraCalls(calls=[self._moderator_call(view)], judge_report=report)
 
-    def _moderator_call(self, view: DiscussionView, disagreements: Mapping[str, str] | None = None) -> ExtraCall:
+    def _moderator_call(
+        self, view: DiscussionView, disagreements: Mapping[str, str] | None = None
+    ) -> ExtraCall:
         """Not reached: the next draft, or at the round limit the final positions.
 
         `disagreements`: this round's confirmation reasons (judge B), for the draft."""
@@ -151,7 +162,9 @@ class ConsensusMode(DiscussionMode):
         # (round, purpose) -> participants who already tried that moderator call.
         self._tried: dict[tuple[int, str], set[str]] = {}
 
-    async def _after_extra_calls(self, view: DiscussionView, results: Sequence[ExtraCallResult]) -> Decision:
+    async def _after_extra_calls(
+        self, view: DiscussionView, results: Sequence[ExtraCallResult]
+    ) -> Decision:
         assert view.current_round is not None
         if results[0].call.purpose == "confirmation":
             return await self._after_confirmations(view, results)
@@ -161,11 +174,20 @@ class ConsensusMode(DiscussionMode):
         # A failed moderator call hands over to the next participant (the engine records
         # it); the new moderator retries the call once, unless it has already tried.
         moderator_call = result.call.purpose in ("draft", "final_result", "no_consensus_summary")
-        if moderator_call and result.status != "ok" and view.moderator_id is not None and view.moderator_id not in tried:
-            return ExtraCalls(calls=[ExtraCall(view.moderator_id, result.call.purpose, result.call.instructions)])
+        if (
+            moderator_call
+            and result.status != "ok"
+            and view.moderator_id is not None
+            and view.moderator_id not in tried
+        ):
+            return ExtraCalls(
+                calls=[ExtraCall(view.moderator_id, result.call.purpose, result.call.instructions)]
+            )
         if result.call.purpose == "final_result":
             if result.status == "ok":
-                return Finish(outcome="consensus", result=DiscussionResult(kind="consensus", text=result.text))
+                return Finish(
+                    outcome="consensus", result=DiscussionResult(kind="consensus", text=result.text)
+                )
             draft = view.rounds[-2].draft if len(view.rounds) >= 2 else None
             return Finish(
                 outcome="consensus",
@@ -178,12 +200,16 @@ class ConsensusMode(DiscussionMode):
                 reason += f"；主持人未能寫出最終立場與分歧點：{result.error or result.status}"
             return Finish(
                 outcome="no_consensus",
-                result=DiscussionResult(kind="no_consensus", text=result.text if result.status == "ok" else None),
+                result=DiscussionResult(
+                    kind="no_consensus", text=result.text if result.status == "ok" else None
+                ),
                 reason=reason,
             )
         return ContinueRound()
 
-    async def _after_confirmations(self, view: DiscussionView, results: Sequence[ExtraCallResult]) -> Decision:
+    async def _after_confirmations(
+        self, view: DiscussionView, results: Sequence[ExtraCallResult]
+    ) -> Decision:
         judge = get_judge(view.settings.judge)
         answers = [_confirmation_answer(r) for r in results]
         verdict = await judge.handle_confirmation(view, answers)
@@ -207,7 +233,10 @@ class ConsensusMode(DiscussionMode):
 
     @staticmethod
     def _disagreements_note(view: DiscussionView, disagreements: Mapping[str, str]) -> str:
-        lines = [f"- {view.participant_names.get(pid, pid)}: {reason}" for pid, reason in disagreements.items()]
+        lines = [
+            f"- {view.participant_names.get(pid, pid)}: {reason}"
+            for pid, reason in disagreements.items()
+        ]
         return (
             "When asked whether consensus had been reached, these participants did not agree. "
             "Address their reasons:\n" + "\n".join(lines)
@@ -243,7 +272,8 @@ def _confirmation_answer(result: ExtraCallResult) -> ConfirmationAnswer:
     """A confirmation call -> agree only with an ok reply ending in `STANCE: AGREE`."""
     if result.status != "ok":
         return ConfirmationAnswer(
-            participant_id=result.call.participant_id, agree=False,
+            participant_id=result.call.participant_id,
+            agree=False,
             reason=f"反問失敗：{result.error or result.status}",
         )
     reason = strip_stance_line(result.text or "")

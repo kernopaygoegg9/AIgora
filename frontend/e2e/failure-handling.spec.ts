@@ -6,7 +6,9 @@ import { expect, test } from '@playwright/test'
 const round = (page: import('@playwright/test').Page, n: number) =>
   page.locator(`[data-testid="round"][data-round="${n}"]`)
 
-test('a failing participant is marked failed, then removed, and the moderator hands over', async ({ page }) => {
+test('a failing participant is marked failed, then removed, and the moderator hands over', async ({
+  page,
+}) => {
   await page.goto('/')
 
   await page.getByRole('radio', { name: '共識討論' }).check()
@@ -18,14 +20,18 @@ test('a failing participant is marked failed, then removed, and the moderator ha
   await page.getByRole('button', { name: '開始討論' }).click()
 
   // Round 1: the failed turn shows its status and reason; the others answer normally.
-  const flaky1 = round(page, 1).locator('[data-testid="turn-card"][data-participant-id="fake-flaky"]')
+  const flaky1 = round(page, 1).locator(
+    '[data-testid="turn-card"][data-participant-id="fake-flaky"]',
+  )
   await expect(flaky1.getByTestId('turn-status')).toHaveText('失敗')
   await expect(flaky1.getByTestId('turn-failure')).toHaveText('fake: simulated crash')
   const a1 = round(page, 1).locator('[data-testid="turn-card"][data-participant-id="fake-a"]')
   await expect(a1.getByTestId('turn-status')).toHaveText('完成')
   await expect(round(page, 1).getByTestId('participant-removed')).toHaveCount(0)
   // The moderator's turn failed, so the moderator role moves on at once (wrapping to Fake A).
-  await expect(round(page, 1).getByTestId('moderator-changed')).toContainText('改由 Fake A 擔任主持人')
+  await expect(round(page, 1).getByTestId('moderator-changed')).toContainText(
+    '改由 Fake A 擔任主持人',
+  )
 
   // Round 2: second failure in a row -> removed; the moderator does not change again.
   const removed = round(page, 2).getByTestId('participant-removed')
@@ -34,7 +40,8 @@ test('a failing participant is marked failed, then removed, and the moderator ha
   await expect(round(page, 2).getByTestId('moderator-changed')).toHaveCount(0)
 
   // The inspector (ui-redesign 05): Fake Flaky is marked removed, Fake A is now the moderator.
-  const seat = (id: string) => page.locator(`[data-testid="inspector-participant"][data-participant-id="${id}"]`)
+  const seat = (id: string) =>
+    page.locator(`[data-testid="inspector-participant"][data-participant-id="${id}"]`)
   await expect(seat('fake-flaky')).toContainText('已移出')
   await expect(seat('fake-a').getByTestId('inspector-moderator')).toBeVisible()
   await expect(seat('fake-flaky').getByTestId('inspector-moderator')).toHaveCount(0)
