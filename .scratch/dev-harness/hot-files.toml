@@ -1,0 +1,25 @@
+# 熱點檔案 → 可以改它的 ticket。"*" = 所有 ticket 皆可改。
+# 不在表中的檔案不受限制。格式說明見 docs/agents/issue-tracker.md（ticket 07）。
+
+[files]
+"frontend/package.json" = ["01", "06"]   # 06 只改 check / check:fast 兩行
+"frontend/package-lock.json" = ["01"]
+"backend/pyproject.toml" = ["01"]
+"backend/uv.lock" = ["01"]
+"frontend/eslint.config.*" = ["01"]
+"frontend/.prettierrc*" = ["01"]
+".github/workflows/**" = ["02"]
+"backend/tests/real_adapter.py" = ["03"]
+"backend/tests/test_*_real.py" = ["03"]
+"backend/tests/test_*_adapter_real.py" = ["03"]
+"frontend/playwright.config.ts" = ["04"]
+"frontend/vite.config.ts" = ["04"]
+"backend/tests/conftest.py" = ["05"]
+"backend/tests/fake_*_cli.py" = ["05"]
+"scripts/check_glossary.py" = ["06"]
+"scripts/check_hot_files.py" = ["07"]
+"scripts/merge-ticket.sh" = ["08"]
+"AGENTS.md" = "*"
+"docs/architecture/testing.md" = ["04", "05"]
+"docs/architecture/adapters.md" = ["03"]
+"docs/agents/issue-tracker.md" = ["07"]
