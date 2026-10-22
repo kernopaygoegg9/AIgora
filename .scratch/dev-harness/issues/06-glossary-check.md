@@ -12,9 +12,13 @@
 
 **Blocked by:** 01
 
-**Status:** claimed
+**Status:** resolved
 
-- [ ] 測試涵蓋：template 文字命中、字串常值命中、註解不命中、識別字不命中、「討論模式」中的「模式」不命中、`glossary-ignore` 略過、括號說明被去掉
-- [ ] 違規輸出格式為 `檔案:行: 用詞「X」，請改用「Y」`，結束碼非零
-- [ ] 把 v1 的「現有的回答當作第 1 輪」暫時放回某個元件，`check:fast` 會失敗（驗證後還原）
-- [ ] `npm run check --prefix frontend` 在目前的程式碼上通過
+- [x] 測試涵蓋：template 文字命中、字串常值命中、註解不命中、識別字不命中、「討論模式」中的「模式」不命中、`glossary-ignore` 略過、括號說明被去掉
+- [x] 違規輸出格式為 `檔案:行: 用詞「X」，請改用「Y」`，結束碼非零
+- [x] 把 v1 的「現有的回答當作第 1 輪」暫時放回某個元件，`check:fast` 會失敗（驗證後還原）
+- [x] `npm run check --prefix frontend` 在目前的程式碼上通過
+
+## Comments
+
+- 2026-10-22 merged (`check:fast` green, no current violations). Skips non-visible attributes (class, id, href, `data-*`, event handlers…). Follow-up: `scripts/` is outside ruff scope.
