@@ -11,7 +11,7 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 - [ ] 用 `act` 或對 workflow 檔做靜態檢查（如 `actionlint`，若本機沒有就以 YAML 語法檢查加人工核對步驟）確認 workflow 可解析
 - [ ] workflow 只在 `pull_request` 與 `push` 到 `master` 觸發
