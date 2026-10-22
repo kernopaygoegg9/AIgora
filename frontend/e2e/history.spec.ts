@@ -45,7 +45,13 @@ test('a finished ask can be found in the history and opened read-only', async ({
 
 test('a discussion still in progress is listed as 進行中', async ({ page }) => {
   const summaries: DiscussionSummary[] = [
-    { id: '29990101-000000-aaaaaa', question: 'Still going', mode: 'consensus', created_at: '2999-01-01T00:00:00.000+00:00', outcome: null },
+    {
+      id: '29990101-000000-aaaaaa',
+      question: 'Still going',
+      mode: 'consensus',
+      created_at: '2999-01-01T00:00:00.000+00:00',
+      outcome: null,
+    },
   ]
   await page.route('**/api/discussions', (route) => route.fulfill({ json: summaries }))
   await page.goto('/history')
@@ -63,7 +69,11 @@ const snapshot = (id: string, name: string) => ({
   capabilities: { web_access: true, streaming: true },
 })
 
-const turn = (participant_id: string, text: string, extra: Partial<DiscussionRecord['rounds'][0]['turns'][0]> = {}) => ({
+const turn = (
+  participant_id: string,
+  text: string,
+  extra: Partial<DiscussionRecord['rounds'][0]['turns'][0]> = {},
+) => ({
   participant_id,
   status: 'ok' as const,
   text,
@@ -95,7 +105,11 @@ const fullRecord: DiscussionRecord = {
   rounds: [
     {
       number: 1,
-      turns: [turn('a', 'Vim is best.'), turn('b', 'Emacs is best.'), turn('c', '', { status: 'timeout', text: null, error: 'timed out after 300 s' })],
+      turns: [
+        turn('a', 'Vim is best.'),
+        turn('b', 'Emacs is best.'),
+        turn('c', '', { status: 'timeout', text: null, error: 'timed out after 300 s' }),
+      ],
       draft: 'Draft one: both are fine.',
       judge: null,
       confirmations: null,
@@ -107,7 +121,11 @@ const fullRecord: DiscussionRecord = {
         turn('c', '', { status: 'failed', text: null, error: 'crashed' }),
       ],
       draft: 'Draft two: pick what you like.',
-      judge: { judge: 'jev', outcome: 'not_reached', detail: { probability: 0.91, threshold: 0.8 } },
+      judge: {
+        judge: 'jev',
+        outcome: 'not_reached',
+        detail: { probability: 0.91, threshold: 0.8 },
+      },
       judge_history: [
         { judge: 'jev', outcome: 'confirm', detail: { probability: 0.91, threshold: 0.8 } },
         { judge: 'jev', outcome: 'not_reached', detail: { probability: 0.91, threshold: 0.8 } },
@@ -118,11 +136,21 @@ const fullRecord: DiscussionRecord = {
       number: 3,
       turns: [turn('b', 'Agreed.', { stance: 'AGREE' })],
       draft: null,
-      judge: { judge: 'stance_vote', outcome: 'reached', detail: { stances: { b: 'AGREE', a: null } } },
+      judge: {
+        judge: 'stance_vote',
+        outcome: 'reached',
+        detail: { stances: { b: 'AGREE', a: null } },
+      },
       confirmations: null,
     },
   ],
-  interjections: [{ text: 'Please consider VS Code too', at: '2026-10-20T10:01:00.000+00:00', applies_to_round: 2 }],
+  interjections: [
+    {
+      text: 'Please consider VS Code too',
+      at: '2026-10-20T10:01:00.000+00:00',
+      applies_to_round: 2,
+    },
+  ],
   removed_participants: [{ participant_id: 'c', round: 2, reason: '連續 2 輪發言失敗' }],
   moderator_changes: [{ round: 3, participant_id: 'b' }],
   outcome: 'consensus',
@@ -130,25 +158,42 @@ const fullRecord: DiscussionRecord = {
 }
 
 test('the read-only view shows every part of a record', async ({ page }) => {
-  await page.route(`**/api/discussions/${fullRecord.id}`, (route) => route.fulfill({ json: fullRecord }))
+  await page.route(`**/api/discussions/${fullRecord.id}`, (route) =>
+    route.fulfill({ json: fullRecord }),
+  )
   await page.goto(`/discussions/${fullRecord.id}`)
 
   const view = page.getByTestId('record-view')
   await expect(view.getByTestId('record-question')).toHaveText('Which editor?')
   await expect(view.getByTestId('record-outcome')).toHaveText('取得共識')
   await expect(view.getByTestId('record-meta')).toContainText('共識討論')
-  await expect(view.getByTestId('record-derived-from')).toHaveAttribute('href', '/discussions/20261020-090000-123456')
+  await expect(view.getByTestId('record-derived-from')).toHaveAttribute(
+    'href',
+    '/discussions/20261020-090000-123456',
+  )
 
   const round = (n: number) => view.locator(`[data-testid="record-round"][data-round="${n}"]`)
   await expect(view.getByTestId('record-round')).toHaveCount(3)
-  await expect(round(1).getByTestId('turn-card').filter({ hasText: 'Alpha' })).toContainText('Vim is best.')
-  await expect(round(1).getByTestId('turn-card').filter({ hasText: 'Gamma' }).getByTestId('turn-status')).toHaveText('逾時')
-  await expect(round(1).getByTestId('turn-card').filter({ hasText: 'Gamma' })).toContainText('timed out after 300 s')
+  await expect(round(1).getByTestId('turn-card').filter({ hasText: 'Alpha' })).toContainText(
+    'Vim is best.',
+  )
+  await expect(
+    round(1).getByTestId('turn-card').filter({ hasText: 'Gamma' }).getByTestId('turn-status'),
+  ).toHaveText('逾時')
+  await expect(round(1).getByTestId('turn-card').filter({ hasText: 'Gamma' })).toContainText(
+    'timed out after 300 s',
+  )
   await expect(round(1).getByTestId('record-draft')).toContainText('Draft one: both are fine.')
 
-  await expect(round(2).getByTestId('record-interjection')).toContainText('Please consider VS Code too')
-  await expect(round(2).getByTestId('turn-card').filter({ hasText: 'Gamma' }).getByTestId('turn-status')).toHaveText('失敗')
-  await expect(round(2).getByTestId('record-turn').filter({ hasText: 'Beta' }).getByTestId('record-stance')).toHaveText('同意')
+  await expect(round(2).getByTestId('record-interjection')).toContainText(
+    'Please consider VS Code too',
+  )
+  await expect(
+    round(2).getByTestId('turn-card').filter({ hasText: 'Gamma' }).getByTestId('turn-status'),
+  ).toHaveText('失敗')
+  await expect(
+    round(2).getByTestId('record-turn').filter({ hasText: 'Beta' }).getByTestId('record-stance'),
+  ).toHaveText('同意')
   // Judge B: the `confirm` verdict (Jev passed the threshold), then the final one.
   await expect(round(2).getByTestId('record-judge')).toHaveCount(2)
   await expect(round(2).getByTestId('record-judge').first()).toContainText('達到門檻，需要反問確認')
@@ -169,7 +214,9 @@ test('the read-only view shows every part of a record', async ({ page }) => {
 })
 
 test('the record names the speaking order as the backend does, or by its id', async ({ page }) => {
-  await page.route(`**/api/discussions/${fullRecord.id}`, (route) => route.fulfill({ json: fullRecord }))
+  await page.route(`**/api/discussions/${fullRecord.id}`, (route) =>
+    route.fulfill({ json: fullRecord }),
+  )
   await page.route('**/api/options', async (route) => {
     const options = await (await route.fetch()).json()
     options.speaking_orders = [{ id: 'parallel', name: '大家一起說', implemented: true }]

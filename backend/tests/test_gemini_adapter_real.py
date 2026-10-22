@@ -32,7 +32,9 @@ async def adapter():
 
 
 async def run(adapter, workspace: Path, prompt: str) -> tuple[list, str]:
-    request = TurnRequest(participant=PARTICIPANT, prompt=prompt, workspace=workspace, timeout_seconds=240)
+    request = TurnRequest(
+        participant=PARTICIPANT, prompt=prompt, workspace=workspace, timeout_seconds=240
+    )
     events = [e async for e in adapter.run_turn(request)]
     streamed = "".join(e.text for e in events if isinstance(e, Delta))
     return events, streamed

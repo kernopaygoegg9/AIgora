@@ -69,10 +69,14 @@ def exec_args(request: TurnRequest) -> list[str]:
         "--skip-git-repo-check",
         "--ignore-user-config",
         "--ignore-rules",
-        "--sandbox", "read-only",
-        "--cd", str(request.workspace),
-        "-c", 'web_search="live"',
-        "--color", "never",
+        "--sandbox",
+        "read-only",
+        "--cd",
+        str(request.workspace),
+        "-c",
+        'web_search="live"',
+        "--color",
+        "never",
     ]
     for feature in DISABLED_FEATURES:
         args += ["--disable", feature]
@@ -105,7 +109,9 @@ class _Turn:
             return self._item(event.get("item") or {})
         if kind == "turn.failed":
             error = event.get("error") or {}
-            self.error = str(error.get("message") or error) if isinstance(error, dict) else str(error)
+            self.error = (
+                str(error.get("message") or error) if isinstance(error, dict) else str(error)
+            )
         elif kind == "error":
             self.error = str(event.get("message") or "")
         return []
@@ -120,17 +126,37 @@ class _Turn:
         self._messages[item_id] = new
         if not new.startswith(old):
             return []  # the CLI rewrote the message; only `Completed` carries the fixed text
-        added = new[len(old):]
+        added = new[len(old) :]
         if not added:
             return []
-        if is_new_item and len(self._messages) > 1 and any(self._messages[k] for k in list(self._messages)[:-1]):
+        if (
+            is_new_item
+            and len(self._messages) > 1
+            and any(self._messages[k] for k in list(self._messages)[:-1])
+        ):
             added = "\n\n" + added
         return [Delta(added)]
 
 
-_AUTH_MARKERS = ("not logged in", "unauthorized", "401", "codex login", "please log in", "login required",
-                 "refresh token", "token expired", "authentication")
-_QUOTA_MARKERS = ("usage limit", "rate limit", "quota", "429", "too many requests", "insufficient_quota")
+_AUTH_MARKERS = (
+    "not logged in",
+    "unauthorized",
+    "401",
+    "codex login",
+    "please log in",
+    "login required",
+    "refresh token",
+    "token expired",
+    "authentication",
+)
+_QUOTA_MARKERS = (
+    "usage limit",
+    "rate limit",
+    "quota",
+    "429",
+    "too many requests",
+    "insufficient_quota",
+)
 
 
 def classify(message: str) -> FailureKind | None:
@@ -146,10 +172,14 @@ def _catalog_models(raw: bytes) -> tuple[ModelOption, ...] | None:
     """`{"models": [...]}` -> the `visibility == "list"` models by `priority`; None if unreadable."""
     try:
         entries = json.loads(raw.decode("utf-8", errors="replace"))["models"]
-        listed = [m for m in entries if m.get("visibility") == "list" and isinstance(m.get("slug"), str)]
+        listed = [
+            m for m in entries if m.get("visibility") == "list" and isinstance(m.get("slug"), str)
+        ]
     except (ValueError, KeyError, TypeError, AttributeError):
         return None
-    listed.sort(key=lambda m: m["priority"] if isinstance(m.get("priority"), (int, float)) else float("inf"))
+    listed.sort(
+        key=lambda m: m["priority"] if isinstance(m.get("priority"), (int, float)) else float("inf")
+    )
     return tuple(ModelOption(m["slug"], str(m.get("display_name") or m["slug"])) for m in listed)
 
 
@@ -183,7 +213,9 @@ class CodexAdapter(Adapter):
         except OSError as exc:
             return Availability(False, f"could not start codex CLI: {exc}")
         try:
-            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=_STATUS_TIMEOUT_SECONDS)
+            stdout, stderr = await asyncio.wait_for(
+                process.communicate(), timeout=_STATUS_TIMEOUT_SECONDS
+            )
         except asyncio.TimeoutError:
             return Availability(False, "codex login status did not answer in time")
         finally:
@@ -208,23 +240,35 @@ class CodexAdapter(Adapter):
         except OSError as exc:
             return ModelChoices(free_text=True, error=f"could not start codex CLI: {exc}")
         try:
-            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=_MODELS_TIMEOUT_SECONDS)
+            stdout, stderr = await asyncio.wait_for(
+                process.communicate(), timeout=_MODELS_TIMEOUT_SECONDS
+            )
         except asyncio.TimeoutError:
-            return ModelChoices(free_text=True, error=f"codex debug models did not answer in {_MODELS_TIMEOUT_SECONDS} s")
+            return ModelChoices(
+                free_text=True,
+                error=f"codex debug models did not answer in {_MODELS_TIMEOUT_SECONDS} s",
+            )
         finally:
             await kill_tree(process)
         if process.returncode != 0:
-            detail = stderr.decode("utf-8", errors="replace").strip()[-300:] or f"exit code {process.returncode}"
+            detail = (
+                stderr.decode("utf-8", errors="replace").strip()[-300:]
+                or f"exit code {process.returncode}"
+            )
             return ModelChoices(free_text=True, error=f"codex debug models failed: {detail}")
         models = _catalog_models(stdout)
         if models is None:
-            return ModelChoices(free_text=True, error="codex debug models printed an unreadable model catalog")
+            return ModelChoices(
+                free_text=True, error="codex debug models printed an unreadable model catalog"
+            )
         return ModelChoices(models=models, free_text=True)
 
-    async def _spawn(self, executable: list[str], args: list[str], cwd: str | None,
-                     stdin: bool) -> asyncio.subprocess.Process:
+    async def _spawn(
+        self, executable: list[str], args: list[str], cwd: str | None, stdin: bool
+    ) -> asyncio.subprocess.Process:
         return await asyncio.create_subprocess_exec(
-            *executable, *args,
+            *executable,
+            *args,
             cwd=cwd,
             stdin=subprocess.PIPE if stdin else subprocess.DEVNULL,
             stdout=subprocess.PIPE,
@@ -238,7 +282,9 @@ class CodexAdapter(Adapter):
             yield Failed("not_available", "codex CLI not found on PATH")
             return
         try:
-            process = await self._spawn(executable, exec_args(request), str(request.workspace), stdin=True)
+            process = await self._spawn(
+                executable, exec_args(request), str(request.workspace), stdin=True
+            )
         except OSError as exc:
             yield Failed("not_available", f"could not start codex CLI: {exc}")
             return

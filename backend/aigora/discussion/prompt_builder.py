@@ -31,7 +31,9 @@ def build_prompt(view: DiscussionView, participant_id: str, instructions: str | 
 
 def _system_prompt(view: DiscussionView, participant_id: str) -> str:
     me = view.participant_names.get(participant_id, participant_id)
-    others = [view.participant_names[pid] for pid in view.active_participant_ids if pid != participant_id]
+    others = [
+        view.participant_names[pid] for pid in view.active_participant_ids if pid != participant_id
+    ]
     who = (
         f"You are {me}, discussing the user's question with: {', '.join(others)}."
         if others
@@ -66,8 +68,12 @@ def _round_lines(view: DiscussionView, round_: RoundView) -> list[str]:
         if turn.status == "ok" and turn.text:
             lines.append(f"### Round {round_.number} - {name}\n\n{turn.text}")
         else:
-            lines.append(f"### Round {round_.number} - {name}\n\n(no reply: {turn.error or turn.status})")
+            lines.append(
+                f"### Round {round_.number} - {name}\n\n(no reply: {turn.error or turn.status})"
+            )
     if round_.draft:
         moderator = view.participant_names.get(view.moderator_id or "", "the moderator")
-        lines.append(f"### Consensus draft after round {round_.number} (by {moderator})\n\n{round_.draft}")
+        lines.append(
+            f"### Consensus draft after round {round_.number} (by {moderator})\n\n{round_.draft}"
+        )
     return lines

@@ -118,7 +118,9 @@ class DiscussionEngine:
         *,
         question: str,
         settings: m.DiscussionSettings,
-        participants: Sequence[ParticipantConfig],  # the discussion's participants, in settings order
+        participants: Sequence[
+            ParticipantConfig
+        ],  # the discussion's participants, in settings order
         mode: DiscussionMode,
         order: SpeakingOrder,
         store: DiscussionStore,
@@ -141,7 +143,9 @@ class DiscussionEngine:
         self._main: asyncio.Task[DiscussionRecord] | None = None
         self._stop_requested = False
         self._cancelled_calls: list[_CancelledCall] = []
-        self._schedule_order: dict[int, list[str]] = {}  # round -> participant ids in scheduled order
+        self._schedule_order: dict[
+            int, list[str]
+        ] = {}  # round -> participant ids in scheduled order
         self._first_round = first_round
         self.record = DiscussionRecord(
             id=discussion_id or new_discussion_id(),
@@ -180,7 +184,9 @@ class DiscussionEngine:
             return self.record
         except Exception as exc:  # noqa: BLE001 - reported to the user, saved in the record
             log.exception("discussion %s crashed", self.discussion_id)
-            await self._finish(Finish(outcome="error", result=None, reason=f"討論發生錯誤：{exc!r}"))
+            await self._finish(
+                Finish(outcome="error", result=None, reason=f"討論發生錯誤：{exc!r}")
+            )
             return self.record
 
     async def stop(self) -> None:
@@ -287,7 +293,9 @@ class DiscussionEngine:
         async def turn(pid: str, view: DiscussionView) -> None:
             # Kept as soon as it ends, so a stop mid-round keeps the finished turns.
             round_.turns.append(
-                await self._run_call(pid, number, "turn", self.mode.round_instructions(view, pid), view)
+                await self._run_call(
+                    pid, number, "turn", self.mode.round_instructions(view, pid), view
+                )
             )
 
         for batch in self.order.schedule(self.active_participant_ids(), number):
@@ -310,7 +318,9 @@ class DiscussionEngine:
             if turn.status == "ok":
                 await self._emit(m.TurnCompleted, **ids, text=turn.text or "", stance=turn.stance)
             else:
-                await self._emit(m.TurnFailed, **ids, reason=turn.error or "發言失敗", kind=_kind_of(turn.status))
+                await self._emit(
+                    m.TurnFailed, **ids, reason=turn.error or "發言失敗", kind=_kind_of(turn.status)
+                )
 
     async def _remove_failing(self, number: int) -> None:
         """Remove every active participant whose turns failed in this round and the one before."""
@@ -323,7 +333,9 @@ class DiscussionEngine:
                 continue
             last_error = turns[0].error if turns[0] is not None else None
             reason = f"連續 {FAILED_ROUNDS_TO_REMOVE} 輪發言失敗（最後一次：{last_error or '未知原因'}），已移出討論"
-            self.record.removed_participants.append(RecordRemoval(participant_id=pid, round=number, reason=reason))
+            self.record.removed_participants.append(
+                RecordRemoval(participant_id=pid, round=number, reason=reason)
+            )
             await self._emit(m.ParticipantRemoved, participant_id=pid, reason=reason, round=number)
             if pid == self.moderator_id():
                 await self._hand_over_moderator(number)
@@ -343,23 +355,32 @@ class DiscussionEngine:
         ids = list(self.settings.participant_ids)
         active = set(self.active_participant_ids()) - {current}
         start = ids.index(current) if current in ids else -1
-        after = ids[start + 1:] + ids[: start + 1]  # the list wraps around
+        after = ids[start + 1 :] + ids[: start + 1]  # the list wraps around
         successor = next((pid for pid in after if pid in active), None)
         if successor is None:
             return
-        self.record.moderator_changes.append(RecordModeratorChange(round=number, participant_id=successor))
+        self.record.moderator_changes.append(
+            RecordModeratorChange(round=number, participant_id=successor)
+        )
         await self._emit(m.ModeratorChanged, participant_id=successor, round=number)
 
     def _sort_turns(self, round_: RecordRound) -> None:
         """Record a round's turns in speaking order, not in the order they finished."""
         order = self._schedule_order.get(round_.number, [])
-        round_.turns.sort(key=lambda t: order.index(t.participant_id) if t.participant_id in order else len(order))
+        round_.turns.sort(
+            key=lambda t: order.index(t.participant_id) if t.participant_id in order else len(order)
+        )
 
-    async def _run_extra_calls(self, number: int, calls: Sequence[ExtraCall]) -> list[ExtraCallResult]:
+    async def _run_extra_calls(
+        self, number: int, calls: Sequence[ExtraCall]
+    ) -> list[ExtraCallResult]:
         """Run the mode's extra calls in parallel; a finished `draft` call becomes the round's draft."""
         view = self.view()
         turns = await asyncio.gather(
-            *(self._run_call(c.participant_id, number, c.purpose, c.instructions, view) for c in calls)
+            *(
+                self._run_call(c.participant_id, number, c.purpose, c.instructions, view)
+                for c in calls
+            )
         )
         round_ = self.record.rounds[-1]
         results: list[ExtraCallResult] = []
@@ -367,14 +388,26 @@ class DiscussionEngine:
             if call.purpose == "draft" and turn.status == "ok" and turn.text:
                 round_.draft = turn.text
                 await self._emit(m.DraftCreated, round=number, text=turn.text)
-            if turn.status != "ok" and call.purpose in MODERATOR_PURPOSES and call.participant_id == self.moderator_id():
+            if (
+                turn.status != "ok"
+                and call.purpose in MODERATOR_PURPOSES
+                and call.participant_id == self.moderator_id()
+            ):
                 await self._hand_over_moderator(number)
             results.append(
-                ExtraCallResult(call=call, status=turn.status, text=turn.text, stance=turn.stance, error=turn.error)
+                ExtraCallResult(
+                    call=call,
+                    status=turn.status,
+                    text=turn.text,
+                    stance=turn.stance,
+                    error=turn.error,
+                )
             )
         return results
 
-    async def _apply_reports(self, number: int, decision: ContinueRound | ExtraCalls | Finish) -> None:
+    async def _apply_reports(
+        self, number: int, decision: ContinueRound | ExtraCalls | Finish
+    ) -> None:
         """Store and emit the confirmation / judge reports a decision carries.
 
         Confirmation answers come first: judge B's verdict after a confirmation is based
@@ -390,7 +423,9 @@ class DiscussionEngine:
             r = decision.judge_report
             round_.judge = RecordJudge(judge=r.judge, outcome=r.outcome, detail=r.detail)
             round_.judge_history.append(round_.judge)
-            await self._emit(m.JudgeResult, round=number, judge=r.judge, outcome=r.outcome, detail=r.detail)
+            await self._emit(
+                m.JudgeResult, round=number, judge=r.judge, outcome=r.outcome, detail=r.detail
+            )
 
     async def _complete_round(self, number: int) -> None:
         self.store.save(self.record)
@@ -403,7 +438,10 @@ class DiscussionEngine:
         self.record.finished_at = now_iso()
         self.store.save(self.record)
         await self._emit(
-            m.DiscussionFinished, outcome=decision.outcome, result=decision.result, reason=decision.reason
+            m.DiscussionFinished,
+            outcome=decision.outcome,
+            result=decision.result,
+            reason=decision.reason,
         )
 
     async def _run_call(
@@ -422,10 +460,14 @@ class DiscussionEngine:
         try:
             await self._emit(m.TurnStarted, **ids)
             prompt = build_prompt(view, participant_id, instructions)
-            text, failure = await self._call_adapter(participant, prompt, round_number, purpose, ids, streamed)
+            text, failure = await self._call_adapter(
+                participant, prompt, round_number, purpose, ids, streamed
+            )
         except asyncio.CancelledError:
             if self._stop_requested:
-                self._cancelled_calls.append(_CancelledCall(ids=ids, started_at=started_at, streamed=streamed))
+                self._cancelled_calls.append(
+                    _CancelledCall(ids=ids, started_at=started_at, streamed=streamed)
+                )
             raise
 
         if failure is not None:
@@ -463,7 +505,9 @@ class DiscussionEngine:
     ) -> tuple[str, tuple[str, str] | None]:
         """Stream the adapter's events (collected in `streamed`); returns (text, (kind, reason) on failure)."""
         timeout = self.settings.turn_timeout_seconds
-        with tempfile.TemporaryDirectory(prefix="aigora-turn-", ignore_cleanup_errors=True) as workspace:
+        with tempfile.TemporaryDirectory(
+            prefix="aigora-turn-", ignore_cleanup_errors=True
+        ) as workspace:
             request = TurnRequest(
                 participant=participant,
                 prompt=prompt,
@@ -483,7 +527,10 @@ class DiscussionEngine:
                             return event.text, None
                         elif isinstance(event, Failed):
                             return "".join(streamed), (event.kind, event.reason)
-                return "".join(streamed), ("crashed", f"{participant.adapter}: ended without a reply")
+                return "".join(streamed), (
+                    "crashed",
+                    f"{participant.adapter}: ended without a reply",
+                )
             except TimeoutError:
                 return "".join(streamed), ("timeout", f"沒有在 {timeout:g} 秒內完成發言")
             except Exception as exc:  # noqa: BLE001 - an adapter bug must not kill the discussion
@@ -515,8 +562,13 @@ class DiscussionEngine:
                 RoundView(
                     number=r.number,
                     turns=[
-                        TurnView(participant_id=t.participant_id, status=t.status, text=t.text,
-                                 stance=t.stance, error=t.error)
+                        TurnView(
+                            participant_id=t.participant_id,
+                            status=t.status,
+                            text=t.text,
+                            stance=t.stance,
+                            error=t.error,
+                        )
                         for t in r.turns
                     ],
                     draft=r.draft,

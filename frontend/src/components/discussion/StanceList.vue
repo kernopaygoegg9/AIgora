@@ -27,7 +27,9 @@ const STANCE_PILLS = { AGREE: 'pill-ok', DISAGREE: 'pill-bad', none: 'pill-bad' 
       :data-testid="itemTestid"
     >
       <ParticipantLabel :participant="participantById(s.id)" :id="s.id" :size="18" hide-web />
-      <span class="pill" :class="STANCE_PILLS[s.stance ?? 'none']">{{ stanceLabel(s.stance) }}</span>
+      <span class="pill" :class="STANCE_PILLS[s.stance ?? 'none']">{{
+        stanceLabel(s.stance)
+      }}</span>
     </li>
   </ul>
 </template>

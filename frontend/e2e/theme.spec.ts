@@ -3,7 +3,9 @@ import { expect, test } from '@playwright/test'
 // Theme (ui-redesign 01/02): follows the system until the user picks one in the sidebar;
 // the pick survives a reload.
 
-test('the theme toggle cycles system → light → dark and the choice survives a reload', async ({ page }) => {
+test('the theme toggle cycles system → light → dark and the choice survives a reload', async ({
+  page,
+}) => {
   await page.goto('/')
   const html = page.locator('html')
   const toggle = page.getByTestId('theme-toggle')

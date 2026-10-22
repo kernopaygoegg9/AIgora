@@ -119,7 +119,15 @@ function initialState(): State {
 }
 
 function newRound(number: number): RoundState {
-  return { number, status: 'running', turns: [], extraCalls: [], draft: null, judge: null, confirmations: null }
+  return {
+    number,
+    status: 'running',
+    turns: [],
+    extraCalls: [],
+    draft: null,
+    judge: null,
+    confirmations: null,
+  }
 }
 
 function newTurn(round: number, participantId: string, purpose: TurnPurpose): TurnState {
@@ -134,7 +142,8 @@ export const useDiscussionStore = defineStore('discussion', {
       return state.rounds.length ? state.rounds[state.rounds.length - 1] : null
     },
     participantById(state) {
-      return (id: string): ParticipantSnapshot | undefined => state.participants.find((p) => p.id === id)
+      return (id: string): ParticipantSnapshot | undefined =>
+        state.participants.find((p) => p.id === id)
     },
     roundByNumber(state) {
       return (n: number): RoundState | undefined => state.rounds.find((r) => r.number === n)
@@ -154,7 +163,8 @@ export const useDiscussionStore = defineStore('discussion', {
       if (this.readOnly) return
 
       if (msg.type === 'error') {
-        if (msg.discussion_id && this.discussionId && msg.discussion_id !== this.discussionId) return
+        if (msg.discussion_id && this.discussionId && msg.discussion_id !== this.discussionId)
+          return
         this.errors.push(msg.message)
         return
       }
@@ -194,7 +204,12 @@ export const useDiscussionStore = defineStore('discussion', {
         }
         case 'turn_completed': {
           const turn = this.ensureTurn(msg.round, msg.participant_id, msg.purpose ?? 'turn')
-          Object.assign(turn, { status: 'ok', text: msg.text, stance: msg.stance ?? null, failure: null })
+          Object.assign(turn, {
+            status: 'ok',
+            text: msg.text,
+            stance: msg.stance ?? null,
+            failure: null,
+          })
           break
         }
         case 'turn_failed': {
@@ -204,7 +219,9 @@ export const useDiscussionStore = defineStore('discussion', {
           break
         }
         case 'participant_removed':
-          this.activeParticipantIds = this.activeParticipantIds.filter((id) => id !== msg.participant_id)
+          this.activeParticipantIds = this.activeParticipantIds.filter(
+            (id) => id !== msg.participant_id,
+          )
           this.removed.push({
             participantId: msg.participant_id,
             reason: msg.reason,
@@ -222,7 +239,11 @@ export const useDiscussionStore = defineStore('discussion', {
           this.ensureRound(msg.round).draft = msg.text
           break
         case 'judge_result':
-          this.ensureRound(msg.round).judge = { judge: msg.judge, outcome: msg.outcome, detail: msg.detail }
+          this.ensureRound(msg.round).judge = {
+            judge: msg.judge,
+            outcome: msg.outcome,
+            detail: msg.detail,
+          }
           break
         case 'confirmation_result':
           this.ensureRound(msg.round).confirmations = msg.answers
@@ -257,37 +278,39 @@ export const useDiscussionStore = defineStore('discussion', {
         participants: record.participants,
         activeParticipantIds: record.settings.participant_ids.filter((id) => !removedIds.has(id)),
         moderatorId: lastChange ? lastChange.participant_id : record.settings.moderator_id,
-        moderatorChanges: record.moderator_changes.map((c) => ({ participantId: c.participant_id, round: c.round })),
+        moderatorChanges: record.moderator_changes.map((c) => ({
+          participantId: c.participant_id,
+          round: c.round,
+        })),
         removed: record.removed_participants.map((r) => ({
           participantId: r.participant_id,
           reason: r.reason,
           round: r.round,
         })),
-        interjections: record.interjections.map((i) => ({ text: i.text, appliesToRound: i.applies_to_round })),
-        rounds: record.rounds.map(
-          (r): RoundState => ({
-            number: r.number,
-            status: 'completed',
-            turns: r.turns.map(
-              (t): TurnState => ({
-                round: r.number,
-                participantId: t.participant_id,
-                purpose: 'turn',
-                status: t.status,
-                text: t.text ?? '',
-                stance: t.stance,
-                failure:
-                  t.status === 'ok'
-                    ? null
-                    : { kind: t.status === 'timeout' ? 'timeout' : 'unknown', reason: t.error ?? '' },
-              }),
-            ),
-            extraCalls: [],
-            draft: r.draft ?? null,
-            judge: r.judge ?? null,
-            confirmations: r.confirmations ?? null,
-          }),
-        ),
+        interjections: record.interjections.map((i) => ({
+          text: i.text,
+          appliesToRound: i.applies_to_round,
+        })),
+        rounds: record.rounds.map((r): RoundState => ({
+          number: r.number,
+          status: 'completed',
+          turns: r.turns.map((t): TurnState => ({
+            round: r.number,
+            participantId: t.participant_id,
+            purpose: 'turn',
+            status: t.status,
+            text: t.text ?? '',
+            stance: t.stance,
+            failure:
+              t.status === 'ok'
+                ? null
+                : { kind: t.status === 'timeout' ? 'timeout' : 'unknown', reason: t.error ?? '' },
+          })),
+          extraCalls: [],
+          draft: r.draft ?? null,
+          judge: r.judge ?? null,
+          confirmations: r.confirmations ?? null,
+        })),
         outcome: record.outcome,
         result: record.result ?? null,
       } satisfies Partial<State>)
@@ -306,7 +329,12 @@ export const useDiscussionStore = defineStore('discussion', {
       return round
     },
 
-    ensureTurn(roundNumber: number, participantId: string, purpose: TurnPurpose, starting = false): TurnState {
+    ensureTurn(
+      roundNumber: number,
+      participantId: string,
+      purpose: TurnPurpose,
+      starting = false,
+    ): TurnState {
       const round = this.ensureRound(roundNumber)
       const list = purpose === 'turn' ? round.turns : round.extraCalls
       // Normal turns: one entry per participant per round. Extra calls: one entry per
@@ -316,7 +344,9 @@ export const useDiscussionStore = defineStore('discussion', {
           ? list.find((t) => t.participantId === participantId)
           : starting
             ? undefined
-            : [...list].reverse().find((t) => t.participantId === participantId && t.purpose === purpose)
+            : [...list]
+                .reverse()
+                .find((t) => t.participantId === participantId && t.purpose === purpose)
       if (!turn) {
         list.push(newTurn(roundNumber, participantId, purpose))
         turn = list[list.length - 1]

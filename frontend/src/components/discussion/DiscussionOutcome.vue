@@ -38,7 +38,9 @@ const tone = computed(() => {
     data-testid="discussion-result"
     :data-outcome="outcome"
   >
-    <h2 class="d-result-title"><span v-if="kind === 'consensus'" aria-hidden="true">✓ </span>{{ title }}</h2>
+    <h2 class="d-result-title">
+      <span v-if="kind === 'consensus'" aria-hidden="true">✓ </span>{{ title }}
+    </h2>
     <p v-if="reason" class="d-result-reason">{{ reason }}</p>
     <template v-if="result">
       <!-- eslint-disable-next-line vue/no-v-html -- sanitised in renderMarkdown -->

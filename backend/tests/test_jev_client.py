@@ -17,7 +17,13 @@ TRANSCRIPT = {
     "question": "Is tea better than coffee?",
     "participants": ["Alpha", "Beta"],
     "rounds": [
-        {"number": 1, "turns": [{"participant": "Alpha", "text": "Tea."}, {"participant": "Beta", "text": "Tea."}]},
+        {
+            "number": 1,
+            "turns": [
+                {"participant": "Alpha", "text": "Tea."},
+                {"participant": "Beta", "text": "Tea."},
+            ],
+        },
     ],
 }
 

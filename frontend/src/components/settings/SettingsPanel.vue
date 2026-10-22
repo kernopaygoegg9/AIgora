@@ -10,7 +10,13 @@ import { computed, reactive, ref, watch } from 'vue'
 
 import '../../styles/inspector.css'
 import type { OptionsResponse, ParticipantInfo } from '../../contracts/http'
-import type { ExtraParticipant, JudgeId, ModeId, SpeakingOrderId, StartSettings } from '../../contracts/messages'
+import type {
+  ExtraParticipant,
+  JudgeId,
+  ModeId,
+  SpeakingOrderId,
+  StartSettings,
+} from '../../contracts/messages'
 import ParticipantLabel from '../discussion/ParticipantLabel.vue'
 import ModelSelect, { OTHER_MODEL } from './ModelSelect.vue'
 
@@ -41,7 +47,9 @@ watch(
     const d = options.defaults
     mode.value = d.mode
     const defaultJudge = options.judges.find((j) => j.id === d.judge)
-    judge.value = defaultJudge?.available ? d.judge : (options.judges.find((j) => j.available)?.id ?? d.judge)
+    judge.value = defaultJudge?.available
+      ? d.judge
+      : (options.judges.find((j) => j.available)?.id ?? d.judge)
     speakingOrder.value = d.speaking_order
     maxRounds.value = d.max_rounds
     turnTimeout.value = d.turn_timeout_seconds
@@ -70,7 +78,9 @@ function requestedModel(id: string): string | null {
   return model.length <= MAX_MODEL_LENGTH && !/\s/.test(model) ? model : ''
 }
 
-const uses = computed(() => new Set(props.options?.modes.find((m) => m.id === mode.value)?.uses_settings ?? []))
+const uses = computed(
+  () => new Set(props.options?.modes.find((m) => m.id === mode.value)?.uses_settings ?? []),
+)
 
 // Extra participants (臨時參與者): copies of a configured participant (the template),
 // only for this discussion. They come after the configured ones, in the order added.
@@ -104,10 +114,13 @@ function effectiveModel(row: Row): string | null {
 // get "（模型）", names still duplicated get " 2", " 3"... (the snapshot has the final say).
 const names = computed(() => {
   const chosen = chosenRows.value
-  const count = (list: string[]) => list.reduce((m, n) => m.set(n, (m.get(n) ?? 0) + 1), new Map<string, number>())
+  const count = (list: string[]) =>
+    list.reduce((m, n) => m.set(n, (m.get(n) ?? 0) + 1), new Map<string, number>())
   const base = count(chosen.map((r) => r.info.display_name))
   const withModel = chosen.map((r) =>
-    base.get(r.info.display_name)! > 1 ? `${r.info.display_name}（${effectiveModel(r) ?? '預設模型'}）` : r.info.display_name,
+    base.get(r.info.display_name)! > 1
+      ? `${r.info.display_name}（${effectiveModel(r) ?? '預設模型'}）`
+      : r.info.display_name,
   )
   const again = count(withModel)
   const taken = new Set(withModel)
@@ -136,13 +149,16 @@ const moderatorChoices = computed(() => chosenRows.value)
 // is that Adapter's first available participant in the participants file.
 const adapterTemplates = computed(() => {
   const byAdapter = new Map<string, ParticipantInfo>()
-  for (const p of props.participants) if (p.available && !byAdapter.has(p.adapter)) byAdapter.set(p.adapter, p)
+  for (const p of props.participants)
+    if (p.available && !byAdapter.has(p.adapter)) byAdapter.set(p.adapter, p)
   return [...byAdapter.values()]
 })
 const adding = ref(false)
 const newAdapter = ref('')
 const NEW_ID = '__new__'
-const newTemplate = computed(() => adapterTemplates.value.find((t) => t.adapter === newAdapter.value))
+const newTemplate = computed(() =>
+  adapterTemplates.value.find((t) => t.adapter === newAdapter.value),
+)
 
 // A new Adapter has its own model list: start again from its default.
 watch(newAdapter, () => {
@@ -159,7 +175,12 @@ function startAdding() {
 // The backend also rejects ids of disabled participants, which this page never sees, so the
 // `-x<n>` suffix keeps clear of the usual `<name>-2` style of configured ids.
 function newExtraId(template: ParticipantInfo): string {
-  const base = template.id.toLowerCase().replace(/[^a-z0-9_-]/g, '-').replace(/^[^a-z0-9]+/, '').slice(0, 54) || 'extra'
+  const base =
+    template.id
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]/g, '-')
+      .replace(/^[^a-z0-9]+/, '')
+      .slice(0, 54) || 'extra'
   const used = new Set(rows.value.map((r) => r.id))
   let n = 2
   while (used.has(`${base}-x${n}`)) n++
@@ -279,7 +300,12 @@ function orderLabel(name: string, implemented: boolean): string {
         <fieldset v-if="options" class="mode-row">
           <legend class="row-label">討論模式</legend>
           <div class="segmented">
-            <label v-for="m in options.modes" :key="m.id" class="segment" :class="{ on: mode === m.id }">
+            <label
+              v-for="m in options.modes"
+              :key="m.id"
+              class="segment"
+              :class="{ on: mode === m.id }"
+            >
               <input v-model="mode" type="radio" name="mode" :value="m.id" />
               <span>{{ m.name }}</span>
             </label>
@@ -288,7 +314,9 @@ function orderLabel(name: string, implemented: boolean): string {
 
         <fieldset class="participants">
           <legend class="section-label">參與者</legend>
-          <p v-if="participants.length === 0" class="muted">沒有可用的參與者（請檢查 participants.toml）</p>
+          <p v-if="participants.length === 0" class="muted">
+            沒有可用的參與者（請檢查 participants.toml）
+          </p>
           <table v-else class="participant-table">
             <thead>
               <tr>
@@ -303,7 +331,11 @@ function orderLabel(name: string, implemented: boolean): string {
               <tr
                 v-for="row in rows"
                 :key="row.id"
-                :class="{ unavailable: !row.info.available, chosen: selected.includes(row.id), extra: row.extra }"
+                :class="{
+                  unavailable: !row.info.available,
+                  chosen: selected.includes(row.id),
+                  extra: row.extra,
+                }"
                 data-testid="participant-option"
                 :title="row.info.available ? undefined : (row.info.unavailable_reason ?? '不可用')"
               >
@@ -319,7 +351,9 @@ function orderLabel(name: string, implemented: boolean): string {
                       />
                       <ParticipantLabel :participant="snapshot(row)" :id="row.id" hide-web />
                     </label>
-                    <span v-if="row.extra" class="pill pill-accent" data-testid="extra-participant">臨時</span>
+                    <span v-if="row.extra" class="pill pill-accent" data-testid="extra-participant"
+                      >臨時</span
+                    >
                   </span>
                 </td>
                 <td class="muted">{{ row.info.adapter }}</td>
@@ -342,7 +376,9 @@ function orderLabel(name: string, implemented: boolean): string {
                 <td>
                   <span class="status-cell">
                     <span v-if="row.info.available" class="pill pill-ok">可用</span>
-                    <span v-else class="pill pill-bad reason">不可用：{{ row.info.unavailable_reason ?? '原因不明' }}</span>
+                    <span v-else class="pill pill-bad reason"
+                      >不可用：{{ row.info.unavailable_reason ?? '原因不明' }}</span
+                    >
                     <button
                       v-if="row.extra"
                       type="button"
@@ -360,10 +396,14 @@ function orderLabel(name: string, implemented: boolean): string {
           </table>
 
           <div v-if="adapterTemplates.length" class="add-participant">
-            <button v-if="!adding" type="button" class="btn" @click="startAdding">＋ 新增參與者</button>
+            <button v-if="!adding" type="button" class="btn" @click="startAdding">
+              ＋ 新增參與者
+            </button>
             <div v-else class="add-row" data-testid="add-participant">
               <select v-model="newAdapter" aria-label="新參與者的 Adapter">
-                <option v-for="t in adapterTemplates" :key="t.adapter" :value="t.adapter">{{ t.adapter }}</option>
+                <option v-for="t in adapterTemplates" :key="t.adapter" :value="t.adapter">
+                  {{ t.adapter }}
+                </option>
               </select>
               <ModelSelect
                 v-if="newTemplate"
@@ -377,25 +417,42 @@ function orderLabel(name: string, implemented: boolean): string {
                 :error="newTemplate.models_error"
               />
               <span class="add-actions">
-                <button type="button" class="btn btn-primary" :disabled="requestedModel(NEW_ID) === ''" @click="addExtra">
+                <button
+                  type="button"
+                  class="btn btn-primary"
+                  :disabled="requestedModel(NEW_ID) === ''"
+                  @click="addExtra"
+                >
                   加入
                 </button>
                 <button type="button" class="btn" @click="adding = false">取消</button>
               </span>
-              <small class="muted add-note">以 {{ newTemplate?.display_name }} 為範本，只在這場討論中存在</small>
+              <small class="muted add-note"
+                >以 {{ newTemplate?.display_name }} 為範本，只在這場討論中存在</small
+              >
             </div>
           </div>
 
-          <p v-if="tooFewParticipants && participants.length > 0" class="hint" data-testid="participants-hint">
+          <p
+            v-if="tooFewParticipants && participants.length > 0"
+            class="hint"
+            data-testid="participants-hint"
+          >
             請選擇至少 {{ MIN_PARTICIPANTS }} 個參與者
           </p>
-          <p v-if="invalidModel" class="hint" data-testid="models-hint">請輸入模型名稱（1–100 個字元，不能有空白）</p>
+          <p v-if="invalidModel" class="hint" data-testid="models-hint">
+            請輸入模型名稱（1–100 個字元，不能有空白）
+          </p>
         </fieldset>
       </div>
 
       <!-- Inspector: the rest of this discussion's settings, and start. -->
       <aside class="inspector">
-        <section v-if="options && uses.has('judge')" class="inspector-section" data-testid="judge-options">
+        <section
+          v-if="options && uses.has('judge')"
+          class="inspector-section"
+          data-testid="judge-options"
+        >
           <h3 class="inspector-title">共識裁定方式</h3>
           <label
             v-for="j in options.judges"
@@ -404,7 +461,13 @@ function orderLabel(name: string, implemented: boolean): string {
             :class="{ on: judge === j.id, unavailable: !j.available }"
             data-testid="judge-option"
           >
-            <input v-model="judge" type="radio" name="judge" :value="j.id" :disabled="!j.available" />
+            <input
+              v-model="judge"
+              type="radio"
+              name="judge"
+              :value="j.id"
+              :disabled="!j.available"
+            />
             <span class="judge-text">
               <span>{{ j.name }}</span>
               <small v-if="!j.available">不可用：{{ j.unavailable_reason ?? '原因不明' }}</small>
@@ -432,7 +495,12 @@ function orderLabel(name: string, implemented: boolean): string {
             <div v-if="uses.has('speaking_order')" class="field wide">
               <label for="speaking-order-select">發言順序</label>
               <select id="speaking-order-select" v-model="speakingOrder">
-                <option v-for="o in options.speaking_orders" :key="o.id" :value="o.id" :disabled="!o.implemented">
+                <option
+                  v-for="o in options.speaking_orders"
+                  :key="o.id"
+                  :value="o.id"
+                  :disabled="!o.implemented"
+                >
                   {{ orderLabel(o.name, o.implemented) }}
                 </option>
               </select>
@@ -440,24 +508,50 @@ function orderLabel(name: string, implemented: boolean): string {
 
             <div v-if="uses.has('max_rounds')" class="field">
               <label for="max-rounds-input">輪數上限</label>
-              <input id="max-rounds-input" v-model.number="maxRounds" type="number" min="1" step="1" />
+              <input
+                id="max-rounds-input"
+                v-model.number="maxRounds"
+                type="number"
+                min="1"
+                step="1"
+              />
             </div>
 
             <div v-if="uses.has('turn_timeout_seconds')" class="field">
               <label for="turn-timeout-input">逾時（秒）</label>
-              <input id="turn-timeout-input" v-model.number="turnTimeout" type="number" min="1" step="1" />
+              <input
+                id="turn-timeout-input"
+                v-model.number="turnTimeout"
+                type="number"
+                min="1"
+                step="1"
+              />
             </div>
 
-            <div v-if="uses.has('judge') && uses.has('jev_threshold') && judge === 'jev'" class="field">
+            <div
+              v-if="uses.has('judge') && uses.has('jev_threshold') && judge === 'jev'"
+              class="field"
+            >
               <label for="jev-threshold-input">Jev 門檻</label>
-              <input id="jev-threshold-input" v-model.number="jevThreshold" type="number" min="0" max="1" step="0.05" />
+              <input
+                id="jev-threshold-input"
+                v-model.number="jevThreshold"
+                type="number"
+                min="0"
+                max="1"
+                step="0.05"
+              />
             </div>
           </div>
         </section>
 
         <section class="inspector-section">
-          <button type="submit" class="btn btn-primary submit" :disabled="!canSubmit">開始討論</button>
-          <p class="submit-note muted">已選 {{ selectedIds.length }} 個參與者 · 預設值來自 participants.toml</p>
+          <button type="submit" class="btn btn-primary submit" :disabled="!canSubmit">
+            開始討論
+          </button>
+          <p class="submit-note muted">
+            已選 {{ selectedIds.length }} 個參與者 · 預設值來自 participants.toml
+          </p>
         </section>
       </aside>
     </fieldset>

@@ -54,7 +54,9 @@ class DiscussionStore:
         """Every readable record, newest first (by `created_at`). In-progress ones included."""
         if not self.directory.is_dir():
             return []
-        records = [r for path in self.directory.glob("*.json") if (r := self._load(path)) is not None]
+        records = [
+            r for path in self.directory.glob("*.json") if (r := self._load(path)) is not None
+        ]
         return sorted(records, key=lambda r: (r.created_at, r.id), reverse=True)
 
     def _load(self, path: Path) -> DiscussionRecord | None:

@@ -82,9 +82,9 @@ class JevJudge(ConsensusJudge):
     async def evaluate(self, view: DiscussionView, threshold: float) -> Evaluation:
         try:
             # Looked up at call time so tests can replace `create_jev_client`.
-            probability: float | None = await create_jev_client(backend_env()).consensus_probability(
-                transcript_of(view)
-            )
+            probability: float | None = await create_jev_client(
+                backend_env()
+            ).consensus_probability(transcript_of(view))
         except JevError as exc:
             log.warning("Jev failed: %s", exc)
             probability = None
@@ -127,7 +127,10 @@ def transcript_of(view: DiscussionView) -> dict[str, Any]:
     }
 
 
-JUDGES: dict[str, type[ConsensusJudge]] = {StanceVoteJudge.id: StanceVoteJudge, JevJudge.id: JevJudge}
+JUDGES: dict[str, type[ConsensusJudge]] = {
+    StanceVoteJudge.id: StanceVoteJudge,
+    JevJudge.id: JevJudge,
+}
 
 
 def get_judge(judge_id: str) -> ConsensusJudge:

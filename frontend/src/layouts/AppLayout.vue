@@ -24,11 +24,22 @@ function onDiscussionLink() {
       <header class="brand-block">
         <div class="brand">
           <!-- App icon from assets/brand (Vite publicDir; served at the site root). -->
-          <img class="app-logo" data-testid="app-logo" src="/app-icon.png" alt="" width="24" height="24" />
+          <img
+            class="app-logo"
+            data-testid="app-logo"
+            src="/app-icon.png"
+            alt=""
+            width="24"
+            height="24"
+          />
           <span class="app-title">AIgora</span>
         </div>
         <nav class="app-nav" aria-label="主要">
-          <RouterLink class="nav-link nav-primary" :to="{ name: 'discussion' }" @click="onDiscussionLink">
+          <RouterLink
+            class="nav-link nav-primary"
+            :to="{ name: 'discussion' }"
+            @click="onDiscussionLink"
+          >
             <span class="plus" aria-hidden="true">＋</span>討論
           </RouterLink>
           <RouterLink class="nav-link" :to="{ name: 'history' }">歷史</RouterLink>

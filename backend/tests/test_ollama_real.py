@@ -34,7 +34,11 @@ def ollama_participant() -> ParticipantConfig:
             pytest.skip("Ollama has no models installed")
         model = models[0]["name"]
     return ParticipantConfig(
-        id="ollama", display_name="Ollama", adapter="ollama", model=model, options={"base_url": BASE_URL}
+        id="ollama",
+        display_name="Ollama",
+        adapter="ollama",
+        model=model,
+        options={"base_url": BASE_URL},
     )
 
 
@@ -43,7 +47,9 @@ async def run_turn(participant: ParticipantConfig, prompt: str, workspace: Path)
     availability = await adapter.check_availability(participant)
     if not availability.available:
         pytest.skip(availability.reason)
-    request = TurnRequest(participant=participant, prompt=prompt, workspace=workspace, timeout_seconds=300)
+    request = TurnRequest(
+        participant=participant, prompt=prompt, workspace=workspace, timeout_seconds=300
+    )
     return [event async for event in adapter.run_turn(request)]
 
 
@@ -66,7 +72,9 @@ async def test_canary_cannot_read_a_file_outside_the_workspace(ollama_participan
     assert secret not in "".join(e.text for e in events if isinstance(e, Delta))
 
 
-async def test_smoke_short_question_gets_a_reply_with_a_parseable_stance(ollama_participant, tmp_path):
+async def test_smoke_short_question_gets_a_reply_with_a_parseable_stance(
+    ollama_participant, tmp_path
+):
     events = await run_turn(
         ollama_participant,
         "Is 2 + 2 equal to 4? Answer in one short sentence. Then, on the very last line, write exactly "
@@ -85,5 +93,6 @@ async def test_model_list_includes_the_installed_test_model(ollama_participant):
 
     assert choices.error is None, choices.error
     assert ollama_participant.model in {m.id for m in choices.models} | {
-        m.id.removesuffix(":latest") for m in choices.models}
+        m.id.removesuffix(":latest") for m in choices.models
+    }
     assert choices.free_text is False

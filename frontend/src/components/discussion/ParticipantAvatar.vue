@@ -17,7 +17,11 @@ const missing = ref(false)
     :height="size ?? 32"
     @error="missing = true"
   />
-  <span v-else class="avatar avatar-missing" :style="{ width: `${size ?? 32}px`, height: `${size ?? 32}px` }" />
+  <span
+    v-else
+    class="avatar avatar-missing"
+    :style="{ width: `${size ?? 32}px`, height: `${size ?? 32}px` }"
+  />
 </template>
 
 <style scoped>

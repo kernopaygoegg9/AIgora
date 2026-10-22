@@ -14,7 +14,9 @@ def participant(**options) -> ParticipantConfig:
     return ParticipantConfig(id="fake-a", display_name="Fake A", adapter="fake", options=options)
 
 
-def request(p: ParticipantConfig, round: int = 1, purpose: str = "turn", prompt: str = "Q?") -> TurnRequest:
+def request(
+    p: ParticipantConfig, round: int = 1, purpose: str = "turn", prompt: str = "Q?"
+) -> TurnRequest:
     return TurnRequest(
         participant=p,
         prompt=prompt,
@@ -50,7 +52,9 @@ async def test_unscripted_reply_names_the_participant_and_agrees_from_round_two(
 
 
 async def test_streaming_sends_deltas_that_add_up_to_the_completed_text():
-    p = participant(replies=["hello streaming world"], stream=True, chunk_chars=5, chunk_delay_seconds=0)
+    p = participant(
+        replies=["hello streaming world"], stream=True, chunk_chars=5, chunk_delay_seconds=0
+    )
     events = await run(p)
     deltas = [e for e in events if isinstance(e, Delta)]
     assert [d.text for d in deltas] == ["hello", " stre", "aming", " worl", "d"]
@@ -77,7 +81,9 @@ async def test_fails_in_the_configured_rounds_with_the_configured_kind():
 
 
 async def test_failure_after_streaming_part_of_the_reply():
-    p = participant(replies=["partial reply"], fail_rounds=[1], chunk_chars=4, chunk_delay_seconds=0)
+    p = participant(
+        replies=["partial reply"], fail_rounds=[1], chunk_chars=4, chunk_delay_seconds=0
+    )
     events = await run(p)
     assert joined_deltas(events) != ""
     assert isinstance(events[-1], Failed) and events[-1].kind == "crashed"
@@ -116,7 +122,9 @@ async def test_echo_prompt_replies_with_the_prompt_it_received():
 async def test_availability_is_configurable():
     adapter = get_adapter("fake")
     assert (await adapter.check_availability(participant())).available
-    down = await adapter.check_availability(participant(available=False, unavailable_reason="not logged in"))
+    down = await adapter.check_availability(
+        participant(available=False, unavailable_reason="not logged in")
+    )
     assert not down.available and down.reason == "not logged in"
 
 
@@ -157,12 +165,13 @@ def test_invalid_options_are_rejected(options):
         get_adapter("fake").validate_options(options)
 
 
-
 async def test_model_list_comes_from_the_models_option():
     adapter = get_adapter("fake")
 
     assert (await adapter.list_models(participant(models=["small", "large"]))).models == (
-        ModelOption("small", "small"), ModelOption("large", "large"))
+        ModelOption("small", "small"),
+        ModelOption("large", "large"),
+    )
     without = await adapter.list_models(participant())
     assert without.models == ()
     assert without.free_text is False

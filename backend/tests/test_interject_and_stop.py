@@ -5,13 +5,14 @@ from __future__ import annotations
 import asyncio
 import json
 
+from conftest import fake_participant
+
 from aigora.api.messages import DiscussionSettings
 from aigora.config import ParticipantConfig
 from aigora.discussion.engine import DiscussionEngine
 from aigora.discussion.modes import get_mode
 from aigora.discussion.orders import get_speaking_order
 from aigora.discussion.store import DiscussionStore
-from conftest import fake_participant
 
 
 def consensus(*ids: str, **settings) -> dict:
@@ -54,7 +55,13 @@ def test_an_interjection_is_queued_for_the_next_round_and_reaches_every_particip
     )
     received: list[dict] = []
     with client.websocket_connect("/ws/discussion") as ws:
-        ws.send_json({"type": "start", "question": "Q?", "settings": consensus("fake-a", "echo-1", "echo-2", max_rounds=3)})
+        ws.send_json(
+            {
+                "type": "start",
+                "question": "Q?",
+                "settings": consensus("fake-a", "echo-1", "echo-2", max_rounds=3),
+            }
+        )
         receive_until(ws, received, lambda m: m["type"] == "turn_started" and m["round"] == 1)
         ws.send_json({"type": "interject", "text": "Please consider cost too."})
         queued = receive_until(ws, received, lambda m: m["type"] == "interjection_queued")
@@ -73,7 +80,9 @@ def test_an_interjection_is_queued_for_the_next_round_and_reaches_every_particip
             assert "Please consider cost too." in texts[pid]
 
     assert received[-1]["type"] == "discussion_finished"
-    record = json.loads((data_dir / f"{received[-1]['discussion_id']}.json").read_text(encoding="utf-8"))
+    record = json.loads(
+        (data_dir / f"{received[-1]['discussion_id']}.json").read_text(encoding="utf-8")
+    )
     [interjection] = record["interjections"]
     assert interjection["text"] == "Please consider cost too."
     assert interjection["applies_to_round"] == 2
@@ -91,8 +100,12 @@ def test_stop_cancels_the_running_turns_and_ends_the_discussion_as_stopped_with_
     )
     received: list[dict] = []
     with client.websocket_connect("/ws/discussion") as ws:
-        ws.send_json({"type": "start", "question": "Q?", "settings": consensus("quick", "slow-a", "slow-b")})
-        receive_until(ws, received, lambda m: m["type"] == "turn_completed" and m["participant_id"] == "quick")
+        ws.send_json(
+            {"type": "start", "question": "Q?", "settings": consensus("quick", "slow-a", "slow-b")}
+        )
+        receive_until(
+            ws, received, lambda m: m["type"] == "turn_completed" and m["participant_id"] == "quick"
+        )
         ws.send_json({"type": "stop"})
         receive_until(ws, received, finished)
 
@@ -102,7 +115,10 @@ def test_stop_cancels_the_running_turns_and_ends_the_discussion_as_stopped_with_
     # The running turns were cancelled (the adapter saw it) and are reported as ended.
     assert sorted(cancel_log.read_text(encoding="utf-8").split()) == ["slow-a", "slow-b"]
     failed = of_type(received, "turn_failed")
-    assert sorted((f["round"], f["participant_id"]) for f in failed) == [(1, "slow-a"), (1, "slow-b")]
+    assert sorted((f["round"], f["participant_id"]) for f in failed) == [
+        (1, "slow-a"),
+        (1, "slow-b"),
+    ]
     assert not of_type(received, "round_completed")
 
     record = json.loads((data_dir / f"{end['discussion_id']}.json").read_text(encoding="utf-8"))
@@ -110,7 +126,9 @@ def test_stop_cancels_the_running_turns_and_ends_the_discussion_as_stopped_with_
     assert record["finished_at"]
     [round_1] = record["rounds"]
     assert [(t["participant_id"], t["status"]) for t in round_1["turns"]] == [
-        ("quick", "ok"), ("slow-a", "failed"), ("slow-b", "failed"),
+        ("quick", "ok"),
+        ("slow-a", "failed"),
+        ("slow-b", "failed"),
     ]
     assert round_1["turns"][1]["error"]
 
@@ -121,8 +139,15 @@ def test_stop_during_the_moderators_draft_cancels_it_and_keeps_the_finished_turn
     cancel_log = tmp_path / "cancelled.log"
     # The moderator's short turn streams quickly enough; its long draft would take minutes.
     write_participants(
-        fake_participant("mod", "Mod", chunk_chars=1, chunk_delay_seconds=0.3, replies=["ok"],
-                         drafts=["a very slow draft " * 20], cancel_log=cancel_log.as_posix())
+        fake_participant(
+            "mod",
+            "Mod",
+            chunk_chars=1,
+            chunk_delay_seconds=0.3,
+            replies=["ok"],
+            drafts=["a very slow draft " * 20],
+            cancel_log=cancel_log.as_posix(),
+        )
         + fake_participant("other", "Other", stream=False)
     )
     received: list[dict] = []
@@ -134,11 +159,18 @@ def test_stop_during_the_moderators_draft_cancels_it_and_keeps_the_finished_turn
 
     assert received[-1]["outcome"] == "stopped"
     assert cancel_log.read_text(encoding="utf-8").split() == ["mod"]
-    assert [(f["participant_id"], f["purpose"]) for f in of_type(received, "turn_failed")] == [("mod", "draft")]
+    assert [(f["participant_id"], f["purpose"]) for f in of_type(received, "turn_failed")] == [
+        ("mod", "draft")
+    ]
     assert not of_type(received, "draft_created")
-    record = json.loads((data_dir / f"{received[-1]['discussion_id']}.json").read_text(encoding="utf-8"))
+    record = json.loads(
+        (data_dir / f"{received[-1]['discussion_id']}.json").read_text(encoding="utf-8")
+    )
     [round_1] = record["rounds"]
-    assert [(t["participant_id"], t["status"]) for t in round_1["turns"]] == [("mod", "ok"), ("other", "ok")]
+    assert [(t["participant_id"], t["status"]) for t in round_1["turns"]] == [
+        ("mod", "ok"),
+        ("other", "ok"),
+    ]
     assert round_1["draft"] is None
 
 
@@ -150,8 +182,14 @@ async def test_an_interjection_after_stop_is_rejected_with_an_error(tmp_path):
         for pid in ("slow-a", "slow-b")
     ]
     settings = DiscussionSettings(
-        mode="consensus", participant_ids=["slow-a", "slow-b"], judge="stance_vote", moderator_id="slow-a",
-        speaking_order="parallel", max_rounds=3, turn_timeout_seconds=60, jev_threshold=0.8,
+        mode="consensus",
+        participant_ids=["slow-a", "slow-b"],
+        judge="stance_vote",
+        moderator_id="slow-a",
+        speaking_order="parallel",
+        max_rounds=3,
+        turn_timeout_seconds=60,
+        jev_threshold=0.8,
     )
     sent: list[dict] = []
 
@@ -159,8 +197,13 @@ async def test_an_interjection_after_stop_is_rejected_with_an_error(tmp_path):
         sent.append(message)
 
     engine = DiscussionEngine(
-        question="Q?", settings=settings, participants=participants, mode=get_mode("consensus"),
-        order=get_speaking_order("parallel"), store=DiscussionStore(tmp_path), send=send,
+        question="Q?",
+        settings=settings,
+        participants=participants,
+        mode=get_mode("consensus"),
+        order=get_speaking_order("parallel"),
+        store=DiscussionStore(tmp_path),
+        send=send,
     )
     run = asyncio.create_task(engine.run())
     while not any(m["type"] == "turn_started" for m in sent):

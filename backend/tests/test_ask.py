@@ -10,11 +10,17 @@ from conftest import fake_participant, run_discussion
 
 def test_ask_streams_one_round_from_every_participant_and_finishes(client, write_participants):
     write_participants(
-        fake_participant("fake-a", "Fake A", replies=["Answer from A"], chunk_chars=4, chunk_delay_seconds=0)
-        + fake_participant("fake-b", "Fake B", replies=["Answer from B"], chunk_chars=4, chunk_delay_seconds=0)
+        fake_participant(
+            "fake-a", "Fake A", replies=["Answer from A"], chunk_chars=4, chunk_delay_seconds=0
+        )
+        + fake_participant(
+            "fake-b", "Fake B", replies=["Answer from B"], chunk_chars=4, chunk_delay_seconds=0
+        )
     )
 
-    messages = run_discussion(client, "Tabs or spaces?", {"mode": "ask", "participant_ids": ["fake-a", "fake-b"]})
+    messages = run_discussion(
+        client, "Tabs or spaces?", {"mode": "ask", "participant_ids": ["fake-a", "fake-b"]}
+    )
 
     types = [m["type"] for m in messages]
     assert types[:2] == ["discussion_started", "round_started"]
@@ -54,14 +60,18 @@ def test_participants_in_one_batch_answer_in_parallel(client, write_participants
     )
 
     started = time.monotonic()
-    messages = run_discussion(client, "Q?", {"mode": "ask", "participant_ids": ["slow-a", "slow-b", "slow-c"]})
+    messages = run_discussion(
+        client, "Q?", {"mode": "ask", "participant_ids": ["slow-a", "slow-b", "slow-c"]}
+    )
     elapsed = time.monotonic() - started
 
     assert messages[-1]["outcome"] == "completed"
     assert 0.6 <= elapsed < 1.2  # about the slowest one (0.6 s), not the sum (1.8 s)
     types = [m["type"] for m in messages]
     # Everyone starts before anyone finishes.
-    assert max(i for i, t in enumerate(types) if t == "turn_started") < types.index("turn_completed")
+    assert max(i for i, t in enumerate(types) if t == "turn_started") < types.index(
+        "turn_completed"
+    )
 
 
 def test_prompt_names_the_participants_and_asks_for_the_question_language_and_cited_urls(
@@ -72,9 +82,15 @@ def test_prompt_names_the_participants_and_asks_for_the_question_language_and_ci
         + fake_participant("other", "Other Bot", stream=False)
     )
 
-    messages = run_discussion(client, "貓為什麼會呼嚕？", {"mode": "ask", "participant_ids": ["echo", "other"]})
+    messages = run_discussion(
+        client, "貓為什麼會呼嚕？", {"mode": "ask", "participant_ids": ["echo", "other"]}
+    )
 
-    prompt = next(m["text"] for m in messages if m["type"] == "turn_completed" and m["participant_id"] == "echo")
+    prompt = next(
+        m["text"]
+        for m in messages
+        if m["type"] == "turn_completed" and m["participant_id"] == "echo"
+    )
     assert "貓為什麼會呼嚕？" in prompt
     assert "You are Echo Bot" in prompt
     assert "Other Bot" in prompt
@@ -88,7 +104,9 @@ def test_finished_ask_is_saved_as_a_discussion_record(client, write_participants
         + fake_participant("fake-b", "Fake B", replies=["Answer from B"], stream=False)
     )
 
-    messages = run_discussion(client, "Tabs or spaces?", {"mode": "ask", "participant_ids": ["fake-a", "fake-b"]})
+    messages = run_discussion(
+        client, "Tabs or spaces?", {"mode": "ask", "participant_ids": ["fake-a", "fake-b"]}
+    )
 
     discussion_id = messages[0]["discussion_id"]
     files = list(data_dir.glob("*.json"))
@@ -96,9 +114,20 @@ def test_finished_ask_is_saved_as_a_discussion_record(client, write_participants
     record = json.loads(files[0].read_text(encoding="utf-8"))
 
     assert set(record) == {
-        "schema_version", "id", "question", "created_at", "finished_at", "settings", "participants",
-        "derived_from", "rounds", "interjections", "removed_participants", "moderator_changes",
-        "outcome", "result",
+        "schema_version",
+        "id",
+        "question",
+        "created_at",
+        "finished_at",
+        "settings",
+        "participants",
+        "derived_from",
+        "rounds",
+        "interjections",
+        "removed_participants",
+        "moderator_changes",
+        "outcome",
+        "result",
     }
     assert record["schema_version"] == 2
     assert record["id"] == discussion_id
@@ -107,10 +136,22 @@ def test_finished_ask_is_saved_as_a_discussion_record(client, write_participants
     assert record["settings"] == messages[0]["settings"]
     assert record["settings"]["turn_timeout_seconds"] == 300  # filled from [defaults]
     assert record["participants"] == [
-        {"id": "fake-a", "display_name": "Fake A", "adapter": "fake", "model": None, "avatar": "fake.png",
-         "capabilities": {"web_access": False, "streaming": True}},
-        {"id": "fake-b", "display_name": "Fake B", "adapter": "fake", "model": None, "avatar": "fake.png",
-         "capabilities": {"web_access": True, "streaming": False}},
+        {
+            "id": "fake-a",
+            "display_name": "Fake A",
+            "adapter": "fake",
+            "model": None,
+            "avatar": "fake.png",
+            "capabilities": {"web_access": False, "streaming": True},
+        },
+        {
+            "id": "fake-b",
+            "display_name": "Fake B",
+            "adapter": "fake",
+            "model": None,
+            "avatar": "fake.png",
+            "capabilities": {"web_access": True, "streaming": False},
+        },
     ]
     assert record["derived_from"] is None
     assert len(record["rounds"]) == 1
@@ -128,10 +169,14 @@ def test_finished_ask_is_saved_as_a_discussion_record(client, write_participants
     assert record["result"] == messages[-1]["result"]
 
 
-def test_start_with_an_unknown_participant_is_rejected_with_an_error(client, write_participants, data_dir):
+def test_start_with_an_unknown_participant_is_rejected_with_an_error(
+    client, write_participants, data_dir
+):
     write_participants(fake_participant("fake-a", "Fake A"))
 
-    messages = run_discussion(client, "Q?", {"mode": "ask", "participant_ids": ["fake-a", "nobody"]})
+    messages = run_discussion(
+        client, "Q?", {"mode": "ask", "participant_ids": ["fake-a", "nobody"]}
+    )
 
     assert len(messages) == 1
     assert messages[0]["type"] == "error"
@@ -140,7 +185,9 @@ def test_start_with_an_unknown_participant_is_rejected_with_an_error(client, wri
     assert not data_dir.exists() or not list(data_dir.iterdir())
 
 
-def test_start_with_fewer_than_two_participants_is_rejected_with_an_error(client, write_participants, data_dir):
+def test_start_with_fewer_than_two_participants_is_rejected_with_an_error(
+    client, write_participants, data_dir
+):
     write_participants(fake_participant("fake-a", "Fake A"))
 
     for ids in (["fake-a"],):
@@ -157,17 +204,39 @@ def test_participant_list_shows_enabled_participants_with_capabilities_and_avail
     write_participants(
         fake_participant("fake-a", "Fake A", web_access=False)
         + fake_participant("fake-b", "Fake B", available=False, unavailable_reason="not logged in")
-        + fake_participant("hidden", "Hidden").replace('adapter = "fake"', 'adapter = "fake"\nenabled = false')
+        + fake_participant("hidden", "Hidden").replace(
+            'adapter = "fake"', 'adapter = "fake"\nenabled = false'
+        )
     )
 
     response = client.get("/api/participants")
 
     assert response.status_code == 200
     assert response.json() == [
-        {"id": "fake-a", "display_name": "Fake A", "adapter": "fake", "model": None, "avatar": "fake.png",
-         "capabilities": {"web_access": False, "streaming": True}, "available": True, "unavailable_reason": None,
-         "models": [], "free_text_model": False, "models_error": None},
-        {"id": "fake-b", "display_name": "Fake B", "adapter": "fake", "model": None, "avatar": "fake.png",
-         "capabilities": {"web_access": True, "streaming": True}, "available": False,
-         "unavailable_reason": "not logged in", "models": [], "free_text_model": False, "models_error": None},
+        {
+            "id": "fake-a",
+            "display_name": "Fake A",
+            "adapter": "fake",
+            "model": None,
+            "avatar": "fake.png",
+            "capabilities": {"web_access": False, "streaming": True},
+            "available": True,
+            "unavailable_reason": None,
+            "models": [],
+            "free_text_model": False,
+            "models_error": None,
+        },
+        {
+            "id": "fake-b",
+            "display_name": "Fake B",
+            "adapter": "fake",
+            "model": None,
+            "avatar": "fake.png",
+            "capabilities": {"web_access": True, "streaming": True},
+            "available": False,
+            "unavailable_reason": "not logged in",
+            "models": [],
+            "free_text_model": False,
+            "models_error": None,
+        },
     ]

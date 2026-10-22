@@ -3,7 +3,12 @@ import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { fetchDiscussions } from '../api/discussions'
-import { MODE_LABELS, formatTime, outcomeLabel, outcomePillClass } from '../components/history/labels'
+import {
+  MODE_LABELS,
+  formatTime,
+  outcomeLabel,
+  outcomePillClass,
+} from '../components/history/labels'
 import type { DiscussionSummary } from '../contracts/http'
 
 const router = useRouter()
@@ -36,7 +41,9 @@ function open(d: DiscussionSummary) {
 
     <p v-if="loadError" class="state error">{{ loadError }}</p>
     <p v-else-if="loading" class="state muted">載入中…</p>
-    <p v-else-if="!discussions.length" class="state muted" data-testid="history-empty">還沒有任何討論</p>
+    <p v-else-if="!discussions.length" class="state muted" data-testid="history-empty">
+      還沒有任何討論
+    </p>
     <table v-else class="history-table">
       <thead>
         <tr>
@@ -47,9 +54,19 @@ function open(d: DiscussionSummary) {
         </tr>
       </thead>
       <tbody>
-        <tr v-for="d in discussions" :key="d.id" class="history-item" data-testid="history-item" @click="open(d)">
+        <tr
+          v-for="d in discussions"
+          :key="d.id"
+          class="history-item"
+          data-testid="history-item"
+          @click="open(d)"
+        >
           <td class="question-cell">
-            <RouterLink class="history-link" :to="{ name: 'discussion-record', params: { id: d.id } }" @click.stop>
+            <RouterLink
+              class="history-link"
+              :to="{ name: 'discussion-record', params: { id: d.id } }"
+              @click.stop
+            >
               {{ d.question }}
             </RouterLink>
           </td>
@@ -58,7 +75,9 @@ function open(d: DiscussionSummary) {
             <time :datetime="d.created_at">{{ formatTime(d.created_at) }}</time>
           </td>
           <td>
-            <span class="pill" :class="outcomePillClass(d.outcome)" data-testid="history-outcome">{{ outcomeLabel(d.outcome) }}</span>
+            <span class="pill" :class="outcomePillClass(d.outcome)" data-testid="history-outcome">{{
+              outcomeLabel(d.outcome)
+            }}</span>
           </td>
         </tr>
       </tbody>

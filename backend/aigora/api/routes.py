@@ -15,7 +15,9 @@ DISCUSSION_SOCKET_PATH = "/ws/discussion"
 def build_router() -> APIRouter:
     router = APIRouter()
 
-    router.add_api_route(f"{API_PREFIX}/participants", participants.list_participants, methods=["GET"])
+    router.add_api_route(
+        f"{API_PREFIX}/participants", participants.list_participants, methods=["GET"]
+    )
     router.add_api_route(f"{API_PREFIX}/options", options.get_options, methods=["GET"])
     router.add_api_route(f"{API_PREFIX}/discussions", discussions.list_discussions, methods=["GET"])
     router.add_api_route(

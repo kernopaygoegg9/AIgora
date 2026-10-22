@@ -28,10 +28,16 @@ defineProps<{
     >
       <div class="who">
         <ParticipantLabel :participant="p" :id="p.id" :size="22" />
-        <span v-if="p.id === moderatorId" class="pill pill-accent" data-testid="inspector-moderator">主持人</span>
+        <span v-if="p.id === moderatorId" class="pill pill-accent" data-testid="inspector-moderator"
+          >主持人</span
+        >
       </div>
       <span v-if="removedIds.includes(p.id)" class="pill pill-bad state">已移出</span>
-      <span v-else-if="statuses[p.id]" class="pill state" :class="TURN_STATUS_PILLS[statuses[p.id]!]">
+      <span
+        v-else-if="statuses[p.id]"
+        class="pill state"
+        :class="TURN_STATUS_PILLS[statuses[p.id]!]"
+      >
         {{ TURN_STATUS_LABELS[statuses[p.id]!] }}
       </span>
       <span v-else class="muted state">—</span>

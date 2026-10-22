@@ -12,7 +12,14 @@ const label = computed(() => LABELS[mode.value])
 </script>
 
 <template>
-  <button type="button" class="theme-toggle" data-testid="theme-toggle" :data-mode="mode" title="切換主題" @click="cycle">
+  <button
+    type="button"
+    class="theme-toggle"
+    data-testid="theme-toggle"
+    :data-mode="mode"
+    title="切換主題"
+    @click="cycle"
+  >
     <span class="icon" aria-hidden="true">{{ ICONS[mode] }}</span>
     <span>主題：{{ label }}</span>
   </button>
