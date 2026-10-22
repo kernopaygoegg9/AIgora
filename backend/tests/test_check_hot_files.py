@@ -117,3 +117,20 @@ def test_hot_files_changed_on_base_after_the_branch_forked_are_not_blamed_on_it(
     result = run_check(repo, "02")
 
     assert result.returncode == 0, result.stdout
+
+
+def test_unknown_feature_or_bad_range_is_a_usage_error(repo: Path) -> None:
+    commit_changes(repo, "README.md")
+
+    missing_table = subprocess.run(
+        [sys.executable, str(SCRIPT), "--feature", "nope", "--ticket", "01", "base..work"],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+    )
+    bad_range = run_check(repo, "01", "base..no-such-branch")
+
+    assert missing_table.returncode == 2
+    assert "hot-files.toml" in missing_table.stderr
+    assert bad_range.returncode == 2
+    assert "no-such-branch" in bad_range.stderr

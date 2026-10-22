@@ -68,12 +68,23 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("range", help="<base>..<branch>")
     args = parser.parse_args(argv)
 
-    root = Path(git("rev-parse", "--show-toplevel").strip())
-    table = tomllib.loads((root / ".scratch" / args.feature / "hot-files.toml").read_text("utf-8"))
-    hot = table.get("files", {})
+    try:
+        root = Path(git("rev-parse", "--show-toplevel").strip())
+        table_path = root / ".scratch" / args.feature / "hot-files.toml"
+        if not table_path.is_file():
+            print(f"error: {table_path} not found", file=sys.stderr)
+            return 2
+        hot = tomllib.loads(table_path.read_text("utf-8")).get("files", {})
+        changed = changed_files(args.range)
+    except subprocess.CalledProcessError as exc:
+        print(f"error: {' '.join(exc.cmd)} failed:\n{exc.stderr}", file=sys.stderr)
+        return 2
+    except tomllib.TOMLDecodeError as exc:
+        print(f"error: {table_path}: {exc}", file=sys.stderr)
+        return 2
 
     violations = []
-    for path in changed_files(args.range):
+    for path in changed:
         owners = owners_of(path, hot)
         if owners is None or owners == "*" or args.ticket in owners:
             continue
