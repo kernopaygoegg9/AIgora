@@ -42,7 +42,7 @@ A feature run with parallel implementers records which ticket may change each ho
 ```
 
 - Keys are repo-relative paths with `/`, or globs: `*` and `?` match within one path segment, `**` matches across `/`.
-- Values are a list of ticket numbers written as in the issue file names (`"07"`, not `"7"`), or `"*"` for any ticket.
+- Values are a list of ticket numbers written as in the issue file names (`"07"`), or `"*"` for any ticket. A one-digit number (`"7"`, also `--ticket 7`) is read as `"07"`; anything else that is not one or two digits, any other string, or a non-list value is an error. The `[files]` table is required.
 - A file matched by several patterns is owned by all their tickets; `"*"` on any match frees it. Files that match no pattern are unrestricted.
 
 Before merging an implementer branch, check it:
@@ -51,4 +51,4 @@ Before merging an implementer branch, check it:
 python scripts/check_hot_files.py --feature <slug> --ticket <NN> <base>..<branch>
 ```
 
-It diffs the branch against its merge base with `<base>` (so later changes on the base are not blamed on the branch) and prints each changed hot file the ticket does not own as `path: owned by NN, NN`. Exit 0: clean; 1: violations; 2: missing table, bad TOML, or a git error.
+It diffs the branch against its merge base with `<base>` (so later changes on the base are not blamed on the branch) and prints each changed hot file the ticket does not own as `path: owned by NN, NN`. Exit 0: clean; 1: violations; 2: missing or malformed table (bad TOML, no `[files]`, bad owner value), a bad `--ticket`, or a git error.

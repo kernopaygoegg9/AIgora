@@ -134,3 +134,59 @@ def test_unknown_feature_or_bad_range_is_a_usage_error(repo: Path) -> None:
     assert "hot-files.toml" in missing_table.stderr
     assert bad_range.returncode == 2
     assert "no-such-branch" in bad_range.stderr
+
+
+def write_table(repo: Path, text: str) -> None:
+    write(repo, ".scratch/feat/hot-files.toml", text)
+
+
+@pytest.mark.parametrize(
+    "table",
+    [
+        '[files]\n"a.txt" = "01"\n',
+        '[files]\n"a.txt" = 1\n',
+        '[files]\n"a.txt" = ["01", 2]\n',
+        '"a.txt" = ["01"]\n',
+        "files = 1\n",
+    ],
+    ids=["string-not-star", "integer", "non-string-owner", "no-files-table", "files-not-table"],
+)
+def test_malformed_hot_files_table_is_a_usage_error(repo: Path, table: str) -> None:
+    write_table(repo, table)
+    commit_changes(repo, "a.txt")
+
+    result = run_check(repo, "01")
+
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert "hot-files.toml" in result.stderr
+
+
+def test_one_digit_ticket_numbers_are_padded_on_both_sides(repo: Path) -> None:
+    write_table(repo, '[files]\n"a.txt" = ["7"]\n"b.txt" = ["07"]\n')
+    commit_changes(repo, "a.txt", "b.txt")
+
+    assert run_check(repo, "7").returncode == 0
+    assert run_check(repo, "07").returncode == 0
+    other = run_check(repo, "8")
+    assert other.returncode == 1
+    assert "a.txt: owned by 07" in other.stdout
+
+
+@pytest.mark.parametrize("ticket", ["123", "ab", ""])
+def test_ticket_that_is_not_one_or_two_digits_is_a_usage_error(repo: Path, ticket: str) -> None:
+    commit_changes(repo, "README.md")
+
+    result = run_check(repo, ticket)
+
+    assert result.returncode == 2
+    assert "ticket" in result.stderr
+
+
+def test_owner_entry_that_is_not_one_or_two_digits_is_a_usage_error(repo: Path) -> None:
+    write_table(repo, '[files]\n"a.txt" = ["abc"]\n')
+    commit_changes(repo, "a.txt")
+
+    result = run_check(repo, "01")
+
+    assert result.returncode == 2
+    assert "abc" in result.stderr
