@@ -12,7 +12,7 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 - [ ] 測試涵蓋：template 文字命中、字串常值命中、註解不命中、識別字不命中、「討論模式」中的「模式」不命中、`glossary-ignore` 略過、括號說明被去掉
 - [ ] 違規輸出格式為 `檔案:行: 用詞「X」，請改用「Y」`，結束碼非零
