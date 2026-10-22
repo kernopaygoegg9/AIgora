@@ -12,5 +12,3 @@ import { useTheme } from './composables/useTheme'
 useTheme()
 
 createApp(App).use(createPinia()).use(router).mount('#app')
-
-const ciAcceptanceUnused = 1
