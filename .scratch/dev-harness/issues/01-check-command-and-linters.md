@@ -12,10 +12,14 @@
 
 **Blocked by:** None
 
-**Status:** claimed
+**Status:** resolved
 
-- [ ] 在 repo 根目錄執行 `npm run check --prefix frontend` 全部通過，結束碼 0
-- [ ] `npm run check:fast --prefix frontend` 不跑 build 與 E2E，全部通過
-- [ ] 故意在後端加一個未使用的 import、在前端加一個未使用的變數、把一個檔案的縮排弄亂：`check:fast` 各自失敗並指出檔案與行號（驗證後還原，不 commit）
-- [ ] `real_ai` 測試仍預設跳過
-- [ ] formatter 只改格式，所有既有測試（pytest、typecheck、E2E）照常通過
+- [x] 在 repo 根目錄執行 `npm run check --prefix frontend` 全部通過，結束碼 0
+- [x] `npm run check:fast --prefix frontend` 不跑 build 與 E2E，全部通過
+- [x] 故意在後端加一個未使用的 import、在前端加一個未使用的變數、把一個檔案的縮排弄亂：`check:fast` 各自失敗並指出檔案與行號（驗證後還原，不 commit）
+- [x] `real_ai` 測試仍預設跳過
+- [x] formatter 只改格式，所有既有測試（pytest、typecheck、E2E）照常通過
+
+## Comments
+
+- 2026-10-22 merged (`check` green: pytest 293 passed, E2E 41 passed). Deviations: added `eslint-plugin-prettier` so format errors report line numbers; ruff format width 100, E501 limit 120 (long prompt strings); Prettier matches existing style (no semicolons, single quotes, `endOfLine: auto` for autocrlf).
