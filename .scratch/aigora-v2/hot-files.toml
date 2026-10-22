@@ -1,0 +1,43 @@
+# 熱點檔案 → 可以改它的 ticket。"*" = 所有 ticket 皆可改。
+# 不在表中的檔案不受限制。格式說明見 docs/agents/issue-tracker.md。
+
+[files]
+# 契約與設定：只有 01 改（之後的 ticket 只讀，不夠時回報，不自行加欄位）
+"backend/aigora/api/messages.py" = ["01"]
+"backend/aigora/api/http_models.py" = ["01"]
+"backend/aigora/record.py" = ["01"]
+"backend/aigora/domain.py" = ["01"]
+"frontend/src/contracts/**" = ["01"]
+"backend/aigora/config.py" = ["01"]
+"participants.example.toml" = ["01"]
+"backend/aigora/discussion/settings.py" = ["01", "06"]   # 06：chat 的空主題、固定依序、chat_max_rounds
+
+# 討論核心
+"backend/aigora/discussion/interfaces.py" = ["02"]
+"backend/aigora/discussion/engine.py" = ["02", "03", "04", "08"]
+"backend/aigora/discussion/prompt_builder.py" = ["02", "04", "07", "08"]
+"backend/aigora/discussion/orders.py" = ["03"]
+"backend/aigora/discussion/modes.py" = ["02", "05", "06"]
+"backend/aigora/discussion/derived.py" = ["12"]
+"backend/aigora/api/handlers/discussion_socket.py" = ["12"]
+"backend/aigora/api/handlers/options.py" = ["01", "03", "06", "10"]
+
+# Adapter 與金鑰
+"backend/aigora/adapters/base.py" = ["08"]
+"backend/aigora/adapters/ollama.py" = ["11"]
+"backend/aigora/adapters/claude.py" = ["10"]
+"backend/aigora/adapters/codex.py" = ["10"]
+"backend/aigora/env.py" = ["10"]
+".env.example" = ["10"]
+
+# 前端熱點
+"frontend/src/components/settings/SettingsPanel.vue" = ["03", "06", "07", "08", "12"]
+"frontend/src/stores/discussion.ts" = ["03", "04", "05", "06", "08", "09"]
+
+# 測試設定：各 ticket 可以新增自己需要的 Fake 參與者
+"frontend/e2e/participants.e2e.toml" = "*"
+
+# 文件
+"AGENTS.md" = "*"
+"docs/architecture/adapters.md" = ["11", "13"]
+"docs/architecture/**" = ["13"]
