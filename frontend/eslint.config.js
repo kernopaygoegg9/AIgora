@@ -1,5 +1,5 @@
 import js from '@eslint/js'
-import prettier from 'eslint-config-prettier'
+import prettier from 'eslint-plugin-prettier/recommended'
 import vue from 'eslint-plugin-vue'
 import globals from 'globals'
 import tseslint from 'typescript-eslint'
