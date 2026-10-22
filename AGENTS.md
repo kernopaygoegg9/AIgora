@@ -38,7 +38,7 @@ Global installs (`npm install -g`, system packages), `git push`, and creating or
 ## implement-spec: extra rules
 
 - Implementers commit after the first green test and after every green test after that. A usage-limit pause can delete a worktree that has no commits, losing the work.
-- The orchestrator merges an implementer's branch with `bash scripts/merge-ticket.sh <branch> --feature <slug> --ticket <NN>`, run on the integration branch with a clean working tree. It merges with `--no-ff`, runs the hot-file check and `npm run check --prefix frontend`, and keeps the merge commit only if both pass. Exit 0: merged and checked. Exit 1: hot-file or check failure; the branch is reset to its pre-merge commit. Exit 2: usage error, dirty tree, or another merge failure. Exit 3: conflict; the merge is aborted. Dispatch a merger subagent only on exit 3. `AIGORA_MERGE_CHECK_CMD` overrides the check command (for example `npm run check:fast --prefix frontend` while another run holds the E2E ports).
+- The orchestrator merges an implementer's branch with `bash scripts/merge-ticket.sh <branch> --feature <slug> --ticket <NN>`, run on the integration branch with a clean working tree. It merges with `--no-ff`, runs the hot-file check and `npm run check --prefix frontend`, and keeps the merge commit only if both pass. Exit 0: merged and checked. Exit 1: hot-file or check failure; the branch is reset to its pre-merge commit. Exit 2: usage error, dirty tree, or another merge failure. Exit 3: conflict; the merge is aborted. Dispatch a merger subagent only on exit 3. `AIGORA_MERGE_CHECK_CMD` overrides the check command (for example `npm run check:fast --prefix frontend` for a quick dry run).
 
 ## Agent skills
 
