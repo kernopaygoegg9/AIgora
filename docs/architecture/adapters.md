@@ -19,7 +19,7 @@ A new adapter is a module `adapters/<id>.py` with a module-level `create_adapter
 - **codex**: availability via `codex login status`; models via `codex debug models`. Web search is `-c web_search="live"` because `codex exec` has no `--search`. Never disable the `code_mode_host` feature: web search stops working.
 - **ollama**: local HTTP API (`/api/generate`, `/api/tags`), no web access. `model` is required; test seam `OllamaAdapter(transport=httpx.MockTransport(...))`.
 - **gemini**: deferred from v1. Google rejects personal sign-in, and the isolation policy failed against the real CLI; the open bugs are in `.scratch/aigora-v1/issues/14-adapter-gemini.md`. Keep it disabled until its canary passes.
-- **agy (Antigravity CLI)**: not an adapter. Its terms forbid wrapping it with a consumer plan; see `.scratch/agy-adapter/spike.md` on branch `claude/agy-spike-9383b2` before reconsidering.
+- **agy (Antigravity CLI)**: not an adapter. Its terms forbid wrapping it with a consumer plan; see `.scratch/agy-adapter/spike.md` before reconsidering.
 
 ## Real-CLI tests
 
