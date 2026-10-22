@@ -107,7 +107,7 @@ class FakeCli:
 
 
 @pytest.fixture
-def cli(tmp_path, monkeypatch) -> FakeCli:
+def cli(tmp_path, monkeypatch, cli_processes) -> FakeCli:
     return FakeCli(tmp_path, monkeypatch)
 
 

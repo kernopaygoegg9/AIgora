@@ -12,8 +12,12 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] 測試涵蓋：只改自己擁有的檔案 → 通過；改到別張 ticket 的熱點檔案 → 失敗並列出檔案與擁有者；改到「所有 ticket 皆可改」的檔案 → 通過；改到不在表中的檔案 → 通過；glob 比對
-- [ ] 對本 feature 的實際分支執行一次（例如 01 的分支對 `dev-harness`），結果正確
-- [ ] `docs/agents/issue-tracker.md` 說明 `hot-files.toml` 的格式與用途
+- [x] 測試涵蓋：只改自己擁有的檔案 → 通過；改到別張 ticket 的熱點檔案 → 失敗並列出檔案與擁有者；改到「所有 ticket 皆可改」的檔案 → 通過；改到不在表中的檔案 → 通過；glob 比對
+- [x] 對本 feature 的實際分支執行一次（例如 01 的分支對 `dev-harness`），結果正確
+- [x] `docs/agents/issue-tracker.md` 說明 `hot-files.toml` 的格式與用途
+
+## Comments
+
+- 2026-10-22 merged (`check:fast` green). Compares against the merge base (`base...branch`). On ticket 01 it lists 6 files owned by 03/05: correct, 01 reformatted them. Follow-up: `scripts/` is outside ruff scope (ruff runs from `backend/`).

@@ -12,9 +12,13 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] helper 的一般測試涵蓋：完成、`Failed` 結尾、不可用三種情況，且在 `check:fast` 中執行
-- [ ] gemini 的 canary 在 CLI 失敗時不再通過（以 helper 測試證明；不必跑真實 gemini）
-- [ ] 四個真實測試檔都改用 helper；`uv run --directory backend pytest -m real_ai --collect-only` 收集到的測試數量與改動前相同
-- [ ] 不執行任何 `real_ai` 測試（不花額度）
+- [x] helper 的一般測試涵蓋：完成、`Failed` 結尾、不可用三種情況，且在 `check:fast` 中執行
+- [x] gemini 的 canary 在 CLI 失敗時不再通過（以 helper 測試證明；不必跑真實 gemini）
+- [x] 四個真實測試檔都改用 helper；`uv run --directory backend pytest -m real_ai --collect-only` 收集到的測試數量與改動前相同
+- [x] 不執行任何 `real_ai` 測試（不花額度）
+
+## Comments
+
+- 2026-10-22 merged (`check:fast` green, 300 passed; `real_ai --collect-only` 14 before and after). Helper tests in `backend/tests/test_real_adapter_helper.py`.

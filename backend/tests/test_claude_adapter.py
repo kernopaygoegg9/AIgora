@@ -54,7 +54,7 @@ INIT = {"type": "system", "subtype": "init", "tools": ["WebSearch", "WebFetch"],
 
 
 @pytest.fixture
-def fake_claude(tmp_path, monkeypatch):
+def fake_claude(tmp_path, monkeypatch, cli_processes):
     """Returns `setup(**scenario) -> (adapter, record_path)`."""
 
     def setup(**scenario):

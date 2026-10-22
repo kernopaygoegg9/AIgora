@@ -15,6 +15,7 @@ Run from the repo root unless noted.
 - Install: `uv sync --directory backend` and `npm install --prefix frontend`, then once `cd frontend && npx playwright install chromium`.
 - Check everything: `npm run check --prefix frontend` (lint, format check, backend pytest, typecheck, build, E2E; stops at the first failure). Run it before reporting work as done.
 - Fast check for the TDD loop: `npm run check:fast --prefix frontend` (same without build and E2E).
+- CI: `.github/workflows/check.yml` runs the same `npm run check --prefix frontend` on every pull request and every push to `master` (ubuntu, no secrets; Playwright results uploaded as an artifact on failure).
 - Lint: `npm run lint --prefix frontend` (ESLint + ruff). Auto-format: `npm run format --prefix frontend` (Prettier, ruff import sort, `ruff format`). Config: `frontend/eslint.config.js`, `frontend/.prettierrc.json`, `[tool.ruff]` in `backend/pyproject.toml`.
 - Individual steps below are for running one part on its own.
 - Start (backend :8765 + Vite dev server :5173, one command): `npm run dev --prefix frontend`, then open http://127.0.0.1:5173. Vite proxies `/api` and `/ws` to the backend. To move the backend off 8765, set `AIGORA_PORT` in the shell (e.g. `AIGORA_PORT=8775 npm run dev --prefix frontend`); the backend and the Vite proxy both read it. If 5173 is taken, Vite picks the next free port and prints it.

@@ -28,3 +28,27 @@ Used by `/wayfinder`. The **map** is a file with one **child** file per ticket.
 - **Frontier**: scan `.scratch/<effort>/issues/` for files that are open, unblocked, and unclaimed; first by number wins.
 - **Claim**: set `Status: claimed` and save before any work.
 - **Resolve**: append the answer under an `## Answer` heading, set `Status: resolved`, then append a context pointer (gist + link) to the map's Decisions-so-far in `map.md`.
+
+## Hot files
+
+A feature run with parallel implementers records which ticket may change each hot file in `.scratch/<feature-slug>/hot-files.toml`. `tickets-overview.md` (if any) keeps the prose and points here.
+
+```toml
+[files]
+"frontend/package.json" = ["01", "06"]   # owned by tickets 01 and 06
+".github/workflows/**" = ["02"]          # glob
+"backend/tests/test_*_real.py" = ["03"]
+"AGENTS.md" = "*"                         # any ticket may change it
+```
+
+- Keys are repo-relative paths with `/`, or globs: `*` and `?` match within one path segment, `**` matches across `/`.
+- Values are a list of ticket numbers written as in the issue file names (`"07"`, not `"7"`), or `"*"` for any ticket.
+- A file matched by several patterns is owned by all their tickets; `"*"` on any match frees it. Files that match no pattern are unrestricted.
+
+Before merging an implementer branch, check it:
+
+```sh
+python scripts/check_hot_files.py --feature <slug> --ticket <NN> <base>..<branch>
+```
+
+It diffs the branch against its merge base with `<base>` (so later changes on the base are not blamed on the branch) and prints each changed hot file the ticket does not own as `path: owned by NN, NN`. Exit 0: clean; 1: violations; 2: missing table, bad TOML, or a git error.
