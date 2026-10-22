@@ -148,7 +148,9 @@ def test_user_visible_attribute_values_are_scanned(tmp_path):
 
 
 def test_glossary_without_any_avoided_word_is_an_error(tmp_path):
-    (tmp_path / "GLOSSARY.md").write_text("# Fake\n\n**發言 (Turn)**:\n一次回覆。\n", encoding="utf-8")
+    (tmp_path / "GLOSSARY.md").write_text(
+        "# Fake\n\n**發言 (Turn)**:\n一次回覆。\n", encoding="utf-8"
+    )
     (tmp_path / "frontend" / "src").mkdir(parents=True)
 
     result = subprocess.run(
@@ -193,7 +195,7 @@ def test_regex_literals_are_not_strings(tmp_path):
         tmp_path,
         {
             "a.ts": "const r = /'/g\nconst bot = 1\nexport const s = '回答'\n"
-            "export const t = /回答|[/\"]/.test(s) ? bot / 2 : 0\n",
+            'export const t = /回答|[/"]/.test(s) ? bot / 2 : 0\n',
         },
     )
 

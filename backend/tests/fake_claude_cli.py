@@ -13,24 +13,15 @@ Behaviour comes from the JSON file named by `FAKE_CLAUDE_SCENARIO`:
 
 `lines` entries are JSON-encoded unless they are strings (written verbatim).
 With env `AIGORA_TEST_PID_DIR` set, its own pid and the grandchild's are recorded there
-(conftest `cli_processes` ends them at teardown).
+(conftest `cli_processes` ends them at teardown; fake_cli_support.py).
 """
 
 import json
 import os
-import subprocess
 import sys
 import time
 
-HEARTBEAT = (
-    "import sys, time\nwhile True:\n    open(sys.argv[1], 'a').write('.')\n    time.sleep(0.05)\n"
-)
-
-
-def record_pid(pid: int) -> None:
-    """Leave `<pid>.pid` in AIGORA_TEST_PID_DIR so the test's teardown can end that process."""
-    if pid_dir := os.environ.get("AIGORA_TEST_PID_DIR"):
-        open(os.path.join(pid_dir, f"{pid}.pid"), "w").close()
+from fake_cli_support import record_pid, start_heartbeat
 
 
 def main() -> int:
@@ -71,7 +62,7 @@ def main() -> int:
     sys.stderr.write(turn.get("stderr", ""))
     sys.stderr.flush()
     if heartbeat := scenario.get("heartbeat"):
-        record_pid(subprocess.Popen([sys.executable, "-c", HEARTBEAT, heartbeat]).pid)
+        start_heartbeat(heartbeat)
     time.sleep(turn.get("sleep_after_seconds", 0))
     return turn.get("exit_code", 0)
 

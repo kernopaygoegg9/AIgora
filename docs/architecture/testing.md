@@ -4,10 +4,10 @@ Commands are in `AGENTS.md`; this page is where to plug in.
 
 ## Backend (`backend/tests/`)
 
-- `conftest.py`: fixtures `client`, `data_dir`, `write_participants(toml)`, `cli_processes`; context manager `reap_cli_processes(pid_dir)`; helpers `fake_participant(id, name, **options)`, `run_discussion(client, question, settings)`.
+- `conftest.py`: fixtures `client`, `data_dir`, `write_participants(toml)`, `cli_processes`; helpers `fake_participant(id, name, **options)`, `run_discussion(client, question, settings)`.
 - Mid-discussion client messages: `receive_until(ws, received, predicate)` in `test_interject_and_stop.py`.
 - Fake Adapter options drive scenarios (delays, failures per round, `cancel_log` to observe cancellation); see `adapters/fake.py`.
-- CLI adapters: inject a scripted fake CLI (`fake_claude_cli.py`, `fake_codex_cli.py`, `fake_gemini_cli.py`) via the adapter's `command=[sys.executable, script]`. To prove a tree kill, have the fake spawn a grandchild that writes a heartbeat file and assert the heartbeat stops. Fixtures that run a fake CLI depend on `cli_processes` (conftest): the fakes record every pid they start in `AIGORA_TEST_PID_DIR`, and teardown ends any still running, even when the test failed. A new fake CLI calls `record_pid` for itself and each child.
+- CLI adapters: inject a scripted fake CLI (`fake_claude_cli.py`, `fake_codex_cli.py`, `fake_gemini_cli.py`) via the adapter's `command=[sys.executable, script]`. To prove a tree kill, have the fake spawn a grandchild that writes a heartbeat file and assert the heartbeat stops. Fixtures that run a fake CLI depend on `cli_processes` (conftest): the fakes record every pid they start in `AIGORA_TEST_PID_DIR`, and teardown ends any still running, even when the test failed. The reaper lives in `process_reaper.py` (`reap_cli_processes(pid_dir)`, `alive(pid)`, `recorded_pids(pid_dir)`). A new fake CLI imports `record_pid` / `start_heartbeat` from `fake_cli_support.py` (it runs as a script, so its own folder is on `sys.path`) and calls `record_pid` for itself and each child.
 - Jev: monkeypatch `aigora.discussion.judges.create_jev_client`; `test_consensus_jev.py` has fixtures `env_file` and `fake_jev`.
 - `create_app(frontend_dist=None)` keeps tests independent of a built `frontend/dist`.
 
