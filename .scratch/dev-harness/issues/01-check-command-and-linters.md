@@ -12,7 +12,7 @@
 
 **Blocked by:** None
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 - [ ] 在 repo 根目錄執行 `npm run check --prefix frontend` 全部通過，結束碼 0
 - [ ] `npm run check:fast --prefix frontend` 不跑 build 與 E2E，全部通過
