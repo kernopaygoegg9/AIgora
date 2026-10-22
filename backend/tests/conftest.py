@@ -1,10 +1,17 @@
-"""Shared fixtures for API tests: a participants file of Fake Adapter participants and a
-throwaway discussion record folder, wired in through the backend's environment variables."""
+"""Shared fixtures: a participants file of Fake Adapter participants and a throwaway
+discussion record folder (wired in through the backend's environment variables), and the
+reaper that ends every process the fake CLIs started."""
 
 from __future__ import annotations
 
+import contextlib
 import json
-from collections.abc import Callable
+import os
+import signal
+import subprocess
+import sys
+import time
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import pytest
@@ -31,6 +38,71 @@ def write_participants(tmp_path, monkeypatch) -> Callable[[str], Path]:
         return path
 
     return write
+
+
+# The fake CLIs (fake_*_cli.py) write their own pid and every child's pid as `<pid>.pid`
+# files into the folder this variable names.
+PID_DIR_ENV = "AIGORA_TEST_PID_DIR"
+
+
+def _alive(pid: int) -> bool:
+    if sys.platform == "win32":
+        import ctypes
+
+        kernel32 = ctypes.windll.kernel32
+        handle = kernel32.OpenProcess(0x1000, False, pid)  # PROCESS_QUERY_LIMITED_INFORMATION
+        if not handle:
+            return False
+        try:
+            code = ctypes.c_ulong()
+            kernel32.GetExitCodeProcess(handle, ctypes.byref(code))
+            return code.value == 259  # STILL_ACTIVE
+        finally:
+            kernel32.CloseHandle(handle)
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+def _kill(pid: int) -> None:
+    if sys.platform == "win32":
+        subprocess.run(["taskkill", "/F", "/T", "/PID", str(pid)], capture_output=True)
+    else:
+        with contextlib.suppress(ProcessLookupError, PermissionError):
+            os.kill(pid, signal.SIGKILL)
+
+
+@contextlib.contextmanager
+def reap_cli_processes(pid_dir: Path) -> Iterator[Path]:
+    """Point the fake CLIs at `pid_dir`; on exit, end every recorded process still running."""
+    pid_dir.mkdir(parents=True, exist_ok=True)
+    previous = os.environ.get(PID_DIR_ENV)
+    os.environ[PID_DIR_ENV] = str(pid_dir)
+    try:
+        yield pid_dir
+    finally:
+        if previous is None:
+            os.environ.pop(PID_DIR_ENV, None)
+        else:
+            os.environ[PID_DIR_ENV] = previous
+        pids = [int(f.stem) for f in pid_dir.glob("*.pid")]
+        for pid in pids:
+            if _alive(pid):
+                _kill(pid)
+        deadline = time.monotonic() + 5
+        while any(_alive(pid) for pid in pids) and time.monotonic() < deadline:
+            time.sleep(0.05)
+
+
+@pytest.fixture
+def cli_processes(tmp_path) -> Iterator[Path]:
+    """Ends the fake CLIs' processes (and their children) at teardown, even if the test failed."""
+    with reap_cli_processes(tmp_path / "cli-pids") as pid_dir:
+        yield pid_dir
 
 
 @pytest.fixture

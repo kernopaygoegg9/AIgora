@@ -12,7 +12,7 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 - [ ] 有一個測試證明：模擬「取消沒有結束行程樹」時，fixture 的 teardown 之後那個孫行程已不存在
 - [ ] 跑完整個 `uv run --directory backend pytest` 後，沒有任何由測試產生、仍在執行的 python 行程（以行程清單比對驗證）

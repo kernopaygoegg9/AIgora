@@ -12,6 +12,9 @@ Behaviour comes from the JSON file named by env `AIGORA_FAKE_CODEX_SCENARIO`:
       "heartbeat": "path",      # file the grandchild appends to every 50 ms
       "record": "path"          # where `exec` writes {"argv", "cwd", "stdin"}
     }
+
+With env `AIGORA_TEST_PID_DIR` set, its own pid and the grandchild's are recorded there
+(conftest `cli_processes` ends them at teardown).
 """
 
 import json
@@ -25,7 +28,14 @@ HEARTBEAT = (
 )
 
 
+def record_pid(pid: int) -> None:
+    """Leave `<pid>.pid` in AIGORA_TEST_PID_DIR so the test's teardown can end that process."""
+    if pid_dir := os.environ.get("AIGORA_TEST_PID_DIR"):
+        open(os.path.join(pid_dir, f"{pid}.pid"), "w").close()
+
+
 def main() -> int:
+    record_pid(os.getpid())
     with open(os.environ["AIGORA_FAKE_CODEX_SCENARIO"], encoding="utf-8") as f:
         scenario = json.load(f)
     args = sys.argv[1:]
@@ -61,7 +71,7 @@ def main() -> int:
 
     if scenario.get("hang"):
         # Like the npm shim -> native binary: the real work happens in a grandchild.
-        subprocess.Popen([sys.executable, "-c", HEARTBEAT, scenario["heartbeat"]])
+        record_pid(subprocess.Popen([sys.executable, "-c", HEARTBEAT, scenario["heartbeat"]]).pid)
         while True:
             time.sleep(1)
 
