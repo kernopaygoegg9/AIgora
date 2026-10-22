@@ -11,6 +11,8 @@ Run as `python fake_gemini_cli.py <args...>`. Behaviour comes from env vars:
 - FAKE_GEMINI_EXIT: exit code (default 0).
 - FAKE_GEMINI_SLEEP: seconds to sleep after writing stdout (cancellation tests).
 - FAKE_GEMINI_PIDFILE: path; the process writes its pid there first.
+- AIGORA_TEST_PID_DIR: folder; the process records its pid there (conftest
+  `cli_processes` ends it at teardown).
 """
 
 import json
@@ -27,7 +29,14 @@ def _read(path: str | None) -> str | None:
     return p.read_text(encoding="utf-8") if p.exists() else None
 
 
+def record_pid(pid: int) -> None:
+    """Leave `<pid>.pid` in AIGORA_TEST_PID_DIR so the test's teardown can end that process."""
+    if pid_dir := os.environ.get("AIGORA_TEST_PID_DIR"):
+        open(os.path.join(pid_dir, f"{pid}.pid"), "w").close()
+
+
 def main() -> int:
+    record_pid(os.getpid())
     env = os.environ
     if env.get("FAKE_GEMINI_PIDFILE"):
         Path(env["FAKE_GEMINI_PIDFILE"]).write_text(str(os.getpid()), encoding="utf-8")
