@@ -10,7 +10,7 @@
 
 **Blocked by:** 01、07
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 - [ ] 在一個暫時的整合分支上驗證四種情況，每種都確認結束碼與分支狀態：
   - 乾淨合併且檢查通過 → 結束碼 0，merge commit 留下
