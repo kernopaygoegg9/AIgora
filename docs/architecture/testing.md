@@ -13,7 +13,7 @@ Commands are in `AGENTS.md`; this page is where to plug in.
 
 ## Frontend E2E (`frontend/e2e/`)
 
-- Playwright starts its own backend and Vite with `participants.e2e.toml` (Fake participants only: `fake-slow`, `fake-offline`, `fake-echo`, `fake-sleepy`, `fake-down`, `fake-flaky`, …). `playwright.config.ts` picks two free ports (unless `AIGORA_E2E_BACKEND_PORT` / `AIGORA_E2E_FRONTEND_PORT` are set) and a fresh temp records folder, and writes them back to `process.env` so the workers, which reload the config, see the same values. Parallel runs do not collide. In CI it also writes the html report to `playwright-report/`.
+- Playwright starts its own backend and Vite with `participants.e2e.toml` (Fake participants only: `fake-slow`, `fake-offline`, `fake-echo`, `fake-sleepy`, `fake-down`, `fake-flaky`, …). `playwright.config.ts` picks two free ports (unless `AIGORA_E2E_BACKEND_PORT` / `AIGORA_E2E_FRONTEND_PORT` are set) and a fresh temp records folder (`aigora-e2e-*`, removed by `e2e/global-teardown.ts` after the run unless `AIGORA_E2E_DATA_DIR` was set), and writes them back to `process.env` so the workers, which reload the config, see the same values. Parallel runs do not collide. In CI it also writes the html report to `playwright-report/`.
 - Store tests (`discussion-store.spec.ts`) run in Node without a page.
 - Judge B UI is tested with `page.routeWebSocket` because the E2E backend has no TypeSafe key.
 - Earlier tests leave records in history, so match nav links with `exact: true`.
