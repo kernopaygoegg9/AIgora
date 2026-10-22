@@ -12,7 +12,7 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 - [ ] helper 的一般測試涵蓋：完成、`Failed` 結尾、不可用三種情況，且在 `check:fast` 中執行
 - [ ] gemini 的 canary 在 CLI 失敗時不再通過（以 helper 測試證明；不必跑真實 gemini）
