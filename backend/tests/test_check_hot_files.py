@@ -68,3 +68,39 @@ def test_branch_that_changes_only_its_own_hot_files_passes(repo: Path) -> None:
     result = run_check(repo, "01")
 
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_branch_that_changes_another_tickets_hot_file_fails_and_names_file_and_owners(
+    repo: Path,
+) -> None:
+    commit_changes(repo, "frontend/package.json", "backend/uv.lock")
+
+    result = run_check(repo, "06")
+
+    assert result.returncode == 1
+    assert "backend/uv.lock" in result.stdout
+    assert "01" in result.stdout
+    assert "frontend/package.json" not in result.stdout
+
+
+def test_any_ticket_may_change_a_file_marked_star(repo: Path) -> None:
+    commit_changes(repo, "AGENTS.md")
+
+    assert run_check(repo, "05").returncode == 0
+
+
+def test_files_not_in_the_table_are_unrestricted(repo: Path) -> None:
+    commit_changes(repo, "backend/aigora/new_module.py", "README.md")
+
+    assert run_check(repo, "05").returncode == 0
+
+
+def test_glob_patterns_match_changed_files(repo: Path) -> None:
+    commit_changes(repo, ".github/workflows/ci.yml", "backend/tests/test_claude_real.py")
+
+    assert run_check(repo, "02").returncode == 1
+    assert run_check(repo, "03").returncode == 1
+    both_owned = run_check(repo, "04")
+    assert both_owned.returncode == 1
+    assert ".github/workflows/ci.yml: owned by 02" in both_owned.stdout
+    assert "backend/tests/test_claude_real.py: owned by 03" in both_owned.stdout
