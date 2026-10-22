@@ -22,7 +22,7 @@ def participant(model: str | None = None, **options) -> ParticipantConfig:
 
 
 @pytest.fixture
-def fake_cli(tmp_path, monkeypatch):
+def fake_cli(tmp_path, monkeypatch, cli_processes):
     """Returns `script(**scenario) -> CodexAdapter` running the fake CLI with that scenario."""
 
     def script(**scenario) -> CodexAdapter:
