@@ -1,7 +1,8 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
-const backend = `127.0.0.1:${process.env.AIGORA_BACKEND_PORT ?? '8765'}`
+// Same variable and default as the backend (`uv run aigora`), so one setting moves both.
+const backend = `127.0.0.1:${process.env.AIGORA_PORT || '8765'}`
 
 export default defineConfig({
   plugins: [vue()],
