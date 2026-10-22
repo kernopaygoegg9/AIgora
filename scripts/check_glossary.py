@@ -4,8 +4,10 @@ Usage: python scripts/check_glossary.py [--root <repo root>]
 
 Avoided words come from each `_Avoid_:` line of GLOSSARY.md (explanations in
 parentheses are dropped). Scanned text: `.vue` <template> text and attribute
-values, and string literals in `.ts` / `.vue` scripts. Comments and
-identifiers are not scanned. A hit that is part of a glossary term (「模式」 in
+values, and string literals in `.ts` / `.vue` scripts, bound attributes, event
+handlers, `{{ }}` and template-literal `${ }` expressions. Comments, regex
+literals and identifiers are not scanned. Exits 2 when GLOSSARY.md yields no
+avoided words (its format drifted). A hit that is part of a glossary term (「模式」 in
 「討論模式」) is fine. Lines containing `glossary-ignore` are skipped.
 """
 
@@ -50,53 +52,128 @@ def _blank(text: str) -> str:
     return re.sub(r"[^\n]", " ", text)
 
 
+# After these keywords a `/` starts a regex literal, not a division.
+REGEX_KEYWORDS = {
+    "return",
+    "typeof",
+    "instanceof",
+    "in",
+    "of",
+    "new",
+    "delete",
+    "void",
+    "throw",
+    "case",
+    "do",
+    "else",
+    "yield",
+    "await",
+}
+
+
 def _script_strings(code: str) -> str:
-    """Mask of code that keeps only the contents of string literals."""
-    out = []
-    i, n = 0, len(code)
+    """Mask of code that keeps only the contents of string literals.
+
+    Template literals keep their text and recurse into `${...}`; regex literals are blanked.
+    """
+    out = [" "] * len(code)
+    for k, c in enumerate(code):
+        if c == "\n":
+            out[k] = "\n"
+    _scan_code(code, 0, out, in_interp=False)
+    return "".join(out)
+
+
+def _regex_end(code: str, i: int) -> int:
+    """End (exclusive, flags included) of the regex literal at code[i] == "/", or -1."""
+    j, in_class = i + 1, False
+    while j < len(code) and code[j] != "\n":
+        d = code[j]
+        if d == "\\":
+            j += 2
+            continue
+        if d == "[":
+            in_class = True
+        elif d == "]":
+            in_class = False
+        elif d == "/" and not in_class:
+            j += 1
+            while j < len(code) and (code[j].isalnum() or code[j] == "_"):
+                j += 1
+            return j
+        j += 1
+    return -1
+
+
+def _scan_code(code: str, i: int, out: list[str], in_interp: bool) -> int:
+    """Scan code from i, filling `out` with string contents; return where it stopped.
+
+    With in_interp, stops at the `}` closing a template literal's `${`.
+    """
+    n = len(code)
+    depth = 0
+    regex_ok = True  # whether a `/` here would start a regex literal
     while i < n:
         c = code[i]
+        if in_interp and c == "{":
+            depth += 1
+        elif in_interp and c == "}":
+            if depth == 0:
+                return i
+            depth -= 1
         if code.startswith("//", i):
             end = code.find("\n", i)
-            end = n if end == -1 else end
-            out.append(_blank(code[i:end]))
-            i = end
+            i = n if end == -1 else end
         elif code.startswith("/*", i):
             end = code.find("*/", i + 2)
-            end = n if end == -1 else end + 2
-            out.append(_blank(code[i:end]))
+            i = n if end == -1 else end + 2
+        elif c in "'\"":
+            i = _scan_string(code, i, out)
+            regex_ok = False
+        elif c == "`":
+            i = _scan_template(code, i, out)
+            regex_ok = False
+        elif c == "/" and regex_ok and (end := _regex_end(code, i)) != -1:
             i = end
-        elif c in "'\"`":
-            j = i + 1
-            content = []
-            depth = 0
-            while j < n:
-                d = code[j]
-                if depth == 0 and d == "\\" and j + 1 < n:
-                    content.append("  " if code[j + 1] != "\n" else " \n")
-                    j += 2
-                    continue
-                if depth == 0 and d == c:
-                    break
-                if c == "`" and depth == 0 and code.startswith("${", j):
-                    depth = 1
-                    content.append("  ")
-                    j += 2
-                    continue
-                if depth:
-                    depth += {"{": 1, "}": -1}.get(d, 0)
-                    content.append("\n" if d == "\n" else " ")
-                else:
-                    content.append(d)
+            regex_ok = False
+        elif c.isalnum() or c in "_$":
+            j = i
+            while j < n and (code[j].isalnum() or code[j] in "_$"):
                 j += 1
-            out.append(" " + "".join(content))
-            if j < n:
-                out.append(" ")
-            i = j + 1
+            regex_ok = code[i:j] in REGEX_KEYWORDS
+            i = j
         else:
-            out.append("\n" if c == "\n" else " ")
+            if not c.isspace():
+                regex_ok = c not in ")]"
             i += 1
-    return "".join(out)[:n]
+    return n
+
+
+def _scan_string(code: str, i: int, out: list[str]) -> int:
+    quote, j, n = code[i], i + 1, len(code)
+    while j < n and code[j] != quote:
+        if code[j] == "\\":
+            j += 2
+            continue
+        if code[j] != "\n":
+            out[j] = code[j]
+        j += 1
+    return j + 1
+
+
+def _scan_template(code: str, i: int, out: list[str]) -> int:
+    j, n = i + 1, len(code)
+    while j < n and code[j] != "`":
+        if code[j] == "\\":
+            j += 2
+            continue
+        if code.startswith("${", j):
+            j = _scan_code(code, j + 2, out, in_interp=True) + 1
+            continue
+        if code[j] != "\n":
+            out[j] = code[j]
+        j += 1
+    return j + 1
 
 
 # Attributes whose values are not shown to users.
@@ -123,8 +200,7 @@ INTERP_RE = re.compile(r"\{\{(.*?)\}\}", re.S)
 
 
 def _attr_mask(attrs: str) -> str:
-    out = [_blank(attrs)]
-    mask = list(out[0])
+    mask = list(_blank(attrs))
     for m in ATTR_RE.finditer(attrs):
         name, value = m.group(1), m.group(2)
         if value is None:
@@ -138,9 +214,8 @@ def _attr_mask(attrs: str) -> str:
         if base in HIDDEN_ATTRS or base.startswith("data-"):
             continue
         if bound:
-            # A bound value is a JS expression: only its string literals show.
-            if name.startswith("@") or name.startswith("v-on:"):
-                continue
+            # A bound value (event handlers included) is a JS expression: only its string
+            # literals show.
             visible = _script_strings(inner)
         else:
             visible = inner
@@ -200,8 +275,16 @@ def _word_pattern(word: str) -> re.Pattern:
     return re.compile(escaped)
 
 
+class GlossaryError(Exception):
+    """GLOSSARY.md could not be read as expected."""
+
+
 def find_violations(root: Path) -> list[str]:
     terms, avoid = parse_glossary((root / "GLOSSARY.md").read_text(encoding="utf-8"))
+    if not avoid:
+        raise GlossaryError(
+            "GLOSSARY.md: no `_Avoid_:` words found under any `**Term**:` heading (format changed?)"
+        )
     patterns = {word: _word_pattern(word) for word in avoid}
     src = root / "frontend" / "src"
     found = []
@@ -239,7 +322,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
     args = parser.parse_args(argv)
     sys.stdout.reconfigure(encoding="utf-8")
-    violations = find_violations(args.root)
+    sys.stderr.reconfigure(encoding="utf-8")
+    try:
+        violations = find_violations(args.root)
+    except GlossaryError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
     for line in violations:
         print(line)
     return 1 if violations else 0
