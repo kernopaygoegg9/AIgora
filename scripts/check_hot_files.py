@@ -9,6 +9,7 @@ not own, 0 otherwise, 2 on a usage or git error.
 """
 
 import argparse
+import re
 import subprocess
 import sys
 import tomllib
@@ -21,6 +22,39 @@ def git(*args: str) -> str:
 
 def changed_files(rng: str) -> list[str]:
     return [line for line in git("diff", "--name-only", rng).splitlines() if line]
+
+
+def glob_to_regex(pattern: str) -> re.Pattern[str]:
+    """`**` matches across `/`; `*` and `?` stay inside one path segment."""
+    out = []
+    i = 0
+    while i < len(pattern):
+        if pattern.startswith("**", i):
+            out.append(".*")
+            i += 2
+        elif pattern[i] == "*":
+            out.append("[^/]*")
+            i += 1
+        elif pattern[i] == "?":
+            out.append("[^/]")
+            i += 1
+        else:
+            out.append(re.escape(pattern[i]))
+            i += 1
+    return re.compile("".join(out))
+
+
+def owners_of(path: str, hot: dict[str, list[str] | str]) -> list[str] | str | None:
+    """Owners from every pattern matching `path`: "*" if any says so, None if none match."""
+    owners: list[str] = []
+    matched = False
+    for pattern, who in hot.items():
+        if glob_to_regex(pattern).fullmatch(path):
+            if who == "*":
+                return "*"
+            matched = True
+            owners += [w for w in who if w not in owners]
+    return owners if matched else None
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -36,7 +70,7 @@ def main(argv: list[str] | None = None) -> int:
 
     violations = []
     for path in changed_files(args.range):
-        owners = hot.get(path)
+        owners = owners_of(path, hot)
         if owners is None or owners == "*" or args.ticket in owners:
             continue
         violations.append((path, owners))
