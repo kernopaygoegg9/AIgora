@@ -6,6 +6,7 @@
 - `frontend/`: Vue + Vite + TypeScript (Pinia, Vue Router). Playwright E2E in `frontend/e2e/`.
 - `participants.example.toml`, `.env.example`: copy to `participants.toml` / `.env` (both git-ignored). Discussion records go to `data/discussions/` (git-ignored).
 - Hot files and their owners: `.scratch/aigora-v1/tickets-overview.md`.
+- Architecture notes in `docs/architecture/`: read the matching page before changing the discussion engine (`discussion-engine.md`), a backend↔frontend shape (`contracts.md`), an adapter (`adapters.md`), or test setup (`testing.md`).
 
 ## Commands
 
@@ -17,13 +18,22 @@ Run from the repo root unless noted.
 - Backend tests: `uv run --directory backend pytest`. Tests that call a real AI CLI or the real TypeSafe API are marked `real_ai` and skipped by default; run them only when asked or after a CLI upgrade (ADR 0002: each adapter has an isolation canary). All: `uv run --directory backend pytest -m real_ai`. Per adapter (a CLI that is not installed or not logged in is skipped):
   - claude: `uv run --directory backend pytest -m real_ai tests/test_claude_adapter_real.py`
   - codex: `uv run --directory backend pytest -m real_ai tests/test_codex_adapter_real.py`
-  - gemini: `uv run --directory backend pytest -m real_ai tests/test_gemini_adapter_real.py` (needs `npm install -g @google/gemini-cli` + login)
+  - gemini: deferred from v1, see ticket 14 (`.scratch/aigora-v1/issues/14-adapter-gemini.md`)
   - ollama: `uv run --directory backend pytest -m real_ai tests/test_ollama_real.py` (local, no quota; env `AIGORA_TEST_OLLAMA_MODEL`, `AIGORA_TEST_OLLAMA_URL`; default = first installed model at http://127.0.0.1:11434)
   - Jev (TypeSafe): `uv run --directory backend pytest -m real_ai tests/test_jev_client.py` (skipped without `TYPESAFE_API_KEY` in `.env`)
 - Frontend type check: `npm run typecheck --prefix frontend`. Production build: `npm run build --prefix frontend` (output `frontend/dist`, served by the backend).
 - E2E: `cd frontend && npx playwright test`. Starts its own backend (:8766, Fake Adapter participants from `frontend/e2e/participants.e2e.toml`) and Vite (:5174); two runs at the same time collide on those ports.
 - Assets: app icon / favicons in `assets/brand/` (Vite `publicDir`, served at the site root); avatars in `assets/avatars/`, served by `GET /api/avatars/{file}` (unknown file -> `default.png`).
 - Backend env vars: `TYPESAFE_API_KEY`, `AIGORA_HOST`, `AIGORA_PORT`, `AIGORA_PARTICIPANTS_FILE`, `AIGORA_DATA_DIR`, `AIGORA_ENV_FILE` (path of the `.env` to read; default repo-root `.env`).
+
+## User-only actions
+
+Global installs (`npm install -g`, system packages), `git push`, and creating or configuring remote repositories are done by the user. When a task reaches one, stop and report the exact command for the user to run.
+
+## implement-spec: extra rules
+
+- Implementers commit after the first green test and after every green test after that. A usage-limit pause can delete a worktree that has no commits, losing the work.
+- When an implementer's branch merges into the integration branch without conflicts, the orchestrator merges it and runs the checks (backend pytest, typecheck, E2E) itself. Dispatch a merger subagent only for a merge with conflicts.
 
 ## Agent skills
 
