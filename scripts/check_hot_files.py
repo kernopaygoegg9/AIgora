@@ -88,7 +88,9 @@ def load_table(text: str) -> dict[str, list[str] | str]:
             except TableError as exc:
                 raise TableError(f"{pattern!r}: {exc}") from None
         else:
-            raise TableError(f'{pattern!r}: owners must be "*" or a list of ticket numbers, got {who!r}')
+            raise TableError(
+                f'{pattern!r}: owners must be "*" or a list of ticket numbers, got {who!r}'
+            )
     return hot
 
 
