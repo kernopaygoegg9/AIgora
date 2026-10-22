@@ -1,6 +1,7 @@
 """The fake CLIs' processes never outlive a test, even when the adapter fails to end them."""
 
 import asyncio
+import contextlib
 import json
 import sys
 from pathlib import Path
@@ -17,10 +18,15 @@ FAKE_CLAUDE = Path(__file__).with_name("fake_claude_cli.py")
 
 
 async def kill_only_the_cli(proc: asyncio.subprocess.Process) -> None:
-    """A broken cancellation: ends the CLI but leaves its children running."""
+    """A broken cancellation: ends the CLI but leaves its children running.
+
+    The wait is bounded like kill_tree's: on POSIX, asyncio's wait() also waits for the pipes
+    to close, and the surviving grandchild holds them open.
+    """
     if proc.returncode is None:
         proc.kill()
-    await proc.wait()
+    with contextlib.suppress(asyncio.TimeoutError):
+        await asyncio.wait_for(proc.wait(), timeout=1)
 
 
 async def heartbeat_size_after_a_pause(heartbeat: Path) -> tuple[int, int]:
