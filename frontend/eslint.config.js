@@ -13,8 +13,14 @@ export default tseslint.config(
     files: ['**/*.vue'],
     languageOptions: { parserOptions: { parser: tseslint.parser } },
   },
+  // The app runs in the browser; config files and Playwright specs run in Node.
   {
-    languageOptions: { globals: { ...globals.browser, ...globals.node } },
+    files: ['src/**'],
+    languageOptions: { globals: globals.browser },
+  },
+  {
+    files: ['*.{js,ts}', 'e2e/**'],
+    languageOptions: { globals: globals.node },
   },
   prettier,
 )
