@@ -14,6 +14,7 @@ import shutil
 from pathlib import Path
 
 import pytest
+from conftest import fake_participant, run_discussion
 
 from aigora import participant_info
 from aigora.adapters.base import Availability, ModelChoices, ModelOption
@@ -21,7 +22,6 @@ from aigora.adapters.fake import FakeAdapter
 from aigora.api.messages import DiscussionSettings, ExtraParticipant
 from aigora.config import Defaults, ParticipantConfig, ParticipantsConfig
 from aigora.discussion.settings import build_participants
-from conftest import fake_participant, run_discussion
 
 FIXTURES = Path(__file__).parent / "fixtures"
 SCHEMA1_ID = "20260101-120000-a1b2c3"
@@ -40,12 +40,17 @@ def by_id(response) -> dict[str, dict]:
 
 
 def test_participants_carry_their_model_list(client, write_participants):
-    write_participants(fake_participant("fake-a", "Fake A", models=["small", "large"])
-                       + fake_participant("fake-b", "Fake B"))
+    write_participants(
+        fake_participant("fake-a", "Fake A", models=["small", "large"])
+        + fake_participant("fake-b", "Fake B")
+    )
 
     info = by_id(client.get("/api/participants"))
 
-    assert info["fake-a"]["models"] == [{"id": "small", "label": "small"}, {"id": "large", "label": "large"}]
+    assert info["fake-a"]["models"] == [
+        {"id": "small", "label": "small"},
+        {"id": "large", "label": "large"},
+    ]
     assert info["fake-a"]["free_text_model"] is False
     assert info["fake-a"]["models_error"] is None
     assert info["fake-a"]["model"] is None  # still the configured model
@@ -73,7 +78,9 @@ def test_a_listing_error_is_reported_and_an_adapter_that_raises_does_not_break_t
 
     monkeypatch.setattr(FakeAdapter, "list_models", list_models)
     # Different options, so each gets its own listing (listings are shared per adapter + options).
-    write_participants(fake_participant("broken", "Broken", models=["b"]) + fake_participant("offline", "Offline"))
+    write_participants(
+        fake_participant("broken", "Broken", models=["b"]) + fake_participant("offline", "Offline")
+    )
 
     info = by_id(client.get("/api/participants"))
 
@@ -83,7 +90,9 @@ def test_a_listing_error_is_reported_and_an_adapter_that_raises_does_not_break_t
     assert info["offline"]["models_error"] == "catalog offline"
 
 
-def test_model_lists_are_cached_per_adapter_and_options_for_five_minutes(client, write_participants, monkeypatch):
+def test_model_lists_are_cached_per_adapter_and_options_for_five_minutes(
+    client, write_participants, monkeypatch
+):
     calls: list[str] = []
 
     async def list_models(self, participant):
@@ -91,8 +100,10 @@ def test_model_lists_are_cached_per_adapter_and_options_for_five_minutes(client,
         return ModelChoices(models=(ModelOption("m", "m"),))
 
     monkeypatch.setattr(FakeAdapter, "list_models", list_models)
-    write_participants(fake_participant("fake-a", "Fake A", models=["x"])
-                       + fake_participant("fake-c", "Fake C", models=["y"]))
+    write_participants(
+        fake_participant("fake-a", "Fake A", models=["x"])
+        + fake_participant("fake-c", "Fake C", models=["y"])
+    )
     now = [1000.0]
     monkeypatch.setattr(participant_info.time, "monotonic", lambda: now[0])
 
@@ -113,7 +124,9 @@ def test_model_lists_are_cached_per_adapter_and_options_for_five_minutes(client,
 
 
 def test_errors_are_not_cached(client, write_participants, monkeypatch):
-    results = iter([ModelChoices(error="Ollama is not running"), ModelChoices(models=(ModelOption("m", "m"),))])
+    results = iter(
+        [ModelChoices(error="Ollama is not running"), ModelChoices(models=(ModelOption("m", "m"),))]
+    )
 
     async def list_models(self, participant):
         return next(results)
@@ -121,11 +134,15 @@ def test_errors_are_not_cached(client, write_participants, monkeypatch):
     monkeypatch.setattr(FakeAdapter, "list_models", list_models)
     write_participants(fake_participant("fake-a", "Fake A"))
 
-    assert by_id(client.get("/api/participants"))["fake-a"]["models_error"] == "Ollama is not running"
+    assert (
+        by_id(client.get("/api/participants"))["fake-a"]["models_error"] == "Ollama is not running"
+    )
     assert by_id(client.get("/api/participants"))["fake-a"]["models"] == [{"id": "m", "label": "m"}]
 
 
-def test_participants_sharing_adapter_and_options_trigger_one_listing_at_a_time(client, write_participants, monkeypatch):
+def test_participants_sharing_adapter_and_options_trigger_one_listing_at_a_time(
+    client, write_participants, monkeypatch
+):
     calls: list[str] = []
 
     async def list_models(self, participant):
@@ -134,8 +151,10 @@ def test_participants_sharing_adapter_and_options_trigger_one_listing_at_a_time(
         return ModelChoices(models=(ModelOption("m", "m"),))
 
     monkeypatch.setattr(FakeAdapter, "list_models", list_models)
-    write_participants(fake_participant("fake-a", "Fake A", models=["x"])
-                       + fake_participant("fake-b", "Fake B", models=["x"]))
+    write_participants(
+        fake_participant("fake-a", "Fake A", models=["x"])
+        + fake_participant("fake-b", "Fake B", models=["x"])
+    )
 
     info = by_id(client.get("/api/participants"))
 
@@ -154,8 +173,10 @@ def test_a_failed_in_flight_listing_is_shared_but_not_kept(client, write_partici
         return ModelChoices(models=(ModelOption("m", "m"),))
 
     monkeypatch.setattr(FakeAdapter, "list_models", list_models)
-    write_participants(fake_participant("fake-a", "Fake A", models=["x"])
-                       + fake_participant("fake-b", "Fake B", models=["x"]))
+    write_participants(
+        fake_participant("fake-a", "Fake A", models=["x"])
+        + fake_participant("fake-b", "Fake B", models=["x"])
+    )
 
     first = by_id(client.get("/api/participants"))
     assert len(calls) == 1
@@ -167,7 +188,9 @@ def test_a_failed_in_flight_listing_is_shared_but_not_kept(client, write_partici
     assert second["fake-a"]["models"] == [{"id": "m", "label": "m"}]
 
 
-def test_model_listing_runs_at_the_same_time_as_the_availability_check(client, write_participants, monkeypatch):
+def test_model_listing_runs_at_the_same_time_as_the_availability_check(
+    client, write_participants, monkeypatch
+):
     # Each side waits until the other has started: run one after the other, this times out.
     events: dict[str, asyncio.Event] = {}
 
@@ -240,7 +263,9 @@ def received_models(monkeypatch) -> dict[str, set[str | None]]:
 # --- v1 behaviour ----------------------------------------------------------------
 
 
-def test_without_the_new_fields_the_snapshot_has_empty_models_and_extras(client, two_fakes, data_dir):
+def test_without_the_new_fields_the_snapshot_has_empty_models_and_extras(
+    client, two_fakes, data_dir
+):
     messages = run_discussion(client, "Q?", ask("fake-a", "fake-b"))
 
     started = messages[0]
@@ -260,7 +285,9 @@ def test_without_the_new_fields_the_snapshot_has_empty_models_and_extras(client,
 def test_a_model_override_reaches_the_adapter_the_snapshot_and_the_record(
     client, two_fakes, data_dir, received_models
 ):
-    messages = run_discussion(client, "Q?", ask("fake-a", "fake-b", models={"fake-a": "  fast-model  "}))
+    messages = run_discussion(
+        client, "Q?", ask("fake-a", "fake-b", models={"fake-a": "  fast-model  "})
+    )
 
     assert received_models == {"fake-a": {"fast-model"}, "fake-b": {None}}
     started = messages[0]
@@ -276,7 +303,9 @@ def test_a_model_override_reaches_the_adapter_the_snapshot_and_the_record(
 
 def test_an_extra_participant_speaks_and_is_recorded(client, two_fakes, data_dir, received_models):
     messages = run_discussion(
-        client, "Q?", ask("fake-a", "x-1", extra_participants=[extra("x-1", "fake-b", "other-model")])
+        client,
+        "Q?",
+        ask("fake-a", "x-1", extra_participants=[extra("x-1", "fake-b", "other-model")]),
     )
 
     assert messages[-1]["outcome"] == "completed"
@@ -285,7 +314,9 @@ def test_an_extra_participant_speaks_and_is_recorded(client, two_fakes, data_dir
     started = messages[0]
     assert started["settings"]["participant_ids"] == ["fake-a", "x-1"]
     assert started["settings"]["extra_participants"] == [extra("x-1", "fake-b", "other-model")]
-    assert [(p["id"], p["display_name"], p["adapter"], p["model"]) for p in started["participants"]] == [
+    assert [
+        (p["id"], p["display_name"], p["adapter"], p["model"]) for p in started["participants"]
+    ] == [
         ("fake-a", "Fake A", "fake", None),
         ("x-1", "Fake B", "fake", "other-model"),
     ]
@@ -299,14 +330,22 @@ def test_an_extra_participant_without_a_model_uses_its_templates_model_unless_ov
     client, write_participants, received_models
 ):
     write_participants(
-        fake_participant("fake-a", "Fake A", stream=False).replace('adapter = "fake"', 'adapter = "fake"\nmodel = "base"')
+        fake_participant("fake-a", "Fake A", stream=False).replace(
+            'adapter = "fake"', 'adapter = "fake"\nmodel = "base"'
+        )
         + fake_participant("fake-b", "Fake B", stream=False)
     )
 
     messages = run_discussion(
-        client, "Q?",
-        ask("fake-b", "x-1", "x-2", extra_participants=[extra("x-1", "fake-a"), extra("x-2", "fake-a")],
-            models={"x-2": "picked"}),
+        client,
+        "Q?",
+        ask(
+            "fake-b",
+            "x-1",
+            "x-2",
+            extra_participants=[extra("x-1", "fake-a"), extra("x-2", "fake-a")],
+            models={"x-2": "picked"},
+        ),
     )
 
     assert messages[-1]["outcome"] == "completed"
@@ -316,11 +355,19 @@ def test_an_extra_participant_without_a_model_uses_its_templates_model_unless_ov
 
 def test_an_extra_participant_can_moderate(client, two_fakes):
     messages = run_discussion(
-        client, "Q?", consensus("fake-a", "x-1", moderator_id="x-1", extra_participants=[extra("x-1", "fake-b", "m")])
+        client,
+        "Q?",
+        consensus(
+            "fake-a", "x-1", moderator_id="x-1", extra_participants=[extra("x-1", "fake-b", "m")]
+        ),
     )
 
     assert messages[0]["settings"]["moderator_id"] == "x-1"
-    drafts = [(m["round"], m["participant_id"]) for m in of_type(messages, "turn_completed") if m["purpose"] == "draft"]
+    drafts = [
+        (m["round"], m["participant_id"])
+        for m in of_type(messages, "turn_completed")
+        if m["purpose"] == "draft"
+    ]
     assert drafts and all(pid == "x-1" for _, pid in drafts)
     assert messages[-1]["outcome"] == "consensus"
     assert messages[-1]["result"]["text"] == "B's draft"
@@ -333,11 +380,20 @@ def test_a_failing_moderator_hands_over_to_an_extra_participant(client, write_pa
     )
 
     messages = run_discussion(
-        client, "Q?",
-        consensus("fake-a", "x-1", "fake-b", moderator_id="fake-a", extra_participants=[extra("x-1", "fake-b", "m")]),
+        client,
+        "Q?",
+        consensus(
+            "fake-a",
+            "x-1",
+            "fake-b",
+            moderator_id="fake-a",
+            extra_participants=[extra("x-1", "fake-b", "m")],
+        ),
     )
 
-    assert [(c["participant_id"], c["round"]) for c in of_type(messages, "moderator_changed")] == [("x-1", 1)]
+    assert [(c["participant_id"], c["round"]) for c in of_type(messages, "moderator_changed")] == [
+        ("x-1", 1)
+    ]
     assert messages[-1]["outcome"] == "consensus"
 
 
@@ -352,7 +408,12 @@ def test_a_failing_moderator_hands_over_to_an_extra_participant(client, write_pa
         (ask("fake-a", "x" * 65, extra_participants=[extra("x" * 65, "fake-a")]), "格式不合法"),
         (ask("fake-a", "fake-b", extra_participants=[extra("fake-b", "fake-a")]), "重複"),
         (ask("fake-a", "fake-off", extra_participants=[extra("fake-off", "fake-a")]), "重複"),
-        (ask("fake-a", "x-1", extra_participants=[extra("x-1", "fake-a"), extra("x-1", "fake-b")]), "重複"),
+        (
+            ask(
+                "fake-a", "x-1", extra_participants=[extra("x-1", "fake-a"), extra("x-1", "fake-b")]
+            ),
+            "重複",
+        ),
         (ask("fake-a", "x-1", extra_participants=[extra("x-1", "nobody")]), "不存在或已停用"),
         (ask("fake-a", "x-1", extra_participants=[extra("x-1", "fake-off")]), "不存在或已停用"),
         (ask("fake-a", "fake-b", models={"fake-a": "has space"}), "模型不合法"),
@@ -363,11 +424,15 @@ def test_a_failing_moderator_hands_over_to_an_extra_participant(client, write_pa
         (ask("fake-a", "x-1"), "未知或已停用的參與者"),
     ],
 )
-def test_invalid_models_or_extra_participants_are_rejected(client, write_participants, data_dir, settings, fragment):
+def test_invalid_models_or_extra_participants_are_rejected(
+    client, write_participants, data_dir, settings, fragment
+):
     write_participants(
         fake_participant("fake-a", "Fake A", stream=False)
         + fake_participant("fake-b", "Fake B", stream=False)
-        + fake_participant("fake-off", "Fake Off", stream=False).replace('adapter = "fake"', 'adapter = "fake"\nenabled = false')
+        + fake_participant("fake-off", "Fake Off", stream=False).replace(
+            'adapter = "fake"', 'adapter = "fake"\nenabled = false'
+        )
     )
 
     messages = run_discussion(client, "Q?", settings)
@@ -392,9 +457,16 @@ def _config(*participants: ParticipantConfig) -> ParticipantsConfig:
 
 def _settings(ids: list[str], *, models=None, extras=()) -> DiscussionSettings:
     return DiscussionSettings(
-        mode="ask", participant_ids=ids, judge="stance_vote", moderator_id=None, speaking_order="parallel",
-        max_rounds=3, turn_timeout_seconds=60, jev_threshold=0.8,
-        models=models or {}, extra_participants=[ExtraParticipant(**e) for e in extras],
+        mode="ask",
+        participant_ids=ids,
+        judge="stance_vote",
+        moderator_id=None,
+        speaking_order="parallel",
+        max_rounds=3,
+        turn_timeout_seconds=60,
+        jev_threshold=0.8,
+        models=models or {},
+        extra_participants=[ExtraParticipant(**e) for e in extras],
     )
 
 
@@ -405,7 +477,11 @@ def test_duplicated_names_get_the_model_then_a_number():
     )
     settings = _settings(
         ["claude", "x-1", "x-2", "codex", "x-3"],
-        extras=[extra("x-1", "claude", "opus"), extra("x-2", "claude", "opus"), extra("x-3", "claude")],
+        extras=[
+            extra("x-1", "claude", "opus"),
+            extra("x-2", "claude", "opus"),
+            extra("x-3", "claude"),
+        ],
     )
 
     built = build_participants(settings, config)
@@ -427,10 +503,19 @@ def test_participants_address_each_other_by_the_unique_names(client, write_parti
         client, "Q?", ask("fake-a", "x-1", extra_participants=[extra("x-1", "fake-a", "m2")])
     )
 
-    assert [p["display_name"] for p in messages[0]["participants"]] == ["Fake A（預設模型）", "Fake A（m2）"]
+    assert [p["display_name"] for p in messages[0]["participants"]] == [
+        "Fake A（預設模型）",
+        "Fake A（m2）",
+    ]
     prompts = {m["participant_id"]: m["text"] for m in of_type(messages, "turn_completed")}
-    assert "You are Fake A（預設模型）, discussing the user's question with: Fake A（m2）." in prompts["fake-a"]
-    assert "You are Fake A（m2）, discussing the user's question with: Fake A（預設模型）." in prompts["x-1"]
+    assert (
+        "You are Fake A（預設模型）, discussing the user's question with: Fake A（m2）."
+        in prompts["fake-a"]
+    )
+    assert (
+        "You are Fake A（m2）, discussing the user's question with: Fake A（預設模型）."
+        in prompts["x-1"]
+    )
 
 
 # --- 提問轉共識討論 ----------------------------------------------------------------------
@@ -443,7 +528,11 @@ def derive(client, from_id: str) -> list[dict]:
             {
                 "type": "start",
                 "question": "ignored?",
-                "settings": {"mode": "consensus", "participant_ids": ["ignored"], "judge": "stance_vote"},
+                "settings": {
+                    "mode": "consensus",
+                    "participant_ids": ["ignored"],
+                    "judge": "stance_vote",
+                },
                 "from_discussion_id": from_id,
             }
         )
@@ -455,10 +544,18 @@ def derive(client, from_id: str) -> list[dict]:
     return received
 
 
-def test_converting_an_ask_keeps_its_models_and_extra_participants(client, two_fakes, received_models):
+def test_converting_an_ask_keeps_its_models_and_extra_participants(
+    client, two_fakes, received_models
+):
     asked = run_discussion(
-        client, "Q?",
-        ask("fake-a", "x-1", models={"fake-a": "fast"}, extra_participants=[extra("x-1", "fake-b", "other")]),
+        client,
+        "Q?",
+        ask(
+            "fake-a",
+            "x-1",
+            models={"fake-a": "fast"},
+            extra_participants=[extra("x-1", "fake-b", "other")],
+        ),
     )
     received_models.clear()
 
@@ -474,14 +571,21 @@ def test_converting_an_ask_keeps_its_models_and_extra_participants(client, two_f
     assert messages[-1]["outcome"] == "consensus"
 
 
-def test_converting_an_ask_whose_template_was_removed_is_an_error(client, write_participants, data_dir):
+def test_converting_an_ask_whose_template_was_removed_is_an_error(
+    client, write_participants, data_dir
+):
     write_participants(
         fake_participant("fake-a", "Fake A", stream=False)
         + fake_participant("fake-b", "Fake B", stream=False)
         + fake_participant("fake-c", "Fake C", stream=False)
     )
-    asked = run_discussion(client, "Q?", ask("fake-a", "fake-b", "x-1", extra_participants=[extra("x-1", "fake-c")]))
-    write_participants(fake_participant("fake-a", "Fake A", stream=False) + fake_participant("fake-b", "Fake B", stream=False))
+    asked = run_discussion(
+        client, "Q?", ask("fake-a", "fake-b", "x-1", extra_participants=[extra("x-1", "fake-c")])
+    )
+    write_participants(
+        fake_participant("fake-a", "Fake A", stream=False)
+        + fake_participant("fake-b", "Fake B", stream=False)
+    )
 
     messages = derive(client, asked[0]["discussion_id"])
 
@@ -513,7 +617,9 @@ def test_a_schema_1_record_is_listed_and_readable(client, schema1_record):
     assert record["settings"]["models"] == {}
     assert record["settings"]["extra_participants"] == []
     assert [p["model"] for p in record["participants"]] == [None, None]
-    assert [[t["text"] for t in r["turns"]] for r in record["rounds"]] == [["Old answer from A", "Old answer from B"]]
+    assert [[t["text"] for t in r["turns"]] for r in record["rounds"]] == [
+        ["Old answer from A", "Old answer from B"]
+    ]
 
 
 def test_a_schema_1_ask_converts_like_in_v1(client, two_fakes, schema1_record, received_models):

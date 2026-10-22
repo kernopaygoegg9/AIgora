@@ -77,10 +77,20 @@ adapter = "fake"
     )
     config = load_participants(path)
     d = config.defaults
-    assert (d.mode, d.judge, d.speaking_order, d.moderator) == ("consensus", "jev", "sequential", "b")
+    assert (d.mode, d.judge, d.speaking_order, d.moderator) == (
+        "consensus",
+        "jev",
+        "sequential",
+        "b",
+    )
     assert (d.max_rounds, d.turn_timeout_seconds, d.jev_threshold) == (4, 30, 0.9)
     a = config.participants[0]
-    assert (a.model, a.avatar, a.enabled, a.options) == ("m1", "custom.png", False, {"replies": ["hi"]})
+    assert (a.model, a.avatar, a.enabled, a.options) == (
+        "m1",
+        "custom.png",
+        False,
+        {"replies": ["hi"]},
+    )
     assert [p.id for p in config.enabled_participants()] == ["b"]
     assert config.get("b").display_name == "B"
 
@@ -146,7 +156,10 @@ def test_missing_file_fails(tmp_path):
 
 
 def test_persona_is_ignored_and_logged(tmp_path, caplog):
-    path = write(tmp_path, TWO_FAKES.replace('adapter = "fake"\n\n', 'adapter = "fake"\npersona = "grumpy"\n\n', 1))
+    path = write(
+        tmp_path,
+        TWO_FAKES.replace('adapter = "fake"\n\n', 'adapter = "fake"\npersona = "grumpy"\n\n', 1),
+    )
     with caplog.at_level(logging.INFO, logger="aigora.config"):
         config = load_participants(path)
     assert config.participants[0].id == "a"
@@ -155,7 +168,10 @@ def test_persona_is_ignored_and_logged(tmp_path, caplog):
 
 @pytest.mark.parametrize(
     "path",
-    [REPO_ROOT / "participants.example.toml", REPO_ROOT / "frontend" / "e2e" / "participants.e2e.toml"],
+    [
+        REPO_ROOT / "participants.example.toml",
+        REPO_ROOT / "frontend" / "e2e" / "participants.e2e.toml",
+    ],
 )
 def test_shipped_participant_files_load(path):
     assert load_participants(path).participants

@@ -22,6 +22,7 @@ from aigora.discussion.orders import get_speaking_order
 from aigora.discussion.settings import SettingsError, build_participants, resolve_settings
 from aigora.discussion.store import DiscussionStore
 
+
 async def _send_error(websocket: WebSocket, message: str) -> None:
     """An error before any discussion exists (the only message on this connection)."""
     await websocket.send_json(m.to_wire(m.ErrorMessage(discussion_id=None, seq=1, message=message)))

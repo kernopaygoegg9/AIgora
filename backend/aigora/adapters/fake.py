@@ -107,7 +107,10 @@ class FakeAdapter(Adapter):
         o = options
         for key in ("replies", "drafts", "confirmations"):
             if key in o:
-                _check(_is_str_list(o[key]) and len(o[key]) > 0, f"`{key}` must be a non-empty list of strings")
+                _check(
+                    _is_str_list(o[key]) and len(o[key]) > 0,
+                    f"`{key}` must be a non-empty list of strings",
+                )
         if "models" in o:
             _check(_is_str_list(o["models"]), "`models` must be a list of strings")
         for key in ("final", "summary", "fail_reason", "unavailable_reason", "cancel_log"):
@@ -117,20 +120,32 @@ class FakeAdapter(Adapter):
             if key in o:
                 _check(isinstance(o[key], bool), f"`{key}` must be true or false")
         if "chunk_chars" in o:
-            _check(isinstance(o["chunk_chars"], int) and not isinstance(o["chunk_chars"], bool)
-                   and o["chunk_chars"] > 0, "`chunk_chars` must be a positive integer")
+            _check(
+                isinstance(o["chunk_chars"], int)
+                and not isinstance(o["chunk_chars"], bool)
+                and o["chunk_chars"] > 0,
+                "`chunk_chars` must be a positive integer",
+            )
         for key in ("chunk_delay_seconds", "delay_seconds"):
             if key in o:
                 _check(_is_number(o[key]) and o[key] >= 0, f"`{key}` must be a number >= 0")
         if "fail_rounds" in o:
             rounds = o["fail_rounds"]
-            _check(isinstance(rounds, list) and all(isinstance(r, int) and not isinstance(r, bool) and r >= 1
-                                                    for r in rounds), "`fail_rounds` must be a list of round numbers >= 1")
+            _check(
+                isinstance(rounds, list)
+                and all(isinstance(r, int) and not isinstance(r, bool) and r >= 1 for r in rounds),
+                "`fail_rounds` must be a list of round numbers >= 1",
+            )
         if "fail_purposes" in o:
-            _check(_is_str_list(o["fail_purposes"]) and set(o["fail_purposes"]) <= set(TURN_PURPOSES),
-                   f"`fail_purposes` must be a list of: {', '.join(TURN_PURPOSES)}")
+            _check(
+                _is_str_list(o["fail_purposes"]) and set(o["fail_purposes"]) <= set(TURN_PURPOSES),
+                f"`fail_purposes` must be a list of: {', '.join(TURN_PURPOSES)}",
+            )
         if "fail_kind" in o:
-            _check(o["fail_kind"] in FAILURE_KINDS, f"`fail_kind` must be one of: {', '.join(FAILURE_KINDS)}")
+            _check(
+                o["fail_kind"] in FAILURE_KINDS,
+                f"`fail_kind` must be one of: {', '.join(FAILURE_KINDS)}",
+            )
 
     def _options(self, participant: ParticipantConfig) -> dict[str, Any]:
         self.validate_options(participant.options)
@@ -164,7 +179,9 @@ class FakeAdapter(Adapter):
                     log.write(f"{request.participant.id}\n")
             raise
 
-    async def _run_turn(self, request: TurnRequest, o: dict[str, Any]) -> AsyncIterator[AdapterEvent]:
+    async def _run_turn(
+        self, request: TurnRequest, o: dict[str, Any]
+    ) -> AsyncIterator[AdapterEvent]:
         if not o["available"]:
             yield Failed("not_available", o["unavailable_reason"])
             return
@@ -214,7 +231,10 @@ class FakeAdapter(Adapter):
             case "draft":
                 return per_round("drafts") or f"{name}: consensus draft after round {n}."
             case "confirmation":
-                return per_round("confirmations") or f"{name}: I agree consensus is reached.\nSTANCE: AGREE"
+                return (
+                    per_round("confirmations")
+                    or f"{name}: I agree consensus is reached.\nSTANCE: AGREE"
+                )
             case "final_result":
                 return o["final"] or f"{name}: final consensus result."
             case "no_consensus_summary":

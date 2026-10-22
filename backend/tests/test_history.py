@@ -18,7 +18,9 @@ def _participants(write_participants):
     )
 
 
-def test_a_finished_ask_is_listed_with_question_mode_start_time_and_outcome(client, write_participants):
+def test_a_finished_ask_is_listed_with_question_mode_start_time_and_outcome(
+    client, write_participants
+):
     _participants(write_participants)
     messages = run_discussion(client, "Tabs or spaces?", ASK)
     discussion_id = messages[0]["discussion_id"]
@@ -53,12 +55,16 @@ def _in_progress_record(discussion_id: str, created_at: str, question: str) -> D
     )
 
 
-def test_list_is_newest_first_and_includes_discussions_still_in_progress(client, write_participants, data_dir):
+def test_list_is_newest_first_and_includes_discussions_still_in_progress(
+    client, write_participants, data_dir
+):
     _participants(write_participants)
     finished_id = run_discussion(client, "Finished ask", ASK)[0]["discussion_id"]
     store = DiscussionStore(data_dir)
     store.save(_in_progress_record("20000101-000000-aaaaaa", "2000-01-01T00:00:00+00:00", "Oldest"))
-    store.save(_in_progress_record("29990101-000000-bbbbbb", "2999-01-01T00:00:00+00:00", "Still running"))
+    store.save(
+        _in_progress_record("29990101-000000-bbbbbb", "2999-01-01T00:00:00+00:00", "Still running")
+    )
 
     summaries = client.get("/api/discussions").json()
 
@@ -81,11 +87,18 @@ def test_one_discussion_returns_the_full_record(client, write_participants):
     assert record["question"] == "Tabs or spaces?"
     assert record["settings"]["participant_ids"] == ["fake-a", "fake-b"]
     assert [p["display_name"] for p in record["participants"]] == ["Fake A", "Fake B"]
-    assert [[t["text"] for t in r["turns"]] for r in record["rounds"]] == [["Answer from A", "Answer from B"]]
+    assert [[t["text"] for t in r["turns"]] for r in record["rounds"]] == [
+        ["Answer from A", "Answer from B"]
+    ]
     assert record["outcome"] == "completed"
     assert record["result"]["kind"] == "answers"
     assert record["finished_at"] is not None
-    assert {"interjections", "removed_participants", "moderator_changes", "derived_from"} <= record.keys()
+    assert {
+        "interjections",
+        "removed_participants",
+        "moderator_changes",
+        "derived_from",
+    } <= record.keys()
 
 
 def test_unknown_discussion_is_404(client):

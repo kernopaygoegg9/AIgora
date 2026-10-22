@@ -25,7 +25,9 @@ BASE = "http://ollama.test:11434"
 
 def participant(model: str | None = "llama3.2", **options) -> ParticipantConfig:
     options.setdefault("base_url", BASE)
-    return ParticipantConfig(id="ollama", display_name="Ollama", adapter="ollama", model=model, options=options)
+    return ParticipantConfig(
+        id="ollama", display_name="Ollama", adapter="ollama", model=model, options=options
+    )
 
 
 def adapter(handler) -> OllamaAdapter:
@@ -69,17 +71,23 @@ async def test_unavailable_when_no_model_is_configured():
 
 
 async def test_unavailable_when_the_server_answers_with_an_error():
-    result = await adapter(lambda req: httpx.Response(500, text="boom")).check_availability(participant())
+    result = await adapter(lambda req: httpx.Response(500, text="boom")).check_availability(
+        participant()
+    )
     assert result.available is False
     assert "500" in result.reason
 
 
 def test_declares_no_web_access_and_streaming():
-    assert OllamaAdapter().capabilities(participant()) == Capabilities(web_access=False, streaming=True)
+    assert OllamaAdapter().capabilities(participant()) == Capabilities(
+        web_access=False, streaming=True
+    )
 
 
 def request(p: ParticipantConfig | None = None, prompt: str = "Q?") -> TurnRequest:
-    return TurnRequest(participant=p or participant(), prompt=prompt, workspace=Path("."), timeout_seconds=5)
+    return TurnRequest(
+        participant=p or participant(), prompt=prompt, workspace=Path("."), timeout_seconds=5
+    )
 
 
 def ndjson(*chunks: dict) -> bytes:
@@ -156,12 +164,18 @@ async def test_error_in_the_middle_of_the_stream_fails_as_crashed_after_the_part
 
 async def test_stream_ending_without_done_fails_as_crashed():
     body = ndjson({"response": "Half", "done": False})
-    assert only_failure(await run(adapter(lambda req: httpx.Response(200, content=body)))).kind == "crashed"
+    assert (
+        only_failure(await run(adapter(lambda req: httpx.Response(200, content=body)))).kind
+        == "crashed"
+    )
 
 
 async def test_malformed_stream_line_fails_as_crashed():
     body = b'{"response": "ok", "done": false}\nnot json\n'
-    assert only_failure(await run(adapter(lambda req: httpx.Response(200, content=body)))).kind == "crashed"
+    assert (
+        only_failure(await run(adapter(lambda req: httpx.Response(200, content=body)))).kind
+        == "crashed"
+    )
 
 
 async def test_read_timeout_fails_as_timeout():
@@ -249,18 +263,29 @@ async def test_closing_the_turn_early_closes_the_connection_to_ollama():
     assert stream.closed
 
 
-
 async def test_model_list_is_the_installed_models_with_their_size_and_no_free_text():
     def handler(req: httpx.Request) -> httpx.Response:
         assert req.method == "GET" and req.url.path == "/api/tags"
-        return httpx.Response(200, json={"models": [
-            {"name": "qwen3:8b", "model": "qwen3:8b", "details": {"parameter_size": "8.2B", "family": "qwen3"}},
-            {"name": "custom:latest", "model": "custom:latest"},
-        ]})
+        return httpx.Response(
+            200,
+            json={
+                "models": [
+                    {
+                        "name": "qwen3:8b",
+                        "model": "qwen3:8b",
+                        "details": {"parameter_size": "8.2B", "family": "qwen3"},
+                    },
+                    {"name": "custom:latest", "model": "custom:latest"},
+                ]
+            },
+        )
 
     choices = await adapter(handler).list_models(participant())
 
-    assert choices.models == (ModelOption("qwen3:8b", "qwen3:8b (8.2B)"), ModelOption("custom:latest", "custom:latest"))
+    assert choices.models == (
+        ModelOption("qwen3:8b", "qwen3:8b (8.2B)"),
+        ModelOption("custom:latest", "custom:latest"),
+    )
     assert choices.free_text is False
     assert choices.error is None
 
@@ -273,7 +298,12 @@ async def test_model_list_reports_why_when_ollama_is_not_running():
 
 
 @pytest.mark.parametrize(
-    "response", [httpx.Response(500, text="boom"), httpx.Response(200, text="not json"), httpx.Response(200, json={})]
+    "response",
+    [
+        httpx.Response(500, text="boom"),
+        httpx.Response(200, text="not json"),
+        httpx.Response(200, json={}),
+    ],
 )
 async def test_model_list_reports_bad_answers(response):
     choices = await adapter(lambda req: response).list_models(participant())

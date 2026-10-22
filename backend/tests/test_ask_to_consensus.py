@@ -23,7 +23,12 @@ def derive(client, from_id: str, question: str = "ignored?", **settings) -> list
             {
                 "type": "start",
                 "question": question,
-                "settings": {"mode": "consensus", "participant_ids": ["ignored"], "judge": "stance_vote", **settings},
+                "settings": {
+                    "mode": "consensus",
+                    "participant_ids": ["ignored"],
+                    "judge": "stance_vote",
+                    **settings,
+                },
                 "from_discussion_id": from_id,
             }
         )
@@ -39,7 +44,9 @@ def ask(client, *ids: str, question: str = "What is best?") -> list[dict]:
     return run_discussion(client, question, {"mode": "ask", "participant_ids": list(ids)})
 
 
-def test_round_one_is_the_asks_answers_and_the_moderator_drafts_first(client, write_participants, data_dir):
+def test_round_one_is_the_asks_answers_and_the_moderator_drafts_first(
+    client, write_participants, data_dir
+):
     write_participants(
         fake_participant("fake-a", "Fake A", stream=False, replies=["A's ask answer"])
         + fake_participant("fake-b", "Fake B", stream=False, replies=["B's ask answer"])
@@ -48,9 +55,16 @@ def test_round_one_is_the_asks_answers_and_the_moderator_drafts_first(client, wr
     ask_id = asked[0]["discussion_id"]
     # From now on a normal round-1 call would answer differently: it must not happen.
     write_participants(
-        fake_participant("fake-a", "Fake A", stream=False, drafts=["Draft one"],
-                         replies=["CALLED AGAIN", "ok\nSTANCE: AGREE"])
-        + fake_participant("fake-b", "Fake B", stream=False, replies=["CALLED AGAIN", "ok\nSTANCE: AGREE"])
+        fake_participant(
+            "fake-a",
+            "Fake A",
+            stream=False,
+            drafts=["Draft one"],
+            replies=["CALLED AGAIN", "ok\nSTANCE: AGREE"],
+        )
+        + fake_participant(
+            "fake-b", "Fake B", stream=False, replies=["CALLED AGAIN", "ok\nSTANCE: AGREE"]
+        )
     )
 
     messages = derive(client, ask_id)
@@ -61,19 +75,28 @@ def test_round_one_is_the_asks_answers_and_the_moderator_drafts_first(client, wr
     assert started["derived_from"] == ask_id
     assert started["settings"]["mode"] == "consensus"
     assert started["settings"]["participant_ids"] == ["fake-a", "fake-b"]
-    round_one = [(m["participant_id"], m["text"]) for m in of_type(messages, "turn_completed")
-                 if m["round"] == 1 and m["purpose"] == "turn"]
+    round_one = [
+        (m["participant_id"], m["text"])
+        for m in of_type(messages, "turn_completed")
+        if m["round"] == 1 and m["purpose"] == "turn"
+    ]
     assert round_one == [("fake-a", "A's ask answer"), ("fake-b", "B's ask answer")]
-    assert [(d["round"], d["text"]) for d in of_type(messages, "draft_created")] == [(1, "Draft one")]
+    assert [(d["round"], d["text"]) for d in of_type(messages, "draft_created")] == [
+        (1, "Draft one")
+    ]
     finished = messages[-1]
     assert finished["type"] == "discussion_finished"
     assert finished["outcome"] == "consensus"
     assert finished["result"]["text"] == "Draft one"
 
 
-def test_the_new_record_points_at_the_ask_and_the_ask_record_is_unchanged(client, write_participants, data_dir):
-    write_participants(fake_participant("fake-a", "Fake A", stream=False)
-                       + fake_participant("fake-b", "Fake B", stream=False))
+def test_the_new_record_points_at_the_ask_and_the_ask_record_is_unchanged(
+    client, write_participants, data_dir
+):
+    write_participants(
+        fake_participant("fake-a", "Fake A", stream=False)
+        + fake_participant("fake-b", "Fake B", stream=False)
+    )
     ask_id = ask(client, "fake-a", "fake-b")[0]["discussion_id"]
     before = (data_dir / f"{ask_id}.json").read_text(encoding="utf-8")
 
@@ -85,18 +108,19 @@ def test_the_new_record_points_at_the_ask_and_the_ask_record_is_unchanged(client
     assert record["derived_from"] == ask_id
     assert record["settings"]["mode"] == "consensus"
     asked = saved_record(data_dir, ask_id)
-    assert [(t["participant_id"], t["text"], t["started_at"]) for t in record["rounds"][0]["turns"]] == [
-        (t["participant_id"], t["text"], t["started_at"]) for t in asked["rounds"][0]["turns"]
-    ]
+    assert [
+        (t["participant_id"], t["text"], t["started_at"]) for t in record["rounds"][0]["turns"]
+    ] == [(t["participant_id"], t["text"], t["started_at"]) for t in asked["rounds"][0]["turns"]]
     assert record["rounds"][0]["draft"]
     assert (data_dir / f"{ask_id}.json").read_text(encoding="utf-8") == before
 
 
 def test_a_failed_ask_answer_stays_failed_in_round_one(client, write_participants, data_dir):
-    write_participants(fake_participant("fake-a", "Fake A", stream=False)
-                       + fake_participant("fake-b", "Fake B", stream=False)
-                       + fake_participant("fake-c", "Fake C", stream=False, fail_rounds=[1],
-                                          fail_reason="boom"))
+    write_participants(
+        fake_participant("fake-a", "Fake A", stream=False)
+        + fake_participant("fake-b", "Fake B", stream=False)
+        + fake_participant("fake-c", "Fake C", stream=False, fail_rounds=[1], fail_reason="boom")
+    )
     ask_id = ask(client, "fake-a", "fake-b", "fake-c")[0]["discussion_id"]
 
     messages = derive(client, ask_id)
@@ -116,10 +140,14 @@ def test_an_unknown_discussion_is_an_error(client, write_participants):
 
 
 def test_a_discussion_that_is_not_an_ask_is_an_error(client, write_participants):
-    write_participants(fake_participant("fake-a", "Fake A", stream=False)
-                       + fake_participant("fake-b", "Fake B", stream=False))
+    write_participants(
+        fake_participant("fake-a", "Fake A", stream=False)
+        + fake_participant("fake-b", "Fake B", stream=False)
+    )
     consensus_id = run_discussion(
-        client, "Q?", {"mode": "consensus", "participant_ids": ["fake-a", "fake-b"], "judge": "stance_vote"}
+        client,
+        "Q?",
+        {"mode": "consensus", "participant_ids": ["fake-a", "fake-b"], "judge": "stance_vote"},
     )[0]["discussion_id"]
 
     messages = derive(client, consensus_id)
@@ -129,8 +157,10 @@ def test_a_discussion_that_is_not_an_ask_is_an_error(client, write_participants)
 
 
 def test_converting_needs_the_consensus_mode(client, write_participants):
-    write_participants(fake_participant("fake-a", "Fake A", stream=False)
-                       + fake_participant("fake-b", "Fake B", stream=False))
+    write_participants(
+        fake_participant("fake-a", "Fake A", stream=False)
+        + fake_participant("fake-b", "Fake B", stream=False)
+    )
     ask_id = ask(client, "fake-a", "fake-b")[0]["discussion_id"]
 
     messages = derive(client, ask_id, mode="ask")

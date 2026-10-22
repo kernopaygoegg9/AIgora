@@ -40,7 +40,9 @@ const custom = defineModel<string>('custom', { required: true })
       placeholder="模型名稱"
       spellcheck="false"
     />
-    <small v-if="error" class="error" data-testid="models-error" :title="error">清單載入失敗：{{ error }}</small>
+    <small v-if="error" class="error" data-testid="models-error" :title="error"
+      >清單載入失敗：{{ error }}</small
+    >
   </span>
 </template>
 

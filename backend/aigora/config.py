@@ -96,7 +96,9 @@ class _Lines:
 
     def __init__(self, text: str):
         self.lines = text.splitlines()
-        self.participant_headers = [i for i, line in enumerate(self.lines) if _PARTICIPANT_HEADER.match(line)]
+        self.participant_headers = [
+            i for i, line in enumerate(self.lines) if _PARTICIPANT_HEADER.match(line)
+        ]
 
     def _find_key(self, start: int, end: int, key: str) -> int | None:
         pattern = re.compile(rf"^\s*{re.escape(key)}\s*=")
@@ -108,8 +110,14 @@ class _Lines:
     def defaults_key(self, key: str) -> int | None:
         for i, line in enumerate(self.lines):
             if re.match(r"^\s*\[\s*defaults\s*\]", line):
-                end = next((j for j in range(i + 1, len(self.lines)) if _TABLE_HEADER.match(self.lines[j])),
-                           len(self.lines))
+                end = next(
+                    (
+                        j
+                        for j in range(i + 1, len(self.lines))
+                        if _TABLE_HEADER.match(self.lines[j])
+                    ),
+                    len(self.lines),
+                )
                 return self._find_key(i + 1, end, key) or i + 1
         return None
 
@@ -122,7 +130,10 @@ class _Lines:
         if index >= len(self.participant_headers):
             return None
         start = self.participant_headers[index] + 1
-        end = next((j for j in range(start, len(self.lines)) if _TABLE_HEADER.match(self.lines[j])), len(self.lines))
+        end = next(
+            (j for j in range(start, len(self.lines)) if _TABLE_HEADER.match(self.lines[j])),
+            len(self.lines),
+        )
         return self._find_key(start, end, key) or start
 
 
@@ -156,7 +167,9 @@ def load_participants(path: Path | str) -> ParticipantsConfig:
     return ParticipantsConfig(defaults=defaults, participants=participants)
 
 
-def _participant(raw: dict[str, Any], index: int, seen: set[str], lines: _Lines, fail) -> ParticipantConfig:
+def _participant(
+    raw: dict[str, Any], index: int, seen: set[str], lines: _Lines, fail
+) -> ParticipantConfig:
     header = lines.participant(index)
 
     def key_line(key: str) -> int | None:
@@ -187,7 +200,10 @@ def _participant(raw: dict[str, Any], index: int, seen: set[str], lines: _Lines,
 
     adapter_id = raw["adapter"]
     if not registry.is_registered(adapter_id):
-        raise fail(key_line("adapter"), f"unknown adapter `{adapter_id}` (known: {', '.join(registry.adapter_ids())})")
+        raise fail(
+            key_line("adapter"),
+            f"unknown adapter `{adapter_id}` (known: {', '.join(registry.adapter_ids())})",
+        )
     adapter = _try_adapter(adapter_id)
     if adapter is not None:
         try:
@@ -217,14 +233,26 @@ def _try_adapter(adapter_id: str):
     return factory() if factory else None
 
 
-def _defaults(raw: dict[str, Any], participants: list[ParticipantConfig], lines: _Lines, fail) -> Defaults:
+def _defaults(
+    raw: dict[str, Any], participants: list[ParticipantConfig], lines: _Lines, fail
+) -> Defaults:
     if not isinstance(raw, dict):
         raise fail(None, "[defaults] must be a table")
     base = Defaults()
-    known = {"mode", "judge", "speaking_order", "moderator", "max_rounds", "turn_timeout_seconds", "jev_threshold"}
+    known = {
+        "mode",
+        "judge",
+        "speaking_order",
+        "moderator",
+        "max_rounds",
+        "turn_timeout_seconds",
+        "jev_threshold",
+    }
     unknown = sorted(set(raw) - known)
     if unknown:
-        raise fail(lines.defaults_key(unknown[0]), f"unknown [defaults] field(s): {', '.join(unknown)}")
+        raise fail(
+            lines.defaults_key(unknown[0]), f"unknown [defaults] field(s): {', '.join(unknown)}"
+        )
 
     def choice(key: str, allowed: tuple[str, ...], default: str) -> str:
         value = raw.get(key, default)
@@ -232,10 +260,22 @@ def _defaults(raw: dict[str, Any], participants: list[ParticipantConfig], lines:
             raise fail(lines.defaults_key(key), f"`{key}` must be one of: {', '.join(allowed)}")
         return value
 
-    def number(key: str, default: float, *, integer: bool = False, low: float = 0, high: float | None = None):
+    def number(
+        key: str,
+        default: float,
+        *,
+        integer: bool = False,
+        low: float = 0,
+        high: float | None = None,
+    ):
         value = raw.get(key, default)
         ok_type = isinstance(value, int) if integer else isinstance(value, (int, float))
-        if isinstance(value, bool) or not ok_type or value <= low or (high is not None and value > high):
+        if (
+            isinstance(value, bool)
+            or not ok_type
+            or value <= low
+            or (high is not None and value > high)
+        ):
             kind = "an integer" if integer else "a number"
             bound = f" > {low}" + (f" and <= {high}" if high is not None else "")
             raise fail(lines.defaults_key(key), f"`{key}` must be {kind}{bound}")
@@ -243,7 +283,10 @@ def _defaults(raw: dict[str, Any], participants: list[ParticipantConfig], lines:
 
     moderator = raw.get("moderator", participants[0].id)
     if not any(p.id == moderator for p in participants):
-        raise fail(lines.defaults_key("moderator"), f"default moderator `{moderator}` is not a participant id")
+        raise fail(
+            lines.defaults_key("moderator"),
+            f"default moderator `{moderator}` is not a participant id",
+        )
 
     return Defaults(
         mode=choice("mode", MODE_IDS, base.mode),

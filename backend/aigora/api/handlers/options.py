@@ -6,7 +6,13 @@ from collections.abc import Mapping
 
 from fastapi import HTTPException
 
-from aigora.api.http_models import DefaultSettings, JudgeOption, ModeOption, OptionsResponse, SpeakingOrderOption
+from aigora.api.http_models import (
+    DefaultSettings,
+    JudgeOption,
+    ModeOption,
+    OptionsResponse,
+    SpeakingOrderOption,
+)
 from aigora.config import ConfigError, Defaults, load_participants, participants_file_path
 from aigora.discussion.judges import JUDGES
 from aigora.discussion.modes import MODES
@@ -20,7 +26,9 @@ _PENDING_ORDER_NAMES = {"sequential": "依序"}  # interface only in v1
 
 def _mode_options() -> list[ModeOption]:
     return [
-        ModeOption(id=mode_id, name=MODES[mode_id].name, uses_settings=sorted(MODES[mode_id].uses_settings))
+        ModeOption(
+            id=mode_id, name=MODES[mode_id].name, uses_settings=sorted(MODES[mode_id].uses_settings)
+        )
         for mode_id in MODE_IDS
         if mode_id in MODES
     ]
@@ -34,7 +42,10 @@ def _judge_option(judge_id: str, env: Mapping[str, str]) -> JudgeOption:
     else:
         name, available, reason = judge_id, False, "尚未提供"
     return JudgeOption(
-        id=judge_id, name=name, available=available, unavailable_reason=None if available else reason
+        id=judge_id,
+        name=name,
+        available=available,
+        unavailable_reason=None if available else reason,
     )
 
 

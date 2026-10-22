@@ -38,4 +38,6 @@ def load_source(store: DiscussionStore, discussion_id: str) -> DiscussionRecord:
 def derived_engine(*, source: DiscussionRecord, **kwargs: Any) -> DiscussionEngine:
     """A discussion engine that continues the finished ask `source`: same question, and the
     ask's round 1 as its prefilled round 1. `kwargs`: the other `DiscussionEngine` arguments."""
-    return DiscussionEngine(question=source.question, derived_from=source.id, first_round=source.rounds[0], **kwargs)
+    return DiscussionEngine(
+        question=source.question, derived_from=source.id, first_round=source.rounds[0], **kwargs
+    )

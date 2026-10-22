@@ -10,7 +10,15 @@ from pathlib import Path
 
 import pytest
 
-from aigora.adapters.base import Availability, Capabilities, Completed, Delta, Failed, TurnRequest, get_adapter
+from aigora.adapters.base import (
+    Availability,
+    Capabilities,
+    Completed,
+    Delta,
+    Failed,
+    TurnRequest,
+    get_adapter,
+)
 from aigora.adapters.gemini import GeminiAdapter
 from aigora.config import ParticipantConfig
 
@@ -19,7 +27,9 @@ AUTH_ENV = ("GEMINI_API_KEY", "GOOGLE_API_KEY", "GOOGLE_GENAI_USE_VERTEXAI", "GO
 
 
 def participant(model: str | None = None, **options) -> ParticipantConfig:
-    return ParticipantConfig(id="gem", display_name="Gemini", adapter="gemini", model=model, options=options)
+    return ParticipantConfig(
+        id="gem", display_name="Gemini", adapter="gemini", model=model, options=options
+    )
 
 
 def stream_lines(*events: dict) -> str:
@@ -27,7 +37,13 @@ def stream_lines(*events: dict) -> str:
 
 
 def assistant(text: str) -> dict:
-    return {"type": "message", "timestamp": "t", "role": "assistant", "content": text, "delta": True}
+    return {
+        "type": "message",
+        "timestamp": "t",
+        "role": "assistant",
+        "content": text,
+        "delta": True,
+    }
 
 
 INIT = {"type": "init", "timestamp": "t", "session_id": "s1", "model": "gemini-x"}
@@ -51,7 +67,14 @@ class FakeCli:
         self.workspace.mkdir()
         self.script()
 
-    def script(self, stdout: str = "", stderr: str = "", exit: int = 0, sleep: float = 0, line_delay: float = 0):
+    def script(
+        self,
+        stdout: str = "",
+        stderr: str = "",
+        exit: int = 0,
+        sleep: float = 0,
+        line_delay: float = 0,
+    ):
         out = self.dir / "stdout.txt"
         out.write_text(stdout, encoding="utf-8")
         self.monkeypatch.setenv("FAKE_GEMINI_STDOUT", str(out))
@@ -72,7 +95,12 @@ class FakeCli:
         return GeminiAdapter(command=[sys.executable, str(FAKE_CLI)], user_home=self.home)
 
     def request(self, p: ParticipantConfig | None = None, prompt: str = "Q?") -> TurnRequest:
-        return TurnRequest(participant=p or participant(), prompt=prompt, workspace=self.workspace, timeout_seconds=30)
+        return TurnRequest(
+            participant=p or participant(),
+            prompt=prompt,
+            workspace=self.workspace,
+            timeout_seconds=30,
+        )
 
     async def run(self, p: ParticipantConfig | None = None, prompt: str = "Q?") -> list:
         return [e async for e in self.adapter().run_turn(self.request(p, prompt))]
@@ -168,13 +196,21 @@ async def test_unavailable_when_the_model_name_is_invalid(cli):
 
 
 async def test_streams_assistant_chunks_then_completes_with_the_full_text(cli):
-    cli.script(stream_lines(INIT, USER, assistant("Hello "), assistant("world.\nSTANCE: AGREE"), OK))
+    cli.script(
+        stream_lines(INIT, USER, assistant("Hello "), assistant("world.\nSTANCE: AGREE"), OK)
+    )
     events = await cli.run()
-    assert events == [Delta("Hello "), Delta("world.\nSTANCE: AGREE"), Completed("Hello world.\nSTANCE: AGREE")]
+    assert events == [
+        Delta("Hello "),
+        Delta("world.\nSTANCE: AGREE"),
+        Completed("Hello world.\nSTANCE: AGREE"),
+    ]
 
 
 async def test_streams_before_the_process_finishes(cli):
-    cli.script(stream_lines(assistant("first"), assistant(" second"), OK), line_delay=1.0, sleep=2.0)
+    cli.script(
+        stream_lines(assistant("first"), assistant(" second"), OK), line_delay=1.0, sleep=2.0
+    )
     gen = cli.adapter().run_turn(cli.request())
     start = time.monotonic()
     assert await gen.__anext__() == Delta("first")
@@ -186,8 +222,20 @@ async def test_streams_before_the_process_finishes(cli):
 async def test_non_delta_assistant_messages_and_noise_lines_are_handled(cli):
     out = "Loaded cached credentials.\n" + stream_lines(
         INIT,
-        {"type": "tool_use", "timestamp": "t", "tool_name": "google_web_search", "tool_id": "1", "parameters": {}},
-        {"type": "tool_result", "timestamp": "t", "tool_id": "1", "status": "success", "output": "..."},
+        {
+            "type": "tool_use",
+            "timestamp": "t",
+            "tool_name": "google_web_search",
+            "tool_id": "1",
+            "parameters": {},
+        },
+        {
+            "type": "tool_result",
+            "timestamp": "t",
+            "tool_id": "1",
+            "status": "success",
+            "output": "...",
+        },
         {"type": "error", "timestamp": "t", "severity": "warning", "message": "loop detected"},
         {"type": "message", "timestamp": "t", "role": "assistant", "content": "Full answer."},
         OK,
@@ -244,9 +292,20 @@ async def test_system_settings_override_keeps_only_web_tools(cli):
     await cli.run()
     s = json.loads(cli.record["settings"])
     assert s["tools"]["core"] == ["google_web_search", "web_fetch"]
-    assert {"run_shell_command", "read_file", "read_many_files", "list_directory", "glob", "grep_search",
-            "write_file", "replace", "activate_skill", "read_mcp_resource", "list_mcp_resources",
-            "save_memory"} <= set(s["tools"]["exclude"])
+    assert {
+        "run_shell_command",
+        "read_file",
+        "read_many_files",
+        "list_directory",
+        "glob",
+        "grep_search",
+        "write_file",
+        "replace",
+        "activate_skill",
+        "read_mcp_resource",
+        "list_mcp_resources",
+        "save_memory",
+    } <= set(s["tools"]["exclude"])
     assert s["mcp"]["allowed"] == ["__aigora_no_mcp__"]
     assert s["mcpServers"] == {}
     assert s["hooksConfig"]["enabled"] is False
@@ -292,8 +351,18 @@ async def test_missing_cli_is_not_available(cli):
 
 
 async def test_result_error_after_partial_output(cli):
-    cli.script(stream_lines(assistant("half"), {"type": "result", "timestamp": "t", "status": "error",
-                                                "error": {"type": "Error", "message": "boom"}}), exit=1)
+    cli.script(
+        stream_lines(
+            assistant("half"),
+            {
+                "type": "result",
+                "timestamp": "t",
+                "status": "error",
+                "error": {"type": "Error", "message": "boom"},
+            },
+        ),
+        exit=1,
+    )
     events = await cli.run()
     assert events == [Delta("half"), Failed("crashed", "gemini: boom")]
 
@@ -318,8 +387,18 @@ async def test_failure_kind_from_cli_error_text(cli, message, kind):
 
 
 async def test_fatal_error_event_fails_the_turn(cli):
-    cli.script(stream_lines(assistant("partial"), {"type": "error", "timestamp": "t", "severity": "error",
-                                                   "message": "Quota exceeded for model"}), exit=1)
+    cli.script(
+        stream_lines(
+            assistant("partial"),
+            {
+                "type": "error",
+                "timestamp": "t",
+                "severity": "error",
+                "message": "Quota exceeded for model",
+            },
+        ),
+        exit=1,
+    )
     events = await cli.run()
     assert events[0] == Delta("partial")
     assert events[-1].kind == "quota" and "Quota exceeded" in events[-1].reason

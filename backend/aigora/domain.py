@@ -26,7 +26,9 @@ TurnStatus = Literal["ok", "failed", "timeout"]
 JudgeOutcome = Literal["not_reached", "confirm", "reached"]
 
 # `discussion_finished.outcome` and the record's `outcome`.
-Outcome = Literal["completed", "consensus", "no_consensus", "stopped", "insufficient_participants", "error"]
+Outcome = Literal[
+    "completed", "consensus", "no_consensus", "stopped", "insufficient_participants", "error"
+]
 
 MODE_IDS: tuple[str, ...] = get_args(ModeId)
 JUDGE_IDS: tuple[str, ...] = get_args(JudgeId)

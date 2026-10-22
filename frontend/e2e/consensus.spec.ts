@@ -4,7 +4,9 @@ import { expect, test } from '@playwright/test'
 // default fakes take no stance in round 1 and agree from round 2, so the discussion
 // reaches consensus on the moderator's round-1 draft.
 
-test('a consensus discussion shows the draft, everyone\'s stance and the consensus result', async ({ page }) => {
+test("a consensus discussion shows the draft, everyone's stance and the consensus result", async ({
+  page,
+}) => {
   await page.goto('/')
 
   await page.getByRole('radio', { name: '共識討論' }).check()

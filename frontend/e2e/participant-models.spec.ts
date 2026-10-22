@@ -11,7 +11,11 @@ test('a model picked for a participant is used and shown on its card', async ({ 
   await page.goto('/')
   const p = panel(page)
   const picker = p.getByLabel('Fake A 的模型', { exact: true })
-  await expect(picker.locator('option')).toHaveText(['預設（Adapter 預設）', 'fake-small', 'fake-large'])
+  await expect(picker.locator('option')).toHaveText([
+    '預設（Adapter 預設）',
+    'fake-small',
+    'fake-large',
+  ])
   // Unavailable participants cannot pick a model.
   await expect(p.getByLabel('Fake Down 的模型', { exact: true })).toBeDisabled()
 
@@ -34,7 +38,9 @@ async function addExtra(page: Page, adapter: string, model: string) {
   await p.getByRole('button', { name: '加入', exact: true }).click()
 }
 
-test('an extra participant copied from Fake A takes part under a name of its own', async ({ page }) => {
+test('an extra participant copied from Fake A takes part under a name of its own', async ({
+  page,
+}) => {
   await page.goto('/')
   const p = panel(page)
   await p.getByLabel('問題').fill('Two of a kind?')
@@ -45,12 +51,16 @@ test('an extra participant copied from Fake A takes part under a name of its own
   await expect(p.getByTestId('participant-option').filter({ hasText: '臨時' })).toHaveCount(1)
   await expect(p.getByRole('checkbox', { name: 'Fake A（fake-large）', exact: true })).toBeChecked()
   await expect(p.getByRole('checkbox', { name: 'Fake A（預設模型）', exact: true })).toBeChecked()
-  await expect(p.getByLabel('Fake A（fake-large） 的模型', { exact: true })).toHaveValue('fake-large')
+  await expect(p.getByLabel('Fake A（fake-large） 的模型', { exact: true })).toHaveValue(
+    'fake-large',
+  )
 
   await p.getByRole('button', { name: '開始討論' }).click()
   await expect(page.getByTestId('discussion-status')).toHaveText('已結束')
   const extra = card(page, 'Fake A（fake-large）')
-  await expect(extra.getByTestId('turn-text')).toHaveText('Fake A（fake-large）: reply for round 1.')
+  await expect(extra.getByTestId('turn-text')).toHaveText(
+    'Fake A（fake-large）: reply for round 1.',
+  )
   await expect(extra.getByTestId('participant-model')).toHaveText('fake-large')
   await expect(card(page, 'Fake A（預設模型）').getByTestId('turn-text')).toHaveText(
     'Fake A（預設模型）: reply for round 1.',
@@ -58,7 +68,9 @@ test('an extra participant copied from Fake A takes part under a name of its own
 
   // Back on the settings page the extra participant and its model are still there.
   await page.getByRole('link', { name: '討論', exact: true }).click()
-  await expect(p.getByLabel('Fake A（fake-large） 的模型', { exact: true })).toHaveValue('fake-large')
+  await expect(p.getByLabel('Fake A（fake-large） 的模型', { exact: true })).toHaveValue(
+    'fake-large',
+  )
 })
 
 test('an extra participant can be removed', async ({ page }) => {
@@ -90,7 +102,9 @@ test('an extra participant can moderate a consensus discussion', async ({ page }
   await p.getByRole('button', { name: '開始討論' }).click()
 
   await expect(page.getByTestId('discussion-status')).toHaveText('已結束')
-  const lead = page.getByTestId('inspector-participant').filter({ has: page.getByTestId('inspector-moderator') })
+  const lead = page
+    .getByTestId('inspector-participant')
+    .filter({ has: page.getByTestId('inspector-moderator') })
   await expect(lead).toContainText('Fake A')
   await expect(lead.getByTestId('participant-model')).toHaveText('fake-large')
 

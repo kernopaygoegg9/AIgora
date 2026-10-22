@@ -183,7 +183,9 @@ class StopMessage(_Model):
     type: Literal["stop"] = "stop"
 
 
-ClientMessage = Annotated[StartMessage | InterjectMessage | StopMessage, Field(discriminator="type")]
+ClientMessage = Annotated[
+    StartMessage | InterjectMessage | StopMessage, Field(discriminator="type")
+]
 
 
 # --- server -> client ----------------------------------------------------------
@@ -321,7 +323,9 @@ def _types(*models: type[BaseModel]) -> dict[str, type[BaseModel]]:
     return {model.model_fields["type"].default: model for model in models}
 
 
-CLIENT_MESSAGE_TYPES: dict[str, type[BaseModel]] = _types(StartMessage, InterjectMessage, StopMessage)
+CLIENT_MESSAGE_TYPES: dict[str, type[BaseModel]] = _types(
+    StartMessage, InterjectMessage, StopMessage
+)
 SERVER_MESSAGE_TYPES: dict[str, type[BaseModel]] = _types(
     DiscussionStarted,
     RoundStarted,

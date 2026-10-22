@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test'
 
-test('main layout loads and switches between the discussion and history pages', async ({ page }) => {
+test('main layout loads and switches between the discussion and history pages', async ({
+  page,
+}) => {
   await page.goto('/')
 
   await expect(page.getByRole('banner')).toContainText('AIgora')

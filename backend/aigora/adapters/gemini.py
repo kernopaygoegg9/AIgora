@@ -76,36 +76,86 @@ _NO_CONTEXT_FILE = "AIGORA_NO_CONTEXT_FILE.md"
 # Every built-in local tool we know of (docs/reference/tools.md), plus legacy
 # names. `tools.core` already restricts to WEB_TOOLS; this is a second layer.
 LOCAL_TOOLS = [
-    "run_shell_command", "read_file", "read_many_files", "list_directory", "glob", "grep_search",
-    "search_file_content", "write_file", "replace", "edit", "save_memory", "write_todos",
-    "activate_skill", "get_internal_docs", "list_mcp_resources", "read_mcp_resource", "ask_user",
-    "enter_plan_mode", "exit_plan_mode", "invoke_agent", "codebase_investigator", "complete_task",
-    "update_topic", "tracker_create_task", "tracker_update_task", "tracker_get_task",
-    "tracker_list_tasks", "tracker_add_dependency", "tracker_visualize",
-    "ShellTool", "ReadFileTool", "ReadManyFilesTool", "LSTool", "GlobTool", "GrepTool",
-    "WriteFileTool", "EditTool", "MemoryTool",
+    "run_shell_command",
+    "read_file",
+    "read_many_files",
+    "list_directory",
+    "glob",
+    "grep_search",
+    "search_file_content",
+    "write_file",
+    "replace",
+    "edit",
+    "save_memory",
+    "write_todos",
+    "activate_skill",
+    "get_internal_docs",
+    "list_mcp_resources",
+    "read_mcp_resource",
+    "ask_user",
+    "enter_plan_mode",
+    "exit_plan_mode",
+    "invoke_agent",
+    "codebase_investigator",
+    "complete_task",
+    "update_topic",
+    "tracker_create_task",
+    "tracker_update_task",
+    "tracker_get_task",
+    "tracker_list_tasks",
+    "tracker_add_dependency",
+    "tracker_visualize",
+    "ShellTool",
+    "ReadFileTool",
+    "ReadManyFilesTool",
+    "LSTool",
+    "GlobTool",
+    "GrepTool",
+    "WriteFileTool",
+    "EditTool",
+    "MemoryTool",
 ]
 
 SETTINGS: dict[str, Any] = {
-    "tools": {"core": WEB_TOOLS, "allowed": WEB_TOOLS, "exclude": LOCAL_TOOLS, "sandbox": False,
-              "discoveryCommand": "", "callCommand": ""},
+    "tools": {
+        "core": WEB_TOOLS,
+        "allowed": WEB_TOOLS,
+        "exclude": LOCAL_TOOLS,
+        "sandbox": False,
+        "discoveryCommand": "",
+        "callCommand": "",
+    },
     "mcpServers": {},
     "mcp": {"allowed": [NO_MCP], "serverCommand": ""},
     "hooksConfig": {"enabled": False},
     "hooks": {},
     "skills": {"enabled": False},
-    "admin": {"extensions": {"enabled": False}, "mcp": {"enabled": False}, "skills": {"enabled": False}},
+    "admin": {
+        "extensions": {"enabled": False},
+        "mcp": {"enabled": False},
+        "skills": {"enabled": False},
+    },
     "experimental": {"enableAgents": False, "extensionManagement": False},
-    "security": {"disableYoloMode": True, "folderTrust": {"enabled": False}, "blockGitExtensions": True},
-    "context": {"fileName": [_NO_CONTEXT_FILE], "includeDirectories": [],
-                "loadMemoryFromIncludeDirectories": False},
-    "general": {"checkpointing": {"enabled": False}, "enableAutoUpdate": False,
-                "enableAutoUpdateNotification": False},
+    "security": {
+        "disableYoloMode": True,
+        "folderTrust": {"enabled": False},
+        "blockGitExtensions": True,
+    },
+    "context": {
+        "fileName": [_NO_CONTEXT_FILE],
+        "includeDirectories": [],
+        "loadMemoryFromIncludeDirectories": False,
+    },
+    "general": {
+        "checkpointing": {"enabled": False},
+        "enableAutoUpdate": False,
+        "enableAutoUpdateNotification": False,
+    },
     "telemetry": {"enabled": False},
     "privacy": {"usageStatisticsEnabled": False},
 }
 
-POLICY = f"""\
+POLICY = """\
 # AIgora: only web search / fetch (ADR 0002).
 [[rule]]
 toolName = "*"
@@ -154,7 +204,9 @@ class GeminiAdapter(Adapter):
 
     def validate_options(self, options: Mapping[str, Any]) -> None:
         if options:
-            raise ValueError(f"the gemini adapter has no options (got: {', '.join(sorted(options))})")
+            raise ValueError(
+                f"the gemini adapter has no options (got: {', '.join(sorted(options))})"
+            )
 
     def capabilities(self, participant: ParticipantConfig) -> Capabilities:
         return Capabilities(web_access=True, streaming=True)
@@ -164,15 +216,22 @@ class GeminiAdapter(Adapter):
             return Availability(False, f"invalid gemini model name: {participant.model!r}")
         base = self._base_command()
         if base is None:
-            return Availability(False, f"Gemini CLI not found on PATH; install it with `{INSTALL_HINT}`")
+            return Availability(
+                False, f"Gemini CLI not found on PATH; install it with `{INSTALL_HINT}`"
+            )
         try:
             proc = await asyncio.create_subprocess_exec(
-                *base, "--version",
-                stdin=asyncio.subprocess.DEVNULL, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+                *base,
+                "--version",
+                stdin=asyncio.subprocess.DEVNULL,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
                 env=_child_env(None),
             )
         except OSError as exc:
-            return Availability(False, f"Gemini CLI could not be started ({exc}); install it with `{INSTALL_HINT}`")
+            return Availability(
+                False, f"Gemini CLI could not be started ({exc}); install it with `{INSTALL_HINT}`"
+            )
         try:
             out, err = await asyncio.wait_for(proc.communicate(), timeout=30)
         except TimeoutError:
@@ -180,10 +239,13 @@ class GeminiAdapter(Adapter):
             return Availability(False, "`gemini --version` did not answer within 30 s")
         if proc.returncode != 0:
             detail = (err or out).decode("utf-8", "replace").strip()[-500:]
-            return Availability(False, f"`gemini --version` failed (exit code {proc.returncode}): {detail}")
+            return Availability(
+                False, f"`gemini --version` failed (exit code {proc.returncode}): {detail}"
+            )
         if not self._has_credentials():
             return Availability(
-                False, "Gemini CLI is not logged in: run `gemini` once and log in with Google, or set GEMINI_API_KEY"
+                False,
+                "Gemini CLI is not logged in: run `gemini` once and log in with Google, or set GEMINI_API_KEY",
             )
         return Availability(True)
 
@@ -194,7 +256,9 @@ class GeminiAdapter(Adapter):
             return
         base = self._base_command()
         if base is None:
-            yield Failed("not_available", f"Gemini CLI not found on PATH; install it with `{INSTALL_HINT}`")
+            yield Failed(
+                "not_available", f"Gemini CLI not found on PATH; install it with `{INSTALL_HINT}`"
+            )
             return
 
         config_dir = Path(tempfile.mkdtemp(prefix="aigora-gemini-"))
@@ -207,11 +271,16 @@ class GeminiAdapter(Adapter):
             policy_path.write_text(POLICY, encoding="utf-8")
             args = [
                 *base,
-                "--output-format", "stream-json",
-                "--approval-mode", "default",
-                "--extensions", "none",
-                "--allowed-mcp-server-names", NO_MCP,
-                "--admin-policy", str(policy_path),
+                "--output-format",
+                "stream-json",
+                "--approval-mode",
+                "default",
+                "--extensions",
+                "none",
+                "--allowed-mcp-server-names",
+                NO_MCP,
+                "--admin-policy",
+                str(policy_path),
             ]
             if model:
                 args += ["--model", model]
@@ -228,7 +297,10 @@ class GeminiAdapter(Adapter):
                     **process_group_options(),
                 )
             except OSError as exc:
-                yield Failed("not_available", f"Gemini CLI could not be started ({exc}); install it with `{INSTALL_HINT}`")
+                yield Failed(
+                    "not_available",
+                    f"Gemini CLI could not be started ({exc}); install it with `{INSTALL_HINT}`",
+                )
                 return
 
             stderr_task = asyncio.create_task(_read_tail(proc.stderr))
@@ -296,7 +368,12 @@ class GeminiAdapter(Adapter):
         env_file = gemini_dir / ".env"
         if env_file.is_file():
             content = env_file.read_text(encoding="utf-8", errors="replace")
-            return re.search(r"^\s*(export\s+)?(GEMINI_API_KEY|GOOGLE_API_KEY)\s*=\s*\S", content, re.M) is not None
+            return (
+                re.search(
+                    r"^\s*(export\s+)?(GEMINI_API_KEY|GOOGLE_API_KEY)\s*=\s*\S", content, re.M
+                )
+                is not None
+            )
         return False
 
 
@@ -368,9 +445,15 @@ def _failure(code: int, result_status: str | None, errors: list[str], stderr: st
     elif code == _EXIT_AUTH or _AUTH_RE.search(text):
         kind = "auth"
     elif code == _EXIT_INPUT:
-        kind, text = "unknown", f"invalid input or arguments (exit code {code})" + (f": {text}" if text else "")
+        kind, text = (
+            "unknown",
+            f"invalid input or arguments (exit code {code})" + (f": {text}" if text else ""),
+        )
     elif code == _EXIT_TURN_LIMIT:
-        kind, text = "unknown", f"turn limit exceeded (exit code {code})" + (f": {text}" if text else "")
+        kind, text = (
+            "unknown",
+            f"turn limit exceeded (exit code {code})" + (f": {text}" if text else ""),
+        )
     else:
         kind = "crashed"
         if not text:

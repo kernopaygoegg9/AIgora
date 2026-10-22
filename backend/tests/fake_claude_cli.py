@@ -20,7 +20,9 @@ import subprocess
 import sys
 import time
 
-HEARTBEAT = "import sys, time\nwhile True:\n    open(sys.argv[1], 'a').write('.')\n    time.sleep(0.05)\n"
+HEARTBEAT = (
+    "import sys, time\nwhile True:\n    open(sys.argv[1], 'a').write('.')\n    time.sleep(0.05)\n"
+)
 
 
 def main() -> int:
@@ -31,14 +33,19 @@ def main() -> int:
 
     if record := scenario.get("record"):
         with open(record, "w", encoding="utf-8") as f:
-            json.dump({
-                "argv": args,
-                "cwd": os.getcwd(),
-                "stdin": stdin,
-                "env_CLAUDECODE": os.environ.get("CLAUDECODE"),
-                "env_ENABLE_CLAUDEAI_MCP_SERVERS": os.environ.get("ENABLE_CLAUDEAI_MCP_SERVERS"),
-                "pid": os.getpid(),
-            }, f)
+            json.dump(
+                {
+                    "argv": args,
+                    "cwd": os.getcwd(),
+                    "stdin": stdin,
+                    "env_CLAUDECODE": os.environ.get("CLAUDECODE"),
+                    "env_ENABLE_CLAUDEAI_MCP_SERVERS": os.environ.get(
+                        "ENABLE_CLAUDEAI_MCP_SERVERS"
+                    ),
+                    "pid": os.getpid(),
+                },
+                f,
+            )
 
     if is_auth:
         auth = scenario.get("auth", {})

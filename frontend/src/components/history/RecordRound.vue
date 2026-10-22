@@ -42,7 +42,10 @@ function toTurnState(t: RecordTurn): TurnState {
     status: t.status,
     text: t.text ?? '',
     stance: t.stance,
-    failure: t.status === 'ok' ? null : { kind: t.status === 'timeout' ? 'timeout' : 'unknown', reason: t.error ?? '' },
+    failure:
+      t.status === 'ok'
+        ? null
+        : { kind: t.status === 'timeout' ? 'timeout' : 'unknown', reason: t.error ?? '' },
   }
 }
 
@@ -66,29 +69,50 @@ const verdicts = computed(() => {
       <span v-if="interjections.length" class="pill">含插話</span>
     </header>
 
-    <p v-for="(i, k) in interjections" :key="`i${k}`" class="d-notice is-interjection" data-testid="record-interjection">
+    <p
+      v-for="(i, k) in interjections"
+      :key="`i${k}`"
+      class="d-notice is-interjection"
+      data-testid="record-interjection"
+    >
       <span class="d-notice-label">使用者插話</span>
       <time :datetime="i.at">{{ formatTime(i.at) }}</time>
       <span class="event-text">{{ i.text }}</span>
     </p>
-    <p v-for="(c, k) in moderatorChanges" :key="`m${k}`" class="d-notice" data-testid="record-moderator-change">
+    <p
+      v-for="(c, k) in moderatorChanges"
+      :key="`m${k}`"
+      class="d-notice"
+      data-testid="record-moderator-change"
+    >
       <span class="d-notice-label">主持人接手</span>
       <span>改由 {{ name(c.participant_id) }} 擔任主持人</span>
     </p>
 
     <div class="d-cols" :style="{ '--columns': Math.max(turns.length, 1) }">
-      <div v-for="t in turns" :key="t.record.participant_id" class="record-turn" data-testid="record-turn">
+      <div
+        v-for="t in turns"
+        :key="t.record.participant_id"
+        class="record-turn"
+        data-testid="record-turn"
+      >
         <TurnCard :turn="t.state" :participant="participantById(t.record.participant_id)">
           <template #stance>
             <p v-if="t.record.stance" class="d-stance-line" :class="`is-${t.record.stance}`">
-              STANCE: {{ t.record.stance }} · <span data-testid="record-stance">{{ stanceLabel(t.record.stance) }}</span>
+              STANCE: {{ t.record.stance }} ·
+              <span data-testid="record-stance">{{ stanceLabel(t.record.stance) }}</span>
             </p>
           </template>
         </TurnCard>
       </div>
     </div>
 
-    <p v-for="(r, k) in removals" :key="`r${k}`" class="d-notice is-bad" data-testid="record-removal">
+    <p
+      v-for="(r, k) in removals"
+      :key="`r${k}`"
+      class="d-notice is-bad"
+      data-testid="record-removal"
+    >
       <span class="d-notice-label">移出討論</span>
       <span>{{ name(r.participant_id) }}：{{ r.reason }}</span>
     </p>
@@ -115,9 +139,11 @@ const verdicts = computed(() => {
         >
           <header class="d-block-head">
             <span class="d-block-title">{{ JUDGE_LABELS[judge.judge] ?? judge.judge }}</span>
-            <span class="d-push pill" :class="judge.outcome === 'reached' ? 'pill-ok' : 'pill-warn'">{{
-              judgeOutcomeLabel(judge.judge, judge.outcome)
-            }}</span>
+            <span
+              class="d-push pill"
+              :class="judge.outcome === 'reached' ? 'pill-ok' : 'pill-warn'"
+              >{{ judgeOutcomeLabel(judge.judge, judge.outcome) }}</span
+            >
           </header>
           <StanceList
             v-if="judge.detail.stances"
@@ -131,11 +157,19 @@ const verdicts = computed(() => {
           />
         </section>
 
-        <section v-if="round.confirmations?.length" class="d-block" data-testid="record-confirmation">
+        <section
+          v-if="round.confirmations?.length"
+          class="d-block"
+          data-testid="record-confirmation"
+        >
           <header class="d-block-head">
             <span class="d-block-title">反問確認</span>
           </header>
-          <ConfirmationList :answers="round.confirmations" :participant-by-id="participantById" agree-reasons />
+          <ConfirmationList
+            :answers="round.confirmations"
+            :participant-by-id="participantById"
+            agree-reasons
+          />
         </section>
       </div>
     </div>

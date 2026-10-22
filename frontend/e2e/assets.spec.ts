@@ -4,7 +4,9 @@ import { expect, test, type Locator } from '@playwright/test'
 
 async function expectLoadedImage(img: Locator) {
   await expect(img).toBeVisible()
-  await expect.poll(() => img.evaluate((el) => (el as unknown as { naturalWidth: number }).naturalWidth)).toBeGreaterThan(0)
+  await expect
+    .poll(() => img.evaluate((el) => (el as unknown as { naturalWidth: number }).naturalWidth))
+    .toBeGreaterThan(0)
 }
 
 test('header shows the app icon and the page links both favicons', async ({ page, request }) => {
@@ -13,7 +15,9 @@ test('header shows the app icon and the page links both favicons', async ({ page
 
   const icons = page.locator('link[rel="icon"]')
   await expect(icons).toHaveCount(2)
-  for (const href of await icons.evaluateAll((els) => els.map((el) => el.getAttribute('href') ?? ''))) {
+  for (const href of await icons.evaluateAll((els) =>
+    els.map((el) => el.getAttribute('href') ?? ''),
+  )) {
     const response = await request.get(href)
     expect(response.status()).toBe(200)
     expect(response.headers()['content-type']).toContain('image/png')

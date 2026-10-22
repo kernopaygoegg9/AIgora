@@ -44,7 +44,14 @@ const columns = computed(() => `4.5rem repeat(${props.participants.length}, minm
     <div class="grid" :style="{ gridTemplateColumns: columns }" role="table" aria-label="表態追蹤">
       <div class="row" role="row">
         <span role="columnheader" />
-        <span v-for="p in participants" :key="p.id" class="head" role="columnheader" :title="label(p)" :aria-label="label(p)">
+        <span
+          v-for="p in participants"
+          :key="p.id"
+          class="head"
+          role="columnheader"
+          :title="label(p)"
+          :aria-label="label(p)"
+        >
           <ParticipantAvatar :avatar="p.avatar" :size="18" />
         </span>
       </div>

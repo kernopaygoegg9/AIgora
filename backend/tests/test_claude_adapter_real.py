@@ -32,7 +32,9 @@ async def run(prompt: str, workspace: Path) -> tuple[list, str]:
     availability = await adapter.check_availability(PARTICIPANT)
     if not availability.available:
         pytest.skip(f"claude not available: {availability.reason}")
-    request = TurnRequest(participant=PARTICIPANT, prompt=prompt, workspace=workspace, timeout_seconds=300)
+    request = TurnRequest(
+        participant=PARTICIPANT, prompt=prompt, workspace=workspace, timeout_seconds=300
+    )
     events = [event async for event in adapter.run_turn(request)]
     final = events[-1]
     assert not isinstance(final, Failed), final

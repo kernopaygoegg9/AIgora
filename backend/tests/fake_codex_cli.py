@@ -20,7 +20,9 @@ import subprocess
 import sys
 import time
 
-HEARTBEAT = "import sys, time\nwhile True:\n    open(sys.argv[1], 'a').write('.')\n    time.sleep(0.05)\n"
+HEARTBEAT = (
+    "import sys, time\nwhile True:\n    open(sys.argv[1], 'a').write('.')\n    time.sleep(0.05)\n"
+)
 
 
 def main() -> int:

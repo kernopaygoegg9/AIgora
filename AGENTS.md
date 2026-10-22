@@ -13,6 +13,10 @@
 Run from the repo root unless noted.
 
 - Install: `uv sync --directory backend` and `npm install --prefix frontend`, then once `cd frontend && npx playwright install chromium`.
+- Check everything: `npm run check --prefix frontend` (lint, format check, backend pytest, typecheck, build, E2E; stops at the first failure). Run it before reporting work as done.
+- Fast check for the TDD loop: `npm run check:fast --prefix frontend` (same without build and E2E).
+- Lint: `npm run lint --prefix frontend` (ESLint + ruff). Auto-format: `npm run format --prefix frontend` (Prettier, ruff import sort, `ruff format`). Config: `frontend/eslint.config.js`, `frontend/.prettierrc.json`, `[tool.ruff]` in `backend/pyproject.toml`.
+- Individual steps below are for running one part on its own.
 - Start (backend :8765 + Vite dev server :5173, one command): `npm run dev --prefix frontend`, then open http://127.0.0.1:5173. Vite proxies `/api` and `/ws` to the backend.
 - Backend only: `uv run --directory backend aigora`. It also serves `frontend/dist` after `npm run build --prefix frontend`.
 - Backend tests: `uv run --directory backend pytest`. Tests that call a real AI CLI or the real TypeSafe API are marked `real_ai` and skipped by default; run them only when asked or after a CLI upgrade (ADR 0002: each adapter has an isolation canary). All: `uv run --directory backend pytest -m real_ai`. Per adapter (a CLI that is not installed or not logged in is skipped):

@@ -15,9 +15,30 @@ function fresh() {
 }
 
 const participants = [
-  { id: 'a', display_name: 'A', adapter: 'fake', model: null, avatar: 'fake.png', capabilities: { web_access: true, streaming: true } },
-  { id: 'b', display_name: 'B', adapter: 'fake', model: null, avatar: 'fake.png', capabilities: { web_access: false, streaming: false } },
-  { id: 'c', display_name: 'C', adapter: 'fake', model: 'm', avatar: 'fake.png', capabilities: { web_access: true, streaming: true } },
+  {
+    id: 'a',
+    display_name: 'A',
+    adapter: 'fake',
+    model: null,
+    avatar: 'fake.png',
+    capabilities: { web_access: true, streaming: true },
+  },
+  {
+    id: 'b',
+    display_name: 'B',
+    adapter: 'fake',
+    model: null,
+    avatar: 'fake.png',
+    capabilities: { web_access: false, streaming: false },
+  },
+  {
+    id: 'c',
+    display_name: 'C',
+    adapter: 'fake',
+    model: 'm',
+    avatar: 'fake.png',
+    capabilities: { web_access: true, streaming: true },
+  },
 ]
 
 const settings = {
@@ -33,21 +54,59 @@ const settings = {
 
 // A consensus discussion that exercises every server message type.
 function consensusScript(): ServerMessage[] {
-  type Body = ServerMessage extends infer M ? (M extends ServerMessage ? Omit<M, 'seq' | 'discussion_id'> : never) : never
+  type Body = ServerMessage extends infer M
+    ? M extends ServerMessage
+      ? Omit<M, 'seq' | 'discussion_id'>
+      : never
+    : never
   const body: Body[] = [
-    { type: 'discussion_started', question: 'Tabs or spaces?', derived_from: null, settings, participants },
+    {
+      type: 'discussion_started',
+      question: 'Tabs or spaces?',
+      derived_from: null,
+      settings,
+      participants,
+    },
     { type: 'round_started', round: 1 },
     { type: 'turn_started', round: 1, participant_id: 'a', purpose: 'turn' },
     { type: 'turn_started', round: 1, participant_id: 'b', purpose: 'turn' },
     { type: 'turn_started', round: 1, participant_id: 'c', purpose: 'turn' },
     { type: 'turn_delta', round: 1, participant_id: 'a', purpose: 'turn', text: 'Spa' },
     { type: 'turn_delta', round: 1, participant_id: 'a', purpose: 'turn', text: 'ces.' },
-    { type: 'turn_completed', round: 1, participant_id: 'a', purpose: 'turn', text: 'Spaces.', stance: null },
-    { type: 'turn_completed', round: 1, participant_id: 'b', purpose: 'turn', text: 'Tabs.', stance: null },
-    { type: 'turn_failed', round: 1, participant_id: 'c', purpose: 'turn', reason: 'took too long', kind: 'timeout' },
+    {
+      type: 'turn_completed',
+      round: 1,
+      participant_id: 'a',
+      purpose: 'turn',
+      text: 'Spaces.',
+      stance: null,
+    },
+    {
+      type: 'turn_completed',
+      round: 1,
+      participant_id: 'b',
+      purpose: 'turn',
+      text: 'Tabs.',
+      stance: null,
+    },
+    {
+      type: 'turn_failed',
+      round: 1,
+      participant_id: 'c',
+      purpose: 'turn',
+      reason: 'took too long',
+      kind: 'timeout',
+    },
     { type: 'turn_started', round: 1, participant_id: 'a', purpose: 'draft' },
     { type: 'turn_delta', round: 1, participant_id: 'a', purpose: 'draft', text: 'Draft: spa' },
-    { type: 'turn_completed', round: 1, participant_id: 'a', purpose: 'draft', text: 'Draft: spaces', stance: null },
+    {
+      type: 'turn_completed',
+      round: 1,
+      participant_id: 'a',
+      purpose: 'draft',
+      text: 'Draft: spaces',
+      stance: null,
+    },
     { type: 'draft_created', round: 1, text: 'Draft: spaces' },
     { type: 'round_completed', round: 1 },
     { type: 'interjection_queued', text: 'Think about Go.', applies_to_round: 2 },
@@ -55,16 +114,53 @@ function consensusScript(): ServerMessage[] {
     { type: 'turn_started', round: 2, participant_id: 'a' },
     { type: 'turn_started', round: 2, participant_id: 'b' },
     { type: 'turn_started', round: 2, participant_id: 'c' },
-    { type: 'turn_completed', round: 2, participant_id: 'a', text: 'OK\nSTANCE: AGREE', stance: 'AGREE' },
-    { type: 'turn_completed', round: 2, participant_id: 'b', text: 'Fine\nSTANCE: AGREE', stance: 'AGREE' },
+    {
+      type: 'turn_completed',
+      round: 2,
+      participant_id: 'a',
+      text: 'OK\nSTANCE: AGREE',
+      stance: 'AGREE',
+    },
+    {
+      type: 'turn_completed',
+      round: 2,
+      participant_id: 'b',
+      text: 'Fine\nSTANCE: AGREE',
+      stance: 'AGREE',
+    },
     { type: 'turn_failed', round: 2, participant_id: 'c', reason: 'boom', kind: 'crashed' },
-    { type: 'participant_removed', participant_id: 'c', reason: 'failed 2 rounds in a row', round: 2 },
-    { type: 'turn_failed', round: 2, participant_id: 'a', purpose: 'draft', reason: 'quota', kind: 'quota' },
+    {
+      type: 'participant_removed',
+      participant_id: 'c',
+      reason: 'failed 2 rounds in a row',
+      round: 2,
+    },
+    {
+      type: 'turn_failed',
+      round: 2,
+      participant_id: 'a',
+      purpose: 'draft',
+      reason: 'quota',
+      kind: 'quota',
+    },
     { type: 'moderator_changed', participant_id: 'b', round: 2 },
     { type: 'turn_started', round: 2, participant_id: 'b', purpose: 'draft' },
-    { type: 'turn_completed', round: 2, participant_id: 'b', purpose: 'draft', text: 'Draft 2', stance: null },
+    {
+      type: 'turn_completed',
+      round: 2,
+      participant_id: 'b',
+      purpose: 'draft',
+      text: 'Draft 2',
+      stance: null,
+    },
     { type: 'draft_created', round: 2, text: 'Draft 2' },
-    { type: 'judge_result', round: 2, judge: 'jev', outcome: 'confirm', detail: { probability: 0.91, threshold: 0.8 } },
+    {
+      type: 'judge_result',
+      round: 2,
+      judge: 'jev',
+      outcome: 'confirm',
+      detail: { probability: 0.91, threshold: 0.8 },
+    },
     {
       type: 'confirmation_result',
       round: 2,
@@ -74,7 +170,12 @@ function consensusScript(): ServerMessage[] {
       ],
     },
     { type: 'round_completed', round: 2 },
-    { type: 'discussion_finished', outcome: 'consensus', result: { kind: 'consensus', text: 'Use spaces.' }, reason: null },
+    {
+      type: 'discussion_finished',
+      outcome: 'consensus',
+      result: { kind: 'consensus', text: 'Use spaces.' },
+      reason: null,
+    },
   ]
   return body.map((m, i) => ({ ...m, discussion_id: D, seq: i + 1 }) as ServerMessage)
 }
@@ -92,7 +193,9 @@ test('applies a whole consensus discussion', () => {
   expect(store.activeParticipantIds).toEqual(['a', 'b'])
   expect(store.moderatorId).toBe('b')
   expect(store.moderatorChanges).toEqual([{ participantId: 'b', round: 2 }])
-  expect(store.removed).toEqual([{ participantId: 'c', reason: 'failed 2 rounds in a row', round: 2 }])
+  expect(store.removed).toEqual([
+    { participantId: 'c', reason: 'failed 2 rounds in a row', round: 2 },
+  ])
   expect(store.interjections).toEqual([{ text: 'Think about Go.', appliesToRound: 2 }])
 
   expect(store.rounds.map((r) => [r.number, r.status])).toEqual([
@@ -122,7 +225,11 @@ test('applies a whole consensus discussion', () => {
     ['b', 'ok'],
   ])
   expect(r2.draft).toBe('Draft 2')
-  expect(r2.judge).toEqual({ judge: 'jev', outcome: 'confirm', detail: { probability: 0.91, threshold: 0.8 } })
+  expect(r2.judge).toEqual({
+    judge: 'jev',
+    outcome: 'confirm',
+    detail: { probability: 0.91, threshold: 0.8 },
+  })
   expect(r2.confirmations?.map((a) => a.participant_id)).toEqual(['a', 'b'])
 
   expect(store.outcome).toBe('consensus')
@@ -145,7 +252,14 @@ test('ignores repeated seq numbers and messages of another discussion', () => {
   const script = consensusScript().slice(0, 7)
   store.applyMessages(script)
   store.applyMessage(script[6]) // same delta again
-  store.applyMessage({ type: 'turn_delta', discussion_id: 'other', seq: 99, round: 1, participant_id: 'a', text: '!!' })
+  store.applyMessage({
+    type: 'turn_delta',
+    discussion_id: 'other',
+    seq: 99,
+    round: 1,
+    participant_id: 'a',
+    text: '!!',
+  })
   expect(store.rounds[0].turns[0].text).toBe('Spaces.')
   expect(store.lastSeq).toBe(7)
 })
@@ -173,9 +287,23 @@ test('a new discussion_started replaces the previous discussion', () => {
 test('an ask finishes with every answer as the result', () => {
   const store = fresh()
   const msgs: ServerMessage[] = [
-    { type: 'discussion_started', discussion_id: D, seq: 1, question: 'Q', settings: { ...settings, mode: 'ask' }, participants },
+    {
+      type: 'discussion_started',
+      discussion_id: D,
+      seq: 1,
+      question: 'Q',
+      settings: { ...settings, mode: 'ask' },
+      participants,
+    },
     { type: 'round_started', discussion_id: D, seq: 2, round: 1 },
-    { type: 'turn_completed', discussion_id: D, seq: 3, round: 1, participant_id: 'a', text: 'A says' },
+    {
+      type: 'turn_completed',
+      discussion_id: D,
+      seq: 3,
+      round: 1,
+      participant_id: 'a',
+      text: 'A says',
+    },
     { type: 'round_completed', discussion_id: D, seq: 4, round: 1 },
     {
       type: 'discussion_finished',
@@ -194,7 +322,12 @@ test('an ask finishes with every answer as the result', () => {
 
 test('records errors, including ones before any discussion started', () => {
   const store = fresh()
-  store.applyMessage({ type: 'error', discussion_id: null, seq: 1, message: 'unknown participant x' })
+  store.applyMessage({
+    type: 'error',
+    discussion_id: null,
+    seq: 1,
+    message: 'unknown participant x',
+  })
   expect(store.errors).toEqual(['unknown participant x'])
   expect(store.status).toBe('idle')
 })
@@ -203,7 +336,14 @@ test('finishing as insufficient_participants keeps the reason', () => {
   const store = fresh()
   store.applyMessages([
     { type: 'discussion_started', discussion_id: D, seq: 1, question: 'Q', settings, participants },
-    { type: 'discussion_finished', discussion_id: D, seq: 2, outcome: 'insufficient_participants', result: null, reason: 'only A is left' },
+    {
+      type: 'discussion_finished',
+      discussion_id: D,
+      seq: 2,
+      outcome: 'insufficient_participants',
+      result: null,
+      reason: 'only A is left',
+    },
   ])
   expect(store.outcome).toBe('insufficient_participants')
   expect(store.finishReason).toBe('only A is left')
@@ -234,8 +374,24 @@ test('loads a saved discussion record read-only', () => {
       {
         number: 1,
         turns: [
-          { participant_id: 'a', status: 'ok', text: 'Spaces.', stance: null, started_at: 't', ended_at: 't', error: null },
-          { participant_id: 'c', status: 'timeout', text: null, stance: null, started_at: 't', ended_at: 't', error: 'slow' },
+          {
+            participant_id: 'a',
+            status: 'ok',
+            text: 'Spaces.',
+            stance: null,
+            started_at: 't',
+            ended_at: 't',
+            error: null,
+          },
+          {
+            participant_id: 'c',
+            status: 'timeout',
+            text: null,
+            stance: null,
+            started_at: 't',
+            ended_at: 't',
+            error: 'slow',
+          },
         ],
         draft: 'Draft',
         judge: null,
@@ -243,7 +399,17 @@ test('loads a saved discussion record read-only', () => {
       },
       {
         number: 2,
-        turns: [{ participant_id: 'a', status: 'ok', text: 'OK', stance: 'AGREE', started_at: 't', ended_at: 't', error: null }],
+        turns: [
+          {
+            participant_id: 'a',
+            status: 'ok',
+            text: 'OK',
+            stance: 'AGREE',
+            started_at: 't',
+            ended_at: 't',
+            error: null,
+          },
+        ],
         draft: 'Draft 2',
         judge: { judge: 'stance_vote', outcome: 'reached', detail: { stances: { a: 'AGREE' } } },
       },
@@ -260,7 +426,11 @@ test('loads a saved discussion record read-only', () => {
   expect(store.discussionId).toBe('old')
   expect(store.activeParticipantIds).toEqual(['a', 'b'])
   expect(store.moderatorId).toBe('b')
-  expect(store.rounds[0].turns[1]).toMatchObject({ status: 'timeout', text: '', failure: { kind: 'timeout', reason: 'slow' } })
+  expect(store.rounds[0].turns[1]).toMatchObject({
+    status: 'timeout',
+    text: '',
+    failure: { kind: 'timeout', reason: 'slow' },
+  })
   expect(store.rounds[1].judge?.outcome).toBe('reached')
   expect(store.rounds[1].status).toBe('completed')
   expect(store.interjections).toEqual([{ text: 'hey', appliesToRound: 2 }])
