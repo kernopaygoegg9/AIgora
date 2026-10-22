@@ -100,7 +100,23 @@ def _script_strings(code: str) -> str:
 
 
 # Attributes whose values are not shown to users.
-HIDDEN_ATTRS = {"class", "style", "id", "ref", "key", "name", "type", "for", "href", "src", "to", "role", "lang", "is", "slot"}
+HIDDEN_ATTRS = {
+    "class",
+    "style",
+    "id",
+    "ref",
+    "key",
+    "name",
+    "type",
+    "for",
+    "href",
+    "src",
+    "to",
+    "role",
+    "lang",
+    "is",
+    "slot",
+}
 ATTR_RE = re.compile(r"""([^\s=/>"']+)(?:\s*=\s*("[^"]*"|'[^']*'|[^\s>]+))?""")
 TAG_RE = re.compile(r"<(/?)([A-Za-z][\w.:-]*)((?:\"[^\"]*\"|'[^']*'|[^'\">])*)>|<!--.*?-->", re.S)
 INTERP_RE = re.compile(r"\{\{(.*?)\}\}", re.S)
@@ -189,7 +205,9 @@ def find_violations(root: Path) -> list[str]:
     patterns = {word: _word_pattern(word) for word in avoid}
     src = root / "frontend" / "src"
     found = []
-    for path in sorted(p for p in src.rglob("*") if p.suffix in (".ts", ".vue")):
+    for path in sorted(
+        (p for p in src.rglob("*") if p.suffix in (".ts", ".vue")), key=lambda p: p.as_posix()
+    ):
         source = path.read_text(encoding="utf-8").replace("\r\n", "\n")
         lines = source.split("\n")
         mask_lines = visible_text(path, source).split("\n")
