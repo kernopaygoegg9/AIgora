@@ -27,7 +27,7 @@ defineProps<{
       :data-participant-id="p.id"
     >
       <div class="who">
-        <ParticipantLabel :participant="p" :id="p.id" :size="22" />
+        <ParticipantLabel :id="p.id" :participant="p" :size="22" />
         <span v-if="p.id === moderatorId" class="pill pill-accent" data-testid="inspector-moderator"
           >主持人</span
         >

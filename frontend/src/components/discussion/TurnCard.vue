@@ -39,7 +39,7 @@ const failed = computed(() => props.turn.status === 'failed' || props.turn.statu
     :data-participant-id="turn.participantId"
   >
     <header class="d-turn-head">
-      <ParticipantLabel :participant="participant" :id="turn.participantId" />
+      <ParticipantLabel :id="turn.participantId" :participant="participant" />
       <span class="pill" :class="TURN_STATUS_PILLS[turn.status]" data-testid="turn-status">{{
         TURN_STATUS_LABELS[turn.status]
       }}</span>
@@ -47,13 +47,14 @@ const failed = computed(() => props.turn.status === 'failed' || props.turn.statu
     <p v-if="turn.failure" class="d-failure" data-testid="turn-failure">
       {{ turn.failure.reason }}
     </p>
-    <!-- eslint-disable-next-line vue/no-v-html -- sanitised in renderMarkdown -->
+    <!-- eslint-disable vue/no-v-html -- sanitised in renderMarkdown -->
     <div
       class="turn-text d-md"
       :class="{ 'd-caret': turn.status === 'running' }"
       data-testid="turn-text"
       v-html="html"
     />
+    <!-- eslint-enable vue/no-v-html -->
     <p v-if="turn.status === 'running' && !turn.text" class="muted waiting">回覆中…</p>
     <!-- `stance` slot: the read-only record (07) adds its own testid to the same line. -->
     <slot name="stance">

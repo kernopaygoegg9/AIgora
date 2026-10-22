@@ -96,20 +96,21 @@ function callText(call: TurnState): string {
             {{ call.purpose === 'confirmation' ? '' : '主持人' }}</span
           >
           <ParticipantLabel
-            :participant="participantById(call.participantId)"
             :id="call.participantId"
+            :participant="participantById(call.participantId)"
             :size="16"
             hide-web
           />
           <span v-if="call.status === 'running'" class="d-push pill pill-accent">撰寫中…</span>
         </header>
         <p v-if="call.failure" class="d-failure">失敗：{{ call.failure.reason }}</p>
-        <!-- eslint-disable-next-line vue/no-v-html -- sanitised in renderMarkdown -->
+        <!-- eslint-disable vue/no-v-html -- sanitised in renderMarkdown -->
         <div
           class="d-md"
           :class="{ 'd-caret': call.status === 'running' }"
           v-html="renderMarkdown(callText(call))"
         />
+        <!-- eslint-enable vue/no-v-html -->
       </article>
 
       <article
@@ -122,8 +123,8 @@ function callText(call: TurnState): string {
           <span>第 {{ round.number }} 輪後<template v-if="moderatorId"> · 主持人</template></span>
           <ParticipantLabel
             v-if="moderatorId"
-            :participant="participantById(moderatorId)"
             :id="moderatorId"
+            :participant="participantById(moderatorId)"
             :size="16"
             hide-web
           />

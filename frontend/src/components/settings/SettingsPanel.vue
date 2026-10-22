@@ -349,7 +349,7 @@ function orderLabel(name: string, implemented: boolean): string {
                         :disabled="!row.info.available"
                         :aria-label="nameOf(row)"
                       />
-                      <ParticipantLabel :participant="snapshot(row)" :id="row.id" hide-web />
+                      <ParticipantLabel :id="row.id" :participant="snapshot(row)" hide-web />
                     </label>
                     <span v-if="row.extra" class="pill pill-accent" data-testid="extra-participant"
                       >臨時</span
@@ -483,8 +483,8 @@ function orderLabel(name: string, implemented: boolean): string {
               <select
                 id="moderator-select"
                 v-model="moderatorId"
-                @change="moderatorPicked = true"
                 :disabled="moderatorChoices.length === 0"
+                @change="moderatorPicked = true"
               >
                 <option v-for="row in moderatorChoices" :key="row.id" :value="row.id">
                   {{ nameOf(row) }}

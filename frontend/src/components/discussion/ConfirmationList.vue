@@ -28,8 +28,8 @@ defineProps<{
     >
       <div class="d-list-row">
         <ParticipantLabel
-          :participant="participantById(a.participant_id)"
           :id="a.participant_id"
+          :participant="participantById(a.participant_id)"
           :size="18"
           hide-web
         />

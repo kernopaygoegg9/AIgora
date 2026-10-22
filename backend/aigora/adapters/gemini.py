@@ -155,7 +155,7 @@ SETTINGS: dict[str, Any] = {
     "privacy": {"usageStatisticsEnabled": False},
 }
 
-POLICY = f"""\
+POLICY = """\
 # AIgora: only web search / fetch (ADR 0002).
 [[rule]]
 toolName = "*"
