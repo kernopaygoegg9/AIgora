@@ -145,3 +145,58 @@ def test_user_visible_attribute_values_are_scanned(tmp_path):
         "frontend/src/A.vue:2: 用詞「訊息」，請改用「發言」",
         "frontend/src/A.vue:3: 用詞「回答」，請改用「發言」",
     ]
+
+
+def test_glossary_without_any_avoided_word_is_an_error(tmp_path):
+    (tmp_path / "GLOSSARY.md").write_text(
+        "# Fake\n\n**發言 (Turn)**:\n一次回覆。\n", encoding="utf-8"
+    )
+    (tmp_path / "frontend" / "src").mkdir(parents=True)
+
+    result = subprocess.run(
+        [sys.executable, str(SCRIPT), "--root", str(tmp_path)],
+        capture_output=True,
+        encoding="utf-8",
+    )
+
+    assert result.returncode == 2
+    assert "_Avoid_" in result.stderr
+
+
+def test_string_literals_in_event_handlers_are_scanned(tmp_path):
+    result = run_check(
+        tmp_path,
+        {
+            "A.vue": "<template>\n  <button @click=\"say('回答')\">x</button>\n"
+            "  <button v-on:click=\"say('成員')\">y</button>\n</template>\n",
+        },
+    )
+
+    assert result.stdout.splitlines() == [
+        "frontend/src/A.vue:2: 用詞「回答」，請改用「發言」",
+        "frontend/src/A.vue:3: 用詞「成員」，請改用「參與者」",
+    ]
+
+
+def test_string_literals_inside_template_literal_expressions_are_scanned(tmp_path):
+    result = run_check(
+        tmp_path,
+        {"a.ts": "export const a = `第 ${n} 輪${busy ? '等待回答' : `${'成員'}`}`\n"},
+    )
+
+    assert result.stdout.splitlines() == [
+        "frontend/src/a.ts:1: 用詞「回答」，請改用「發言」",
+        "frontend/src/a.ts:1: 用詞「成員」，請改用「參與者」",
+    ]
+
+
+def test_regex_literals_are_not_strings(tmp_path):
+    result = run_check(
+        tmp_path,
+        {
+            "a.ts": "const r = /'/g\nconst bot = 1\nexport const s = '回答'\n"
+            'export const t = /回答|[/"]/.test(s) ? bot / 2 : 0\n',
+        },
+    )
+
+    assert result.stdout.splitlines() == ["frontend/src/a.ts:3: 用詞「回答」，請改用「發言」"]

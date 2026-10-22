@@ -21,18 +21,14 @@ import sys
 import time
 from pathlib import Path
 
+from fake_cli_support import record_pid
+
 
 def _read(path: str | None) -> str | None:
     if not path:
         return None
     p = Path(path)
     return p.read_text(encoding="utf-8") if p.exists() else None
-
-
-def record_pid(pid: int) -> None:
-    """Leave `<pid>.pid` in AIGORA_TEST_PID_DIR so the test's teardown can end that process."""
-    if pid_dir := os.environ.get("AIGORA_TEST_PID_DIR"):
-        open(os.path.join(pid_dir, f"{pid}.pid"), "w").close()
 
 
 def main() -> int:

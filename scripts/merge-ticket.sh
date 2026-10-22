@@ -10,9 +10,11 @@
 #   2. With --feature/--ticket: scripts/check_hot_files.py --feature <slug> --ticket <NN> <before>..<branch>
 #   3. The check command (default `npm run check --prefix frontend`).
 #      Step 2 or 3 fails -> git reset --hard <before>, exit 1.
+#      Interrupted (Ctrl-C / SIGTERM) during step 2 or 3 -> git reset --hard <before>, exit 130 / 143.
 #
 # Exit codes: 0 merged and checked (merge commit kept); 1 hot-file or check failure (rolled back);
-# 2 usage error, dirty working tree, or the merge failed for another reason; 3 merge conflict (aborted).
+# 2 usage error, dirty working tree, or the merge failed for another reason; 3 merge conflict (aborted);
+# 130 / 143 interrupted by SIGINT / SIGTERM (rolled back).
 #
 # Env: AIGORA_MERGE_CHECK_CMD overrides the check command, e.g.
 #   AIGORA_MERGE_CHECK_CMD='npm run check:fast --prefix frontend' bash scripts/merge-ticket.sh <branch>
@@ -68,10 +70,14 @@ if ! git merge --no-ff --no-edit "$branch"; then
 fi
 
 rollback() {
+  trap - INT TERM
   git reset --hard "$before" >/dev/null
   echo "merge-ticket: $1; reset $current to $before" >&2
-  exit 1
+  exit "${2:-1}"
 }
+# Interrupted during the hot-file check or the check: undo the merge too.
+trap 'rollback "interrupted (SIGINT)" 130' INT
+trap 'rollback "interrupted (SIGTERM)" 143' TERM
 
 if [ -n "$feature" ]; then
   echo "merge-ticket: hot-file check (feature $feature, ticket $ticket)"
@@ -83,5 +89,6 @@ fi
 check_cmd="${AIGORA_MERGE_CHECK_CMD:-npm run check --prefix frontend}"
 echo "merge-ticket: running $check_cmd"
 bash -c "$check_cmd" || rollback "check failed ($check_cmd)"
+trap - INT TERM
 
 echo "merge-ticket: merged $branch into $current; checks passed"

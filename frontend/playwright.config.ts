@@ -36,7 +36,11 @@ if (!process.env.AIGORA_E2E_BACKEND_PORT || !process.env.AIGORA_E2E_FRONTEND_POR
   process.env.AIGORA_E2E_FRONTEND_PORT ||= String(frontend)
 }
 // A fresh records folder per run, outside test-results (which a parallel run wipes).
-process.env.AIGORA_E2E_DATA_DIR ||= mkdtempSync(path.join(os.tmpdir(), 'aigora-e2e-'))
+// e2e/global-teardown.ts removes it after the run, but only when this run created it.
+if (!process.env.AIGORA_E2E_DATA_DIR) {
+  process.env.AIGORA_E2E_DATA_DIR = mkdtempSync(path.join(os.tmpdir(), 'aigora-e2e-'))
+  process.env.AIGORA_E2E_CREATED_DATA_DIR = process.env.AIGORA_E2E_DATA_DIR
+}
 
 const backendPort: string = process.env.AIGORA_E2E_BACKEND_PORT
 const frontendPort: string = process.env.AIGORA_E2E_FRONTEND_PORT
@@ -53,6 +57,7 @@ const backendEnv = {
 
 export default defineConfig({
   testDir: './e2e',
+  globalTeardown: './e2e/global-teardown.ts',
   fullyParallel: false,
   workers: 1,
   forbidOnly: !!process.env.CI,

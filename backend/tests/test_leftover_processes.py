@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 import pytest
-from conftest import reap_cli_processes
+from process_reaper import alive, reap_cli_processes, recorded_pids
 
 from aigora.adapters import claude
 from aigora.adapters.base import TurnRequest
@@ -49,7 +49,7 @@ async def test_teardown_ends_a_grandchild_that_cancellation_left_running(tmp_pat
         async for _ in adapter.run_turn(request):
             pass
 
-    with reap_cli_processes(tmp_path / "pids"):  # what the fixture wraps around a test
+    with reap_cli_processes(tmp_path / "pids") as pid_dir:  # what the fixture wraps around a test
         task = asyncio.create_task(consume())
         for _ in range(200):
             if heartbeat.exists() and heartbeat.stat().st_size > 2:
@@ -62,6 +62,10 @@ async def test_teardown_ends_a_grandchild_that_cancellation_left_running(tmp_pat
             await task
         before, after = await heartbeat_size_after_a_pause(heartbeat)
         assert after > before, "the broken cancellation should have left the grandchild running"
+        pids = recorded_pids(pid_dir)
+        assert len(pids) == 2, "the fake CLI should have recorded itself and its grandchild"
+        assert any(alive(pid) for pid in pids)
 
     before, after = await heartbeat_size_after_a_pause(heartbeat)
     assert after == before, "the grandchild is still running after teardown"
+    assert [pid for pid in pids if alive(pid)] == [], "a recorded process outlived teardown"
