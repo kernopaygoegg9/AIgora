@@ -12,8 +12,12 @@
 
 **Blocked by:** 01
 
-**Status:** claimed
+**Status:** resolved
 
-- [ ] 有一個測試證明：模擬「取消沒有結束行程樹」時，fixture 的 teardown 之後那個孫行程已不存在
-- [ ] 跑完整個 `uv run --directory backend pytest` 後，沒有任何由測試產生、仍在執行的 python 行程（以行程清單比對驗證）
-- [ ] `npm run check --prefix frontend` 通過
+- [x] 有一個測試證明：模擬「取消沒有結束行程樹」時，fixture 的 teardown 之後那個孫行程已不存在
+- [x] 跑完整個 `uv run --directory backend pytest` 後，沒有任何由測試產生、仍在執行的 python 行程（以行程清單比對驗證）
+- [x] `npm run check --prefix frontend` 通過
+
+## Comments
+
+- 2026-10-22 merged (`check:fast` green). Fixture `cli_processes` / `reap_cli_processes(pid_dir)` in conftest; proof test `test_leftover_processes.py`. No leftover python processes after full backend pytest (checked by command line).

@@ -11,7 +11,7 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 - [ ] 在兩個終端機同時執行 `cd frontend && npx playwright test`，兩邊都通過
 - [ ] 指定 `AIGORA_E2E_BACKEND_PORT` / `AIGORA_E2E_FRONTEND_PORT` 時 E2E 使用指定的 port
