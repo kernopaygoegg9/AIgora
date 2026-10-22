@@ -23,7 +23,7 @@ A new adapter is a module `adapters/<id>.py` with a module-level `create_adapter
 
 ## Real-CLI tests
 
-Each adapter has a real-CLI test file (`tests/test_<id>_adapter_real.py`, `tests/test_ollama_real.py`; marked `real_ai`, skipped by default): a canary (a random file outside the workspace must not appear in the output) and smoke tests (stance line, web search with a URL). A canary is only meaningful when the turn ended in `Completed`; a CLI that fails to start produces no output and passes vacuously. Rerun them after every CLI upgrade.
+Each adapter has a real-CLI test file (`tests/test_<id>_adapter_real.py`, `tests/test_ollama_real.py`; marked `real_ai`, skipped by default): a canary (a random file outside the workspace must not appear in the output) and smoke tests (stance line, web search with a URL). A canary is only meaningful when the turn ended in `Completed` (a CLI that fails to start produces no output), so every real test runs its turn through `tests/real_adapter.py`: `run_real_turn` skips when the adapter is not available and fails the test unless the turn ends in `Completed`; `assert_canary_not_leaked` checks both the final and the streamed text. The helper itself is tested with the Fake Adapter in `tests/test_real_adapter_helper.py` (not `real_ai`). Rerun the real tests after every CLI upgrade.
 
 ## TypeSafe (Jev)
 
