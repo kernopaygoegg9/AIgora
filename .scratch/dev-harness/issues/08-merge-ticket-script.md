@@ -10,12 +10,16 @@
 
 **Blocked by:** 01、07
 
-**Status:** claimed
+**Status:** resolved
 
-- [ ] 在一個暫時的整合分支上驗證四種情況，每種都確認結束碼與分支狀態：
+- [x] 在一個暫時的整合分支上驗證四種情況，每種都確認結束碼與分支狀態：
   - 乾淨合併且檢查通過 → 結束碼 0，merge commit 留下
   - 有衝突 → 結束碼非零，工作目錄回到合併前、沒有殘留的合併狀態
   - 合併成功但 `check` 失敗 → 結束碼非零，分支回到合併前
   - 改到不屬於該 ticket 的熱點檔案 → 結束碼非零，分支回到合併前
-- [ ] 在 Windows 的 Git Bash 執行通過
-- [ ] 驗證用的暫時分支都已刪除
+- [x] 在 Windows 的 Git Bash 執行通過
+- [x] 驗證用的暫時分支都已刪除
+
+## Comments
+
+- 2026-10-22 merged by running the script itself on `dev-harness` with the default full `check` (exit 0, pytest 317, E2E 41). Exit codes: 0 ok, 1 hot-file/check failure (reset), 2 usage/dirty tree, 3 conflict (abort, dispatch merger). `AIGORA_MERGE_CHECK_CMD` overrides the check. Added `.gitattributes` (`*.sh eol=lf`).
