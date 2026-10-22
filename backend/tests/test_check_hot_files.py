@@ -104,3 +104,16 @@ def test_glob_patterns_match_changed_files(repo: Path) -> None:
     assert both_owned.returncode == 1
     assert ".github/workflows/ci.yml: owned by 02" in both_owned.stdout
     assert "backend/tests/test_claude_real.py: owned by 03" in both_owned.stdout
+
+
+def test_hot_files_changed_on_base_after_the_branch_forked_are_not_blamed_on_it(
+    repo: Path,
+) -> None:
+    commit_changes(repo, ".github/workflows/ci.yml")
+    git(repo, "checkout", "-q", "base")
+    commit_changes(repo, "backend/uv.lock")
+    git(repo, "checkout", "-q", "work")
+
+    result = run_check(repo, "02")
+
+    assert result.returncode == 0, result.stdout

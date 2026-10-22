@@ -21,7 +21,11 @@ def git(*args: str) -> str:
 
 
 def changed_files(rng: str) -> list[str]:
-    return [line for line in git("diff", "--name-only", rng).splitlines() if line]
+    """Files the branch changed since it forked from base (`base...branch`), renames split."""
+    if "..." not in rng:
+        rng = rng.replace("..", "...", 1)
+    out = git("diff", "--name-only", "--no-renames", rng)
+    return [line for line in out.splitlines() if line]
 
 
 def glob_to_regex(pattern: str) -> re.Pattern[str]:
