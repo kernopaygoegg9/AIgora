@@ -12,7 +12,7 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 - [ ] 測試涵蓋：只改自己擁有的檔案 → 通過；改到別張 ticket 的熱點檔案 → 失敗並列出檔案與擁有者；改到「所有 ticket 皆可改」的檔案 → 通過；改到不在表中的檔案 → 通過；glob 比對
 - [ ] 對本 feature 的實際分支執行一次（例如 01 的分支對 `dev-harness`），結果正確
